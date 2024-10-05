@@ -1,0 +1,89 @@
+.table {
+    display: table;
+}
+
+.table {
+    position: relative;
+    width: 100%;
+    border-radius: var(--rounded-box, 1rem);
+    text-align: left;
+    line-height: 1.25rem;
+}
+.table :where(.table-pin-rows thead tr) {
+    position: sticky;
+    top: 0px;
+    z-index: 1;
+    --tw-bg-opacity: 1;
+    font-size: 16px;
+    font-weight: 500;
+    background-color: var(--fallback-b1,oklch(var(--b1)/var(--tw-bg-opacity)));
+}
+
+.table :where(thead tr, tbody tr:not(:last-child),tbody tr:first-child:last-child) {
+    border-bottom-width: 1px;
+    --tw-border-opacity: 1;
+    border-bottom-color: var(--fallback-b2,oklch(var(--b2)/var(--tw-border-opacity)));
+}
+.table :where(thead, tfoot) {
+    white-space: nowrap;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    // font-weight: 700;
+    color: var(--fallback-bc,oklch(var(--bc)/0.6));
+}
+.table :where(tfoot) {
+    border-top-width: 1px;
+    --tw-border-opacity: 1;
+    border-top-color: var(--fallback-b2,oklch(var(--b2)/var(--tw-border-opacity)));
+}
+
+.table-md :not(thead):not(tfoot) tr {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+}
+.table-md :where(th, td) {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem
+}
+
+.table :where(.table-pin-rows thead tr) {
+    position: sticky;
+    top: 0px;
+    z-index: 1;
+    --tw-bg-opacity: 1;
+    background-color: white;
+    background-color: var(--fallback-b1,oklch(var(--b1)/var(--tw-bg-opacity)));
+}
+.table :where(.table-pin-rows tfoot tr) {
+    position: sticky;
+    bottom: 0px;
+    z-index: 1;
+    --tw-bg-opacity: 1;
+    font-size: 16px;
+    font-weight: 500;
+    background-color: var(--fallback-b1,oklch(var(--b1)/var(--tw-bg-opacity)));
+}
+
+.table :where(.table-pin-cols tr th) {
+    position: sticky;
+    left: 0px;
+    right: 0px;
+    --tw-bg-opacity: 1;
+}
+
+.table-zebra tbody tr:nth-child(odd) :where(.table-pin-cols tr th) {
+    --tw-bg-opacity: 1;
+    background-color: white;
+}
+
+.table-zebra tbody tr:nth-child(even) :where(.table-pin-cols tr th) {
+    --tw-bg-opacity: 1;
+    background-color: var(--b1,oklch(var(--b1)/var(--tw-bg-opacity)));
+}
+
+.table-zebra tbody tr:nth-child(even) {
+    --tw-bg-opacity: 1;
+    background-color: var(--b1,oklch(var(--b1)/var(--tw-bg-opacity)));
+}

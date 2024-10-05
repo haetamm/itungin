@@ -1,0 +1,63 @@
+.container {
+    width: 960px;
+    margin: 0 auto;
+
+    .tabs {
+        justify-content: start;
+        padding: 10px 0 10px 0;
+
+        button {
+            background-color: transparent;
+            color: black;
+            cursor: pointer;
+            padding: 9px 12px 9px 12px;
+            width: 100%;
+            align-content: center;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: all 0.5s ease-out;
+            border-bottom: 2px solid black;
+        }
+
+        button:disabled {
+            border-top: 2px solid black;
+            border-left: 2px solid black;
+            border-right: 2px solid black;
+            border-bottom: none;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+            color: black;
+        }
+    }
+
+    .content {
+        background-color: transparent;
+
+        .title {
+            color: black;
+            margin-bottom: 20px;
+        }
+    }
+}
+
+
+@media only screen and (max-width: 960px) {
+
+    .container {
+        width: 100%;
+    }
+
+    .content {
+        padding: 25px 50px 25px 50px;
+    }
+}
+
+@media only screen and (min-width: 1025px) {
+    .container {
+        .tabs {
+            button:hover {
+                color: white;
+                background-color: rgba(255, 255, 255, 0.15);
+            }
+        }
+    }
+}
