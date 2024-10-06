@@ -1,12 +1,13 @@
 import Carousel from '../component/auth/Carousel';
-import { useStateContext } from '../contexts/ContextProvider'
 import { getData } from '../utils/service-list';
 import { Helmet } from 'react-helmet-async';
 
 import '../styles/pages/dashboard.scss';
+import { RootState } from '../store';
+import { useSelector } from 'react-redux';
 
 export default function Home() {
-  const { user } = useStateContext();
+  const { name } = useSelector((state: RootState) => state.user);
   const service = getData();
 
   return (
@@ -18,7 +19,7 @@ export default function Home() {
       <div className="wrap-dashboard overflow-auto items-center px-1 flex-grow mb-8">
         <div className="kontener mx-auto ">
           <div className='text-lg xs:text-2xl lg:text-3xl font-bold text-center mt-5 lg:mt-10'>
-            <p>Hallo, {user?.name}</p>
+            <p>Hallo, {name}</p>
             <p>Aktivitas apa yang ingin Anda lakukan?</p>
           </div>
           <div className="grid text-sm gap-3 mt-5 md:mt-14 grid-cols-1 xs:grid-cols-2 md:grid-cols-3 mx-auto box-content p-2">

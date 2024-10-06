@@ -6,3 +6,4 @@ frontend/.env
 backend/dist
 backend/node_modules
 backend/catatan.text
+backend/uploads

@@ -1,23 +1,21 @@
 import { userRepository } from './../repository/userRepository';
-import bcrypt from "bcrypt";
 import { loginFormSchema, registerFormSchema } from "../validation/authValidatioin";
 import { ResponseError } from "../entities/responseError";
 import { validate } from "../validation/validation";
 import { LoginForm, LoginRes, RegisForm, Role, UserAndRoles, UserRes } from "../utils/interface";
 import { prismaClient } from "../application/database";
-import { roleRepository } from "../repository/roleRepository";
 import { userRolesRepository } from "../repository/userRolesRepository";
 import { securityService } from "./securityService";
+import { userService } from './userService';
+import { roleService } from './roleService';
 
 export class AuthService {
     async register({ body }: { body: RegisForm }): Promise<UserRes> {
         const { username, password, name } = validate(registerFormSchema, body)
         try {
             const newUser = await prismaClient.$transaction(async (prismaTransaction) => {
-                const countUser = await userRepository.countByUsername(username);
-                if (countUser > 0) {
-                    throw new ResponseError(422, "\"username\" is already exists");
-                }
+                
+                await userService.checkUserByUsername(username);
                 
                 const hashedPassword = await securityService.passwordHash(password);
                 const newUser = await userRepository.createUser({
@@ -26,10 +24,7 @@ export class AuthService {
                     password: hashedPassword,
                 });
 
-                const role = await roleRepository.findByRoleName('ADMIN', prismaTransaction);
-                if (!role) {
-                    throw new ResponseError(404, "Role not found");
-                }
+                const role = await roleService.findRoleByName('ADMIN', prismaTransaction);
 
                 await userRolesRepository.addUserRole(newUser.id, role.id, prismaTransaction);
                 return newUser;
@@ -53,7 +48,7 @@ export class AuthService {
             throw new ResponseError(422, "\"username\" or password wrong, \"password\" or username wrong");
         }
 
-        const { id, name, username, password, roleUser } = user;
+        const { id, name, imageUrl, username, password, roleUser, createdAt } = user;
         const isPasswordValid = await securityService.passwordCompare(loginReq.password, password);
         if (!isPasswordValid) {
             throw new ResponseError(422, "\"username\" or password wrong, \"password\" or username wrong");
@@ -70,6 +65,8 @@ export class AuthService {
         return {
             name: name,
             username: username,
+            imageUrl: imageUrl ? imageUrl : null,
+            createdAt: createdAt,
             token,
             roleUser: roleUser.map((userRole: { role: Role }) => userRole.role.role),
         };

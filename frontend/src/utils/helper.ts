@@ -60,3 +60,9 @@ export const dataURLtoBlob = (dataurl: string): Blob => {
 
     return new Blob([u8arr], {type: mime});
 }
+
+export const scrollTop = () => {
+    window.scrollTo(0, 0)
+}
+
+export const timestamp = new Date().getTime();

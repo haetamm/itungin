@@ -1,11 +1,9 @@
-import { PrismaClient, User } from "@prisma/client";
+import { prismaClient } from "../application/database";
 import { RegisForm, UserAndRoles, UserRes } from "../utils/interface";
-
-const prisma = new PrismaClient();
 
 export class UserRepository {
     async findUserByUsername(username: string): Promise<UserAndRoles | null> {
-        return await prisma.user.findUnique({
+        return await prismaClient.user.findUnique({
             where: { username },
             include: {
                 roleUser: {
@@ -18,7 +16,7 @@ export class UserRepository {
     }
 
     async findUserById(id: string): Promise<UserAndRoles | null> {
-        return await prisma.user.findUnique({
+        return await prismaClient.user.findUnique({
             where: { id },
             include: {
                 roleUser: {
@@ -31,7 +29,7 @@ export class UserRepository {
     }
 
     async findUserLogin(id: string, token: string): Promise<UserAndRoles | null> {
-        return prisma.user.findFirst({
+        return prismaClient.user.findFirst({
             where: {
                 id,
                 token,
@@ -48,13 +46,13 @@ export class UserRepository {
     }
 
     async countByUsername(username: string) {
-        return prisma.user.count({
+        return prismaClient.user.count({
             where: { username }
         });
     }
 
     async createUser(data: RegisForm): Promise<UserRes> {
-        return prisma.user.create({
+        return prismaClient.user.create({
             data: data,
             select: {
                 id: true,
@@ -64,7 +62,7 @@ export class UserRepository {
     }
 
     async updateUserToken(username: string, token: string) {
-        return prisma.user.update({
+        return prismaClient.user.update({
             where: { username },
             data: { token },
             select: {
@@ -73,8 +71,20 @@ export class UserRepository {
         });
     }
 
-    async updateUserById(userId: string, data: Partial<{ name: string; username: string; password?: string }>): Promise<UserAndRoles | null>  {
-        return prisma.user.update({
+    async updateImageById(id: string, imageUrl: string) {
+        return prismaClient.user.update({
+            where: { id },
+            data: { 
+                imageUrl: imageUrl
+             },
+            select: {
+                imageUrl: true
+            }
+        });
+    }
+
+    async updateUserById(userId: string, data: Partial<{ name: string; username: string; password?: string }>): Promise<UserAndRoles>  {
+        return prismaClient.user.update({
             where: { id: userId },
             data: {
                 ...data
@@ -91,7 +101,7 @@ export class UserRepository {
     
 
     async deleteTokenUserById(id: string) {
-        return prisma.user.update({
+        return prismaClient.user.update({
             where: { id },
             data: { token: null },
             select: {

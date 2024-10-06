@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react'
 import { IoHome } from "react-icons/io5";
 import { BiSolidReport } from "react-icons/bi";
 import { BsBank2 } from "react-icons/bs";
@@ -10,31 +9,15 @@ import { RiContactsBook2Fill } from "react-icons/ri";
 import { GiCardboardBoxClosed } from "react-icons/gi";
 import { MdHomeWork } from "react-icons/md";
 import { NavLink } from '../auth/NavLink';
-
-import '../../styles/components/sidebar.scss';
 import { RootState } from '../../store';
 import { useSelector } from 'react-redux';
+import { timestamp } from '../../utils/helper';
 
+import '../../styles/components/sidebar.scss';
 
 export default function SideBar() {
-  const navToggleRef = useRef<HTMLInputElement>(null);
+  const { imageUrl } = useSelector((state: RootState) => state.user);
   const { name } = useSelector((state: RootState) => state.user);
-
-  useEffect(() => {
-    const handleResize = () => {
-      const navToggle = navToggleRef.current;
-      if (navToggle) {
-        navToggle.checked = window.innerWidth > 1024;
-      }
-    };
-
-    handleResize();
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [navToggleRef]);
 
   const navLinks = [
     { to: '/home', icon: IoHome, label: 'Home' },
@@ -51,12 +34,9 @@ export default function SideBar() {
   return (
     <>
       <div id="nav-bar">
-        <input id="nav-toggle" type="checkbox" ref={navToggleRef}/>
         <div id="nav-header">
-          <a id="nav-title" href="#">
-            Itungin
-          </a>
-          <hr />
+          <a id="nav-title" href="#" className="hidden xl:block">Itungin</a>
+          <hr className="hidden lg:block"/>
         </div>
         <div id="nav-content">
 
@@ -72,7 +52,7 @@ export default function SideBar() {
             <div id="nav-footer-avatar">
               <img
                 alt="Avatar" 
-                src={"http://laravel-react-fullstack.test/default-image.png"} 
+                src={imageUrl ? `http://localhost:8000/api/v1/user${imageUrl}?update=${timestamp}` : "http://laravel-react-fullstack.test/default-image.png"}  
               />
             </div>
             <div id="nav-footer-titlebox">

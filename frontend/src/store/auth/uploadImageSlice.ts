@@ -8,25 +8,28 @@ interface UpdateState {
     error: string | null;
 }
 
-interface formUpdate {
-    name: string,
-    username: string,
-    password: string | null,
-}
-
 const initialState: UpdateState = {
     loading: false,
     error: null,
 }
 
-export const updateUser = createAsyncThunk(
-    'update/updateUser',
-    async (formData: formUpdate, { rejectWithValue }) => {
+export const uploadImage = createAsyncThunk(
+    'upload/uploadImage',
+    async (formData: FormData, { rejectWithValue }) => {
         try {
-            const { data: response } = await axiosInstance.put('/user', formData);
+            const { data: response } = await axiosInstance.put('/user/upload', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
             const { data: user } = response;
-            localStorage.setItem('user', JSON.stringify({name: user.name, imageUrl: user.imageUrl, username: user.username}));
-            toast.success(`Selamat ${user.name}, profile telah diupdate`);
+            toast.success("Profile image successfully updated");
+            const dataImage = localStorage.getItem('user');
+            if (dataImage) {
+                const userImage = JSON.parse(dataImage);
+                userImage.imageUrl = user.imageUrl
+                localStorage.setItem('user', JSON.stringify(userImage));
+            }
             return user;
         } catch (error: unknown) {
             if (axios.isAxiosError(error) && error.response){
@@ -37,23 +40,23 @@ export const updateUser = createAsyncThunk(
     }
 )
 
-const updateUserSlice = createSlice({
-    name: 'update',
+const uploadImageSlice = createSlice({
+    name: 'upload',
     initialState,
     reducers: {},
     extraReducers: (builder) => {
-        builder.addCase(updateUser.pending, (state) => {
+        builder.addCase(uploadImage.pending, (state) => {
             state.loading = true;
             state.error = null;
         });
-        builder.addCase(updateUser.fulfilled, (state) => {
+        builder.addCase(uploadImage.fulfilled, (state) => {
             state.loading = false;
         });
-        builder.addCase(updateUser.rejected, (state, action) => {
+        builder.addCase(uploadImage.rejected, (state, action) => {
             state.loading = false,
             state.error = action.payload as string;
         });
     },
 });
 
-export default updateUserSlice.reducer;
+export default uploadImageSlice.reducer;

@@ -11,7 +11,6 @@ const { hash } = bcrypt;
 
 async function main() {
   try {
-    // Cek dan buat role ADMIN jika belum ada
     const adminRole = await prisma.role.findUnique({
       where: { role: 'ADMIN' },
     });
@@ -25,7 +24,6 @@ async function main() {
       console.log('Role ADMIN sudah ada dalam database.');
     }
 
-    // Cek dan buat user admin jika belum ada
     const existingAdmin = await prisma.user.findUnique({
       where: { username: 'supmin' },
     });
@@ -34,7 +32,7 @@ async function main() {
       const hashedPassword = await hash('password', 10);
       await prisma.user.create({
         data: {
-          name: 'tatang ganter',
+          name: 'tatang ganteng',
           username: 'supmin',
           password: hashedPassword,
             roleUser: {

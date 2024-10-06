@@ -28,7 +28,7 @@ export default function DefaultLayout() {
         <Modal />
       </div>
     
-          <Toaster className="text-lg" position="bottom-right" />
+      <Toaster className="text-lg" position="bottom-right" />
     </>
   )
 }

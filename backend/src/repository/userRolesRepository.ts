@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client"; // Make sure to import PrismaClient
+import { Prisma } from "@prisma/client";
 
 export class UserRolesRepository {
     async addUserRole(userId: string, roleId: string, prismaTransaction: Prisma.TransactionClient) {

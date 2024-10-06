@@ -1,20 +1,34 @@
-import { formatDate } from '../../utils/helper';
-import { useStateContext } from '../../contexts/ContextProvider';
+import { formatDate, timestamp } from '../../utils/helper';
+import { AppDispatch, RootState } from '../../store';
+import { useDispatch, useSelector } from 'react-redux';
+import { openModal } from '../../store/auth/modalSlice';
 
 
 
 const ProfileImage = () => {
-  const { user, setOpenModal } = useStateContext();
+  const dispatch = useDispatch<AppDispatch>();
+  const { imageUrl, createdAt } = useSelector((state: RootState) => state.user);
+
+  const handleOpenModal = () => {
+    dispatch(openModal({
+      type: 'big',
+      isOpen: true
+    }));
+  };
 
   return (
-    <div className="h-full w-full md:w-[35%] lg:w-[33%] p-1 shadow-custom rounded-none xs:rounded-md">
+    <div className="h-full w-full lg:w-[33%] p-1 shadow-custom rounded-none xs:rounded-md">
       <div className="items-center justify-center flex md:justify-normal md:items-start">
         <div className="items-center justify-center">
-          <div onClick={() => setOpenModal({ toggle: true, setting: "besar"})} className="cursor-pointer">
-            <img src={user?.image ? `http://laravel-react-fullstack.test/storage/upload/${user.image}` : "http://laravel-react-fullstack.test/default-image.png"} className="rounded-full w-[220px] h-[220px]" alt="image-profile" />
+          <div onClick={handleOpenModal} className="cursor-pointer">
+            <img
+              className="rounded-full w-[220px] h-[220px]" 
+              alt="image-profile" 
+              src={imageUrl ? `http://localhost:8000/api/v1/user${imageUrl}?update=${timestamp}` : "http://laravel-react-fullstack.test/default-image.png"}  
+            />
           </div>
           <div className="flex items-center justify-center mt-3">
-            Bergabung: {formatDate(user?.created_at)}
+            Bergabung: {formatDate(createdAt)}
           </div>
         </div>
       </div>
@@ -23,3 +37,5 @@ const ProfileImage = () => {
 }
 
 export default ProfileImage;
+
+

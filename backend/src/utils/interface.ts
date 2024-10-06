@@ -11,9 +11,11 @@ export interface LoginForm {
 
 export interface LoginRes {
     name: string,
+    imageUrl: string | null,
     username: string,
     token: string; 
-    roleUser: string[] 
+    roleUser: string[],
+    createdAt: Date 
 }
 
 export interface UserRes {
@@ -41,6 +43,7 @@ export interface Role {
   export interface UserAndRoles {
     id: string;
     name: string;
+    imageUrl: string | null;
     username: string;
     password: string;
     token?: string | null;

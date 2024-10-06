@@ -4,12 +4,14 @@ import { AppDispatch, RootState } from '../../store';
 import { closeModal } from '../../store/auth/modalSlice';
 import axiosInstance from '../../utils/api-default';
 import { logout } from '../../store/auth/userSlice';
+import Cookies from 'js-cookie';
+import { handleFormErrors } from '../../utils/handleFormErrors';
+import { AxiosError } from 'axios';
 
 import '../../styles/components/modal.scss';
 
 export default function Modal() {
   const dispatch = useDispatch<AppDispatch>();
-
   const { type, isOpen } = useSelector((state: RootState) => state.modal);
 
   const onLogout = async () => {
@@ -18,8 +20,14 @@ export default function Modal() {
       dispatch(logout());
       closeModalHandle();
       localStorage.removeItem('user');
-    } catch (err) {
-      console.error(err);
+      Cookies.remove('token');
+    } catch (error) {
+      const axiosError = error as AxiosError;
+      if (axiosError.response) {
+        handleFormErrors(axiosError.response.data, null);
+      } else {
+        console.log("Unexpected error:", error);
+      }
     }
   };
   

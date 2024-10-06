@@ -3,10 +3,10 @@ import HeaderPage from "../component/auth/HeaderPage";
 import { useState } from "react";
 import ProfileImage from "../component/profile/ProfileImage";
 import ProfileForm from "../component/profile/ProfileForm";
-
-import '../styles/pages/layout-page.scss';
 import { useSelector } from "react-redux";
 import { RootState } from "../store";
+
+import '../styles/pages/layout-page.scss';
 
 export default function Profile() {
   const [openEdit, setOpenEdit] = useState<boolean>(false);
@@ -22,7 +22,7 @@ export default function Profile() {
         <title>{name}</title>
         <meta name='description' content='profile page' />
       </Helmet>
-      <div className="wrap-page overflow-auto items-center flex-grow">
+      <div className="wrap-page overflow-auto items-center flex-grow mb-5">
         <div className="kontener-page mt-3 mx-auto">
           <div className=" mx-auto">
             <HeaderPage title="Profile Setting">

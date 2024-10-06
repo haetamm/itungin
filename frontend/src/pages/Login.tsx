@@ -23,10 +23,9 @@ export default function Login() {
 
   const onSubmit = handleSubmit(async (data) => {
     try {
-      const { name, username, roleUser, token } = await dispatch(loginUser(data)).unwrap();
+      const { name, username, imageUrl, roleUser, token, createdAt } = await dispatch(loginUser(data)).unwrap();
       const userRole = roleUser[0];
-      dispatch(login({ username, name, role: userRole, token }));
-      localStorage.setItem('user', JSON.stringify({name: name, username: username}));
+      dispatch(login({ username, imageUrl, name, role: userRole, token, createdAt }));
     } catch (error) {
       handleFormErrors<LoginFormValues>(error, setError);
     }

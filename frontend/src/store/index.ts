@@ -4,6 +4,7 @@ import registerReducer from './guest/registerSlice';
 import userReducer from './auth/userSlice';
 import modalReducer from './auth/modalSlice';
 import updateUserSlice from './auth/userUpdateSlice';
+import uploadImageSlice from './auth/uploadImageSlice';
 
 export const store = configureStore({
   reducer: {
@@ -12,6 +13,7 @@ export const store = configureStore({
     user: userReducer,
     modal: modalReducer,
     userUpdate: updateUserSlice,
+    uploadImage: uploadImageSlice,
   },
 });
 

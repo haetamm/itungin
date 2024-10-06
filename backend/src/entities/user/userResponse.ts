@@ -4,6 +4,7 @@ class UserResponse {
     static convert({
         id,
         name,
+        imageUrl,
         username,
         createdAt,
         updatedAt,
@@ -12,6 +13,7 @@ class UserResponse {
         return {
             id,
             name,
+            imageUrl,
             username,
             role: roleUser.length > 0 ? roleUser[0].role.role : null,
             createdAt,

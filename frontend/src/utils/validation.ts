@@ -6,6 +6,7 @@ export const loginFormSchema = z.object({
 });
 export type LoginFormValues = z.infer<typeof loginFormSchema>;
 
+
 export const registerFormSchema = z.object({
   name: z.string()
       .trim()
@@ -29,7 +30,6 @@ export const registerFormSchema = z.object({
   message: "Passwords don't match",
   path: ['passwordConfirmation'],
 });
-
 export type RegisterFormValues = z.infer<typeof registerFormSchema>;
 
 
@@ -50,25 +50,21 @@ export const updateFormSchema = z.object({
         .max(8, 'Maximum 8 characters')
         .regex(/^[a-zA-Z0-9]+$/, "Password must contain only alphanumeric characters")
         .optional()
-        .or(z.literal('')),  // Allow empty string for password
+        .or(z.literal('')),
     passwordConfirmation: z.string()
         .trim()
         .min(1, 'Password Confirmation is required')
         .optional()
-        .or(z.literal('')),  // Allow empty string for passwordConfirmation
+        .or(z.literal('')),
 }).refine((data) => {
-    // If password is provided, check that it matches passwordConfirmation
     if (data.password && data.passwordConfirmation) {
         return data.password === data.passwordConfirmation;
     }
-    // If neither are provided, consider it valid
     return !data.password && !data.passwordConfirmation;
 }, {
     message: "Passwords don't match",
     path: ['passwordConfirmation'],
 });
-
-
 export type UpdateFormValues = z.infer<typeof updateFormSchema>;
 
 
