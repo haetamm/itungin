@@ -5,7 +5,7 @@ import { ProductForm } from "../utils/interface";
 export class ProductRepository {
     async findProductById(id: string): Promise<Product | null> {
         return await prismaClient.product.findUnique({
-            where: { id }
+            where: { id, deletedAt: null }
         });
     }
 
@@ -15,17 +15,6 @@ export class ProductRepository {
             data: data
         });
     }
-
-    async updateUserToken(username: string, token: string) {
-        return await prismaClient.user.update({
-            where: { username },
-            data: { token },
-            select: {
-                token: true
-            }
-        });
-    }
-
 
     async updateProductById(id: string, data: ProductForm): Promise<Product>  {
         return await prismaClient.product.update({

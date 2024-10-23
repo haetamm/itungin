@@ -7,6 +7,7 @@ import AuthRoutes from "../routers/AuthRoutes";
 import { errorMiddleware } from "../middleware/errorMiddleware";
 import UserRoutes from "../routers/UserRoutes";
 import ProductsRoutes from "../routers/ProductsRoutes";
+import SupplierRoutes from "../routers/SupplierRoutes";
 
 class App {
     public app: Application;
@@ -42,6 +43,7 @@ class App {
         this.app.use('/api/v1/auth', AuthRoutes);
         this.app.use('/api/v1', UserRoutes);
         this.app.use('/api/v1', ProductsRoutes);
+        this.app.use('/api/v1', SupplierRoutes);
         this.app.use(errorMiddleware);
     }
 }

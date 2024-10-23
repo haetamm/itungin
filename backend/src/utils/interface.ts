@@ -58,3 +58,10 @@ export interface Role {
     category: string,
     stock: number
   }
+
+  export interface SupplierForm {
+    name: string,
+    phone: string,
+    email: string,
+    address: string
+  }
