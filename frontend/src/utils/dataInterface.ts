@@ -32,3 +32,8 @@ export interface modalSetting {
     toggle: boolean,
     setting: string
 }
+
+export interface columnTable {
+  label: string,
+  key: string
+}

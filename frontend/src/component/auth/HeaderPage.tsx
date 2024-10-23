@@ -12,7 +12,7 @@ export default function HeaderPage({ children, title }: HeaderPageProps) {
           <div className="text-3xl">{title}</div>
         </div>
         <div className="flex xs:inline justify-end lg:justify-normal space-x-2">
-          <div className="inline items-center xs:flex justify-end md:justify-normal space-y-2 space-x-2 xs:space-y-0">
+          <div className="inline items-center xs:flex justify-end md:justify-normal space-x-1 space-y-2 xs:space-x-2 xs:space-y-0">
             {children}
           </div>
         </div>

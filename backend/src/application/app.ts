@@ -6,7 +6,7 @@ import cors from "cors";
 import AuthRoutes from "../routers/AuthRoutes";
 import { errorMiddleware } from "../middleware/errorMiddleware";
 import UserRoutes from "../routers/UserRoutes";
-import path from "path";
+import ProductsRoutes from "../routers/ProductsRoutes";
 
 class App {
     public app: Application;
@@ -41,6 +41,7 @@ class App {
 
         this.app.use('/api/v1/auth', AuthRoutes);
         this.app.use('/api/v1', UserRoutes);
+        this.app.use('/api/v1', ProductsRoutes);
         this.app.use(errorMiddleware);
     }
 }

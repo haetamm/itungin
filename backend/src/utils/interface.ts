@@ -53,3 +53,8 @@ export interface Role {
     roleUser: UserRole[];
   }
   
+  export interface ProductForm {
+    name: string,
+    category: string,
+    stock: number
+  }

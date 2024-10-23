@@ -4,8 +4,6 @@ import App from './application/app';
 import { logger } from './application/logging';
 dotenv.config();
 
-
-
 const port: number = 8000;
 const app = new App().app;
 

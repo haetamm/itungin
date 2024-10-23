@@ -39,9 +39,7 @@ export default function Purchases() {
       <div className="wrap-page overflow-auto items-center flex-grow">
         <div className="kontener-page mx-auto">
           <HeaderPage title="Pengeluaran">
-            <div className="flex justify-end xs:justify-normal space-x-1">
               <button className="py-2 px-3 border-2 rounded-md border-slate-300 text-center hover:bg-white hover:border-white">Buat Biaya</button>
-            </div>
           </HeaderPage>
           <div className="mt-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 xl:gap-2">

@@ -25,9 +25,9 @@ export default function SideBar() {
     { to: '/cash', icon: BsBank2, label: 'Cash & Bank' },
     { to: '/sales', icon: IoPricetagsSharp, label: 'Sales' },
     { to: '/purchases', icon: FaShoppingCart, label: 'Purchase' },
+    { to: '/products', icon: GiCardboardBoxClosed, label: 'Products' },
     { to: '/expense', icon: RiCurrencyFill, label: 'Expense' },
     { to: '#', icon: RiContactsBook2Fill, label: 'Contacts' },
-    { to: '#', icon: GiCardboardBoxClosed, label: 'Products' },
     { to: '#', icon: MdHomeWork, label: 'Asset Management' }
   ];
 

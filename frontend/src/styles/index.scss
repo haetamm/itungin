@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Gabarito:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap");
 
 html,
 body,
@@ -19,7 +19,7 @@ p {
 }
 
 body {
-    font-family: "Gabarito", sans-serif;
+    font-family: "Plus Jakarta Sans", sans-serif;
     margin: 0;
     padding: 0;
     font-size: 16px;
@@ -41,31 +41,8 @@ body {
     // --tab-bg: #f6f6f6;
 }
 
-.notification {
-    position: fixed;
-    right: 1rem;
-    bottom: 1rem;
-    z-index: 100;
-    padding: 1rem 1.5rem;
-    color: white;
-    border-radius: 0.5rem;
-}
 
-.success {
-    background-color: #00a762;
-}
 
-.info {
-    background-color: #1900a7;
-}
-
-.warning {
-    background-color: #b1c60f;
-}
-
-.danger {
-    background-color: #c60f12;
-}
 
 
 
@@ -91,3 +68,4 @@ body {
     transform: translateY(0);
   }
 }
+

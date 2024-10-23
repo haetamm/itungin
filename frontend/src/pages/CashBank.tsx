@@ -3,6 +3,7 @@ import CardDashboard from "../component/auth/CardDashboard";
 import TableCashBank from "../component/auth/TableCashBank";
 
 import '../styles/pages/layout-page.scss';
+import HeaderPage from "../component/auth/HeaderPage";
 
 export default function CashBank() {
   const data = [
@@ -20,17 +21,9 @@ export default function CashBank() {
       </Helmet>
       <div className="wrap-page overflow-auto items-center flex-grow mb-5">
         <div className="kontener-page mx-auto">
-          <div  className="border-b-2 lg:border-b-4 border-black py-3 ">
-            <div className="inline xs:flex justify-between items-center">
-              <div className="mb-3 xs:mb-0">
-                <div className="text-3xl">Kas & Bank</div>
-                <div className="text-lg">Akun Kas</div>
-              </div>
-              <div className="flex xs:inline justify-end xs:justify-normal">
-                <button className="py-2 px-3 border-2 rounded-md border-slate-300 text-center hover:bg-white hover:border-white">+ Buat Akun</button>
-              </div>
-            </div>
-          </div>
+          <HeaderPage title="Kas & Bank">
+            <button className="py-2 px-3 border-2 rounded-md border-slate-300 text-center hover:bg-white hover:border-white">+ Buat Akun</button>
+          </HeaderPage>
           <div className="mt-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 xl:gap-2">
               {data.map((d, index) => (

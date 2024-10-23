@@ -27,12 +27,8 @@ export default function Sales() {
       <div className="wrap-page overflow-auto items-center flex-grow">
         <div className="kontener-page mx-auto">
           <HeaderPage title="Penjualan">
-            <div className="flex justify-end xs:justify-normal space-x-1">
-              <button className="py-2 px-3 border-2 rounded-md border-slate-300 text-center hover:bg-white hover:border-white">Import</button>
-            </div>
-            <div className="flex justify-end xs:justify-normal space-x-1">
-              <button className="py-2 px-3 border-2 rounded-md border-slate-300 text-center hover:bg-white hover:border-white">Buat Penjualan</button>
-            </div>
+            <button className="py-2 px-3 border-2 rounded-md border-slate-300 text-center hover:bg-white hover:border-white">Import</button>
+            <button className="py-2 px-3 border-2 rounded-md border-slate-300 text-center hover:bg-white hover:border-white">Buat Penjualan</button>
           </HeaderPage>
           <div className="mt-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 xl:gap-2">

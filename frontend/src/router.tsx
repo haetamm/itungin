@@ -11,6 +11,7 @@ import Sales from './pages/Sales';
 import Purchases from './pages/Purchases';
 import Expense from './pages/Expense';
 import Profile from './pages/Profile';
+import Product from './pages/Products';
 
 interface RouteConfig {
   path: string;
@@ -50,6 +51,10 @@ const routerConfig: RouteConfig[] = [
       {
         path: '/expense',
         element: <Expense />
+      },
+      {
+        path: '/products',
+        element: <Product />
       },
       {
         path: '/profile',
