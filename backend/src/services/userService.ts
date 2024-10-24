@@ -20,24 +20,24 @@ export class UserService {
 
     async updateUserCurrent({ user }: { user: UserAndRoles }, body: RegisForm) {
         const updateUserReq = validate(updateUserFormSchema, body);
-            const userResult = await this.getUserById(user.id);
-    
-            if (updateUserReq.username !== userResult.username) {
-                await this.checkUserByUsername(updateUserReq.username);
-            }
-    
-            const hashedPassword = updateUserReq.password ? 
-                await securityService.passwordHash(updateUserReq.password) : undefined;
-    
-            const updatedData = {
-                name: updateUserReq.name,
-                username: updateUserReq.username,
-                ...(hashedPassword && { password: hashedPassword })
-            };
-    
-            const result = await userRepository.updateUserById(user.id, updatedData);
-            return UserResponse.convert(result);
-    }
+        const userResult = await this.getUserById(user.id);
+
+        if (updateUserReq.username !== userResult.username) {
+            await this.checkUserByUsername(updateUserReq.username);
+        }
+
+        const hashedPassword = updateUserReq.password ? 
+            await securityService.passwordHash(updateUserReq.password) : undefined;
+
+        const updatedData = {
+            name: updateUserReq.name,
+            username: updateUserReq.username,
+            ...(hashedPassword && { password: hashedPassword })
+        };
+
+        const result = await userRepository.updateUserById(user.id, updatedData);
+        return UserResponse.convert(result);
+}
 
     async uploadImageUser({ user }: { user: UserAndRoles }, file: Express.Multer.File) {
         if (!file) throw new ResponseError(422, "No file uploaded");

@@ -9,7 +9,6 @@ export class SupplierRepository {
         });
     }
 
-
     async createSupplier(data: SupplierForm): Promise<Supplier> {
         return prismaClient.supplier.create({
             data: data
@@ -25,7 +24,6 @@ export class SupplierRepository {
         });
     }
     
-
     async deleteSupplierById(id: string): Promise<void> {
         await prismaClient.supplier.update({
             where: { id },

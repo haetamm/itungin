@@ -15,8 +15,8 @@ export class ProductService {
 
     async updateProductById({ body }: { body: ProductForm }, id: string): Promise<Product> {
         const productReq = validate(updateProduct, body);
-        const productRes  = await this.getProductById(id);
-        const product = await productRepository.updateProductById(productRes.id, productReq);
+        const { id: productId}  = await this.getProductById(id);
+        const product = await productRepository.updateProductById(productId, productReq);
         return product;
     }
 
@@ -27,8 +27,8 @@ export class ProductService {
     }
 
     async getAllProduct() {
-        const product = await productRepository.getAllProduct();
-        return product;
+        const products = await productRepository.getAllProduct();
+        return products;
     }
 
     async deleteProductById(id: string) {

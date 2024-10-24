@@ -9,7 +9,6 @@ export class ProductRepository {
         });
     }
 
-
     async createProduct(data: ProductForm): Promise<Product> {
         return prismaClient.product.create({
             data: data
@@ -25,7 +24,6 @@ export class ProductRepository {
         });
     }
     
-
     async deleteProductById(id: string): Promise<void> {
         await prismaClient.product.update({
             where: { id },

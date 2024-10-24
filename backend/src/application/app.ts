@@ -8,6 +8,7 @@ import { errorMiddleware } from "../middleware/errorMiddleware";
 import UserRoutes from "../routers/UserRoutes";
 import ProductsRoutes from "../routers/ProductsRoutes";
 import SupplierRoutes from "../routers/SupplierRoutes";
+import CustomerRoutes from "../routers/CustomerRoutes";
 
 class App {
     public app: Application;
@@ -44,6 +45,7 @@ class App {
         this.app.use('/api/v1', UserRoutes);
         this.app.use('/api/v1', ProductsRoutes);
         this.app.use('/api/v1', SupplierRoutes);
+        this.app.use('/api/v1', CustomerRoutes);
         this.app.use(errorMiddleware);
     }
 }

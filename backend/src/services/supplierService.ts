@@ -15,8 +15,8 @@ export class SupplierService {
 
     async updateSupplierById({ body }: { body: SupplierForm }, id: string): Promise<Supplier> {
         const supplierReq = validate(formSupplier, body);
-        const supplierRes  = await this.getSupplierById(id);
-        const supplier = await supplierRepository.updateSupplierById(supplierRes.id, supplierReq);
+        const { id: supplierId }  = await this.getSupplierById(id);
+        const supplier = await supplierRepository.updateSupplierById(supplierId, supplierReq);
         return supplier;
     }
 
@@ -27,8 +27,8 @@ export class SupplierService {
     }
 
     async getAllSupplier() {
-        const supplier = await supplierRepository.getAllSupplier();
-        return supplier;
+        const suppliers = await supplierRepository.getAllSupplier();
+        return suppliers;
     }
 
     async deleteProductById(id: string) {
