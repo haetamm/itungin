@@ -79,6 +79,11 @@ export interface SupplierForm {
   address: string;
 }
 
+export interface VatForm {
+  vatRate: number;
+  effectiveDate: Date;
+}
+
 export interface CustomerForm {
   customerName: string;
   phone: string;
