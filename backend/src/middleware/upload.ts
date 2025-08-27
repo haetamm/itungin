@@ -1,10 +1,10 @@
-import multer from "multer";
-import path from "path";
-import fs from "fs";
-import { ResponseError } from "../entities/responseError";
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { ResponseError } from '../entities/responseError';
 
 const ensureUploadsFolderExists = () => {
-  const uploadsFolder = "uploads/";
+  const uploadsFolder = 'uploads/';
   if (!fs.existsSync(uploadsFolder)) {
     fs.mkdirSync(uploadsFolder, { recursive: true });
   }
@@ -13,7 +13,7 @@ const ensureUploadsFolderExists = () => {
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     ensureUploadsFolderExists();
-    cb(null, "uploads/");
+    cb(null, 'uploads/');
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
@@ -22,10 +22,10 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req: any, file: any, cb: any) => {
-  if (file.mimetype.startsWith("image/") && file.mimetype !== "image/gif") {
+  if (file.mimetype.startsWith('image/') && file.mimetype !== 'image/gif') {
     cb(null, true);
   } else {
-    cb(new ResponseError(422, "Only image files are allowed!"), false);
+    cb(new ResponseError(422, 'Only image files are allowed!'), false);
   }
 };
 

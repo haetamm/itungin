@@ -1,41 +1,44 @@
-import { Customer } from "@prisma/client";
-import { prismaClient } from "../application/database";
-import { CustomerForm } from "../utils/interface";
+import { Customer } from '@prisma/client';
+import { prismaClient } from '../application/database';
+import { CustomerForm } from '../utils/interface';
 
 export class CustomerRepository {
-    async findCustomerById(id: string): Promise<Customer | null> {
-        return await prismaClient.customer.findUnique({
-            where: { id, deletedAt: null }
-        });
-    }
+  async findCustomerById(customerId: string): Promise<Customer | null> {
+    return await prismaClient.customer.findUnique({
+      where: { customerId, deletedAt: null },
+    });
+  }
 
-    async createCustomer(data: CustomerForm): Promise<Customer> {
-        return prismaClient.customer.create({
-            data: data
-        });
-    }
+  async createCustomer(data: CustomerForm): Promise<Customer> {
+    return prismaClient.customer.create({
+      data: data,
+    });
+  }
 
-    async updateCustomerById(id: string, data: CustomerForm): Promise<Customer>  {
-        return await prismaClient.customer.update({
-            where: { id },
-            data: {
-                ...data
-            }
-        });
-    }
-    
-    async deleteCustomerById(id: string): Promise<void> {
-        await prismaClient.customer.update({
-            where: { id },
-            data: { deletedAt: new Date() },
-        });
-    }
+  async updateCustomerById(
+    customerId: string,
+    data: CustomerForm
+  ): Promise<Customer> {
+    return await prismaClient.customer.update({
+      where: { customerId },
+      data: {
+        ...data,
+      },
+    });
+  }
 
-    async getAllCustomer() {
-        return await prismaClient.customer.findMany({
-            where: { deletedAt: null }
-        });
-    }
+  async deleteCustomerById(customerId: string): Promise<void> {
+    await prismaClient.customer.update({
+      where: { customerId },
+      data: { deletedAt: new Date() },
+    });
+  }
+
+  async getAllCustomer() {
+    return await prismaClient.customer.findMany({
+      where: { deletedAt: null },
+    });
+  }
 }
 
 export const customerRepository = new CustomerRepository();

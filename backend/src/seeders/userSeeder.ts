@@ -1,5 +1,3 @@
-// src/seeders/userSeeder.ts
-
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
@@ -35,11 +33,11 @@ async function main() {
           name: 'tatang ganteng',
           username: 'supmin',
           password: hashedPassword,
-            roleUser: {
-              create: {
-                role: { connect: { role: 'ADMIN' } },
-              },
+          userRoles: {
+            create: {
+              role: { connect: { role: 'ADMIN' } },
             },
+          },
         },
       });
       console.log('User Admin Super berhasil dibuat.');

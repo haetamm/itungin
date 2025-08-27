@@ -1,38 +1,34 @@
 export interface RegisForm {
-  name: string,
-  username: string,
-  password: string
+  name: string;
+  username: string;
+  password: string;
 }
 
 export interface LoginForm {
-  username: string,
-  password: string
+  username: string;
+  password: string;
 }
 
 export interface LoginRes {
-  name: string,
-  imageUrl: string | null,
-  username: string,
-  token: string; 
-  roleUser: string[],
-  createdAt: Date 
+  token: string;
+  userRoles: string[];
 }
 
 export interface UserRes {
-  id: string,
-  name: string,
+  id: string;
+  name: string;
 }
 
 export interface TokenPayload {
-  userId: string,
-  role: string,
+  userId: string;
+  role: string;
 }
 
 export interface Role {
   id: string;
   role: string;
 }
-  
+
 export interface UserRole {
   id: number;
   userId: string;
@@ -50,24 +46,53 @@ export interface UserAndRoles {
   createdAt: Date;
   updatedAt: Date;
   deletedAt?: Date | null;
-  roleUser: UserRole[];
+  userRoles: UserRole[];
 }
 
 export interface ProductForm {
-  name: string,
-  category: string,
-  stock: number
+  productCode: string;
+  productName: string;
+  category: string;
+}
+
+export interface ProductCreate {
+  productCode: string;
+  productName: string;
+  category: string;
+  avgPurchasePrice: number;
+  profitMargin: number;
+  sellingPrice: number;
+  stock: number;
+}
+
+export interface ProductUpdate {
+  productCode: string;
+  productName: string;
+  category: string;
+  profitMargin: number; // nominal langsung
 }
 
 export interface SupplierForm {
-  name: string,
-  phone: string,
-  email: string,
-  address: string
+  supplierName: string;
+  phone: string;
+  email: string;
+  address: string;
 }
 
 export interface CustomerForm {
-  name: string,
-  phone: string,
-  address: string
+  customerName: string;
+  phone: string;
+  address: string;
 }
+
+// types/pagination.ts
+export type PaginationResponse<T, K extends string> = {
+  [key in K]: T[];
+} & {
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};

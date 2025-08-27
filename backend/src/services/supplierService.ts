@@ -1,42 +1,65 @@
-import { SupplierForm } from "../utils/interface";
+import { PaginationResponse, SupplierForm } from '../utils/interface';
 import { validate } from '../validation/validation';
 import { Supplier } from '@prisma/client';
-import { ResponseError } from "../entities/responseError";
-import { formSupplier } from "../validation/suplierValidation";
-import { supplierRepository } from "../repository/supplierRepository";
+import { ResponseError } from '../entities/responseError';
+import { formSupplier } from '../validation/suplierValidation';
+import { supplierRepository } from '../repository/supplierRepository';
 
 export class SupplierService {
-
-    async createSupplier({ body }: { body: SupplierForm }): Promise<Supplier> {
-        const supplierReq = validate(formSupplier, body);
-        const suplier = await supplierRepository.createSupplier(supplierReq);
-        return suplier;
+  async getAllSupplier(
+    page: number = 1,
+    limit: number = 10,
+    search: string = ''
+  ): Promise<PaginationResponse<Supplier, 'suppliers'>> {
+    if (page < 1 || limit < 1) {
+      throw new ResponseError(400, 'Halaman dan batas harus bilangan positif');
     }
+    const { suppliers, total } = await supplierRepository.getAllSupplier(
+      page,
+      limit,
+      search
+    );
 
-    async updateSupplierById({ body }: { body: SupplierForm }, id: string): Promise<Supplier> {
-        const supplierReq = validate(formSupplier, body);
-        const { id: supplierId }  = await this.getSupplierById(id);
-        const supplier = await supplierRepository.updateSupplierById(supplierId, supplierReq);
-        return supplier;
-    }
+    return {
+      suppliers,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
 
-    async getSupplierById(id: string) {
-        const supplier = await supplierRepository.findSupplierById(id);
-        if (!supplier) throw new ResponseError(404, "Supplier not found");
-        return supplier;
-    }
+  async createSupplier({ body }: { body: SupplierForm }): Promise<Supplier> {
+    const supplierReq = validate(formSupplier, body);
+    const suplier = await supplierRepository.createSupplier(supplierReq);
+    return suplier;
+  }
 
-    async getAllSupplier() {
-        const suppliers = await supplierRepository.getAllSupplier();
-        return suppliers;
-    }
+  async updateSupplierById(
+    { body }: { body: SupplierForm },
+    id: string
+  ): Promise<Supplier> {
+    const supplierReq = validate(formSupplier, body);
+    const { supplierId } = await this.getSupplierById(id);
+    const supplier = await supplierRepository.updateSupplierById(
+      supplierId,
+      supplierReq
+    );
+    return supplier;
+  }
 
-    async deleteProductById(id: string) {
-        const { id: supplierId } = await this.getSupplierById(id);
-        await supplierRepository.deleteSupplierById(supplierId);
-        
-    }
+  async getSupplierById(id: string) {
+    const supplier = await supplierRepository.findSupplierById(id);
+    if (!supplier) throw new ResponseError(404, 'Supplier not found');
+    return supplier;
+  }
 
+  async deleteProductById(id: string) {
+    const { supplierId } = await this.getSupplierById(id);
+    await supplierRepository.deleteSupplierById(supplierId);
+  }
 }
 
 export const supplierService = new SupplierService();

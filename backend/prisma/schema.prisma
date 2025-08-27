@@ -1,61 +1,14 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  // provider = "mysql"
-  // url      = env("MYSQL_DATABASE_URL")
   provider = "postgresql"
   url      = env("POSTGRES_DATABASE_URL")
 }
 
-enum PaymentStatus {
-  PAID
-  UNPAID
-}
-
 enum UserRoleEnum {
   ADMIN
-}
-
-model Role {
-  id        String       @id @default(uuid())
-  role      UserRoleEnum @unique
-  roleUsers UserRole[]
-
-  @@map("roles")
-}
-
-model User {
-  id        String     @id @default(uuid())
-  name      String     @db.VarChar(100)
-  username  String     @unique @db.VarChar(100)
-  password  String     @db.VarChar(100)
-  token     String?    @db.Text
-  imageUrl  String?    @map("image_url")
-  createdAt DateTime   @default(now()) @map("created_at")
-  updatedAt DateTime   @updatedAt @map("updated_at")
-  deletedAt DateTime?  @map("deleted_at")
-  roleUser  UserRole[]
-
-  @@map("users")
-}
-
-model UserRole {
-  id     Int    @id @default(autoincrement())
-  userId String
-  roleId String
-  user   User   @relation(fields: [userId], references: [id])
-  role   Role   @relation(fields: [roleId], references: [id])
-
-  @@unique([userId, roleId])
-  @@map("user_roles")
 }
 
 enum AccountType {
@@ -63,19 +16,7 @@ enum AccountType {
   LIABILITY
   EQUITY
   SALES
-  PURCHASES
   EXPENSE
-}
-
-model Account {
-  id            String      @id @default(uuid())
-  code          String?     @db.VarChar(20)
-  accountName   String      @db.VarChar(50) @map("account_name")
-  accountType   AccountType @map("account_type")
-  balance       Decimal     @default(0.00) @db.Decimal(15, 2)
-  Entry         Entry[]
-
-  @@map("accounts")
 }
 
 enum EntryType {
@@ -83,156 +24,288 @@ enum EntryType {
   CREDIT
 }
 
-model Entry {
-  id                  String      @id @default(uuid())
-  accountId           String      @map("account_id")
-  transactionDate     DateTime    @map("transaction_date")
-  description         String?     @db.VarChar(255)
-  amount              Decimal     @default(0.00) @db.Decimal(15, 2)
-  entryType           EntryType   @map("entry_type")
-  account             Account     @relation(fields: [accountId], references: [id])
+enum PaymentType {
+  CASH
+  CREDIT
+}
 
-  payables            Payable?
-  receivables         Receivable?
-  equity              Equity?
-  expenses            Expense?
+enum PaymentStatus {
+  PAID
+  UNPAID
+}
 
-  @@map("entries")
+enum InventoryMethod {
+  AVG
+  FIFO
+  LIFO
+}
+
+model Role {
+  id        String     @id @default(uuid())
+  role      UserRoleEnum @unique
+  userRoles UserRole[]
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  @@map("roles")
+}
+
+model User {
+  id        String     @id @default(uuid())
+  name      String      @db.VarChar(100)
+  username  String      @unique @db.VarChar(100)
+  password  String      @db.VarChar(100)
+  token     String?
+  imageUrl  String?     @map("image_url")
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+  deletedAt DateTime?   @map("deleted_at")
+  userRoles UserRole[]
+
+  @@map("users")
+}
+
+model UserRole {
+  id        Int    @id @default(autoincrement())
+  userId    String @map("user_id")
+  roleId    String @map("role_id")
+  user      User   @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  role      Role   @relation(fields: [roleId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+model Account {
+  accountId     String          @id @default(uuid()) @map("account_id")
+  accountCode   String          @unique @db.VarChar(20) @map("account_code")
+  accountName   String          @db.VarChar(100) @map("account_name")
+  accountType   AccountType     @map("account_type")
+  normalBalance EntryType       @map("normal_balance")
+  balance       Decimal         @default(0.00) @db.Decimal(15, 2)
+  journalEntries JournalEntry[]
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  @@map("accounts")
+}
+
+model Journal {
+  journalId      String          @id @default(uuid()) @map("journal_id")
+  date           DateTime        @db.Date
+  description    String?         @db.VarChar(255)
+  reference      String?         @db.VarChar(50)
+  journalEntries JournalEntry[]
+  sales          Sale[]
+  purchases      Purchase[]
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  @@map("journals")
+}
+
+model JournalEntry {
+  journalEntryId String    @id @default(uuid()) @map("journal_entry_id")
+  journalId      String    @map("journal_id")
+  accountId      String    @map("account_id")
+  debit          Decimal   @default(0.00) @db.Decimal(15, 2)
+  credit         Decimal   @default(0.00) @db.Decimal(15, 2)
+  journal        Journal   @relation(fields: [journalId], references: [journalId], onDelete: Cascade)
+  account        Account   @relation(fields: [accountId], references: [accountId], onDelete: Restrict)
+  payables       Payable[]
+  receivables    Receivable[]
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@map("journal_entries")
 }
 
 model Supplier {
-  id              String      @id @default(uuid())
-  name            String      @db.VarChar(255)
-  phone           String?     @db.VarChar(20)
-  email           String?     @db.VarChar(100)
-  address         String?     @db.VarChar(100)
-  createdAt       DateTime    @default(now()) @map("created_at")
-  updatedAt       DateTime    @updatedAt @map("updated_at")
-  deletedAt       DateTime?   @map("deleted_at")
-  purchases       Purchase[]
-  paybles         Payable[]
+  supplierId   String      @id @default(uuid()) @map("supplier_id")
+  supplierName String      @db.VarChar(255) @map("supplier_name")
+  phone        String?     @db.VarChar(20)
+  email        String?     @db.VarChar(100)
+  address      String?     @db.VarChar(100)
+  purchases    Purchase[]
+  payables     Payable[]
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+  deletedAt    DateTime?   @map("deleted_at")
 
-  @@map("supliers")
+  @@map("suppliers")
 }
 
 model Product {
-  id              String    @id @default(uuid())
-  name            String    @db.VarChar(255)
-  category        String?   @db.VarChar(100)
-  stock           Int
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-  deletedAt       DateTime? @map("deleted_at")
-  purchaseDetails PurchaseDetail[]
-  saleDetails     SaleDetail[]
+  productId        String           @id @default(uuid()) @map("product_id")
+  productCode      String           @unique @db.VarChar(20) @map("product_code")
+  productName      String           @db.VarChar(255) @map("product_name")
+  category         String?          @db.VarChar(100)
+  avgPurchasePrice Decimal          @db.Decimal(15, 2) @map("avg_purchase_price")
+  profitMargin     Decimal          @db.Decimal(15, 2) @map("profit_margin")
+  sellingPrice     Decimal          @db.Decimal(15, 2) @map("selling_price")
+  stock            Int
+  inventoryBatches InventoryBatch[]
+  saleDetails      SaleDetail[]
+  purchaseDetails  PurchaseDetail[]
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  deletedAt        DateTime?        @map("deleted_at")
 
   @@map("products")
 }
 
-model Purchase {
-  id              String        @id @default(uuid())
-  supplierId      String        @map("supplier_id")
-  purchaseDate    DateTime
-  totalAmount     Decimal       @db.Decimal(15, 2) @map("total_amount")
-  status          PaymentStatus
-  suppliers       Supplier?     @relation(fields: [supplierId], references: [id])
-  purchaseDetail  PurchaseDetail[]
+model InventoryBatch {
+  batchId        String    @id @default(uuid()) @map("batch_id")
+  productId      String    @map("product_id")
+  purchaseDate   DateTime  @db.Date @map("purchase_date")
+  quantity       Int
+  purchasePrice  Decimal   @db.Decimal(15, 2) @map("purchase_price")
+  remainingStock Int       @map("remaining_stock")
+  product        Product   @relation(fields: [productId], references: [productId], onDelete: Cascade)
+  saleDetails    SaleDetail[]
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
-  @@map("purchases")
+  @@map("inventory_batches")
 }
 
-model PurchaseDetail {
-  id              String   @id @default(uuid())
-  purchaseId      String
-  productId       String
-  quantity        Int
-  price           Decimal  @db.Decimal(15, 2)
-  purchase        Purchase @relation(fields: [purchaseId], references: [id])
-  product         Product  @relation(fields: [productId], references: [id])
+model GeneralSetting {
+  id              String           @id @default(uuid())
+  inventoryMethod  InventoryMethod  @default(AVG) @map("inventory_method")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
 
-  @@map("purchase_details")
+  @@map("general_settings")
 }
 
-model Payable {
-  id          String        @id @default(uuid())
-  entryId     String        @map("entry_id") @unique
-  supplierId  String        @map("supplier_id")
-  amount      Decimal       @db.Decimal(15, 2)
-  due_date    DateTime
-  status      PaymentStatus 
-  entry       Entry         @relation(fields: [entryId], references: [id])
-  supplier    Supplier      @relation(fields: [supplierId], references: [id])
+model VatSetting {
+  vatId         String   @id @default(uuid()) @map("vat_id")
+  vatRate       Decimal  @db.Decimal(5, 2) @map("vat_rate")
+  effectiveDate DateTime @db.Date @map("effective_date")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
-  @@map("payables")
+  @@map("vat_settings")
 }
 
 model Customer {
-  id          String        @id @default(uuid())
-  name        String        @db.VarChar(100)
-  phone       String?       @db.VarChar(15)
-  address     String?       @db.VarChar(100)
-  createdAt   DateTime      @default(now()) @map("created_at")
-  updatedAt   DateTime      @updatedAt @map("updated_at")
-  deletedAt   DateTime?     @map("deleted_at")
-  sale        Sale[]
-  receivables Receivable[]
+  customerId   String      @id @default(uuid()) @map("customer_id")
+  customerName String      @db.VarChar(100) @map("customer_name")
+  phone        String?     @db.VarChar(15)
+  address      String?     @db.VarChar(100)
+  sales        Sale[]
+  receivables  Receivable[]
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+  deletedAt    DateTime?   @map("deleted_at")
 
   @@map("customers")
 }
 
 model Sale {
-  id            String        @id @default(uuid())
+  saleId        String        @id @default(uuid()) @map("sale_id")
+  date          DateTime      @db.Date
   customerId    String?       @map("customer_id")
-  saleDate      DateTime      @map("sale_date")
-  totalAmount   Decimal       @db.Decimal(15, 2)  @map("total_amount")
-  status        PaymentStatus
-  customer      Customer?     @relation(fields: [customerId], references: [id])
-  SaleDetail    SaleDetail[]
+  invoiceNumber String        @unique @db.VarChar(50) @map("invoice_number")
+  paymentType   PaymentType   @map("payment_type")
+  subtotal      Decimal       @db.Decimal(15, 2)
+  vat           Decimal       @db.Decimal(15, 2)
+  total         Decimal       @db.Decimal(15, 2)
+  journalId     String        @map("journal_id")
+  customer      Customer?     @relation(fields: [customerId], references: [customerId], onDelete: SetNull)
+  journal       Journal       @relation(fields: [journalId], references: [journalId], onDelete: Cascade)
+  saleDetails   SaleDetail[]
+  receivables   Receivable[]
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
 
   @@map("sales")
 }
 
 model SaleDetail {
-  id              String  @id @default(uuid())
-  saleId          String  @map("sale_id")
-  productId       String  @map("product_id")
-  quantity        Int
-  price           Decimal @db.Decimal(15, 2)
-  sale            Sale    @relation(fields: [saleId], references: [id])
-  product         Product @relation(fields: [productId], references: [id])
+  saleDetailId String     @id @default(uuid()) @map("sale_detail_id")
+  saleId       String     @map("sale_id")
+  productId    String     @map("product_id")
+  batchId      String?    @map("batch_id")
+  quantity     Int
+  unitPrice    Decimal    @db.Decimal(15, 2) @map("unit_price")
+  subtotal     Decimal    @db.Decimal(15, 2)
+  sale         Sale       @relation(fields: [saleId], references: [saleId], onDelete: Cascade)
+  product      Product    @relation(fields: [productId], references: [productId], onDelete: Restrict)
+  batch        InventoryBatch? @relation(fields: [batchId], references: [batchId], onDelete: Restrict)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
 
   @@map("sale_details")
 }
 
+model Purchase {
+  purchaseId     String          @id @default(uuid()) @map("purchase_id")
+  date           DateTime        @db.Date
+  supplierId     String          @map("supplier_id")
+  invoiceNumber  String          @unique @db.VarChar(50) @map("invoice_number")
+  paymentType    PaymentType     @map("payment_type")
+  subtotal       Decimal         @db.Decimal(15, 2)
+  vat            Decimal         @db.Decimal(15, 2)
+  total          Decimal         @db.Decimal(15, 2)
+  journalId      String          @map("journal_id")
+  supplier       Supplier        @relation(fields: [supplierId], references: [supplierId], onDelete: Restrict)
+  journal        Journal         @relation(fields: [journalId], references: [journalId], onDelete: Cascade)
+  purchaseDetails PurchaseDetail[]
+  payables       Payable[]
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  @@map("purchases")
+}
+
+model PurchaseDetail {
+  purchaseDetailId String     @id @default(uuid()) @map("purchase_detail_id")
+  purchaseId       String     @map("purchase_id")
+  productId        String     @map("product_id")
+  quantity         Int
+  unitPrice        Decimal    @db.Decimal(15, 2) @map("unit_price")
+  subtotal         Decimal    @db.Decimal(15, 2)
+  purchase         Purchase   @relation(fields: [purchaseId], references: [purchaseId], onDelete: Cascade)
+  product          Product    @relation(fields: [productId], references: [productId], onDelete: Restrict)
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+
+  @@map("purchase_details")
+}
+
+model Payable {
+  payableId      String         @id @default(uuid()) @map("payable_id")
+  journalEntryId String         @unique @map("journal_entry_id")
+  supplierId     String         @map("supplier_id")
+  amount         Decimal        @db.Decimal(15, 2)
+  dueDate        DateTime       @db.Date @map("due_date")
+  status         PaymentStatus
+  journalEntry   JournalEntry   @relation(fields: [journalEntryId], references: [journalEntryId], onDelete: Restrict)
+  supplier       Supplier       @relation(fields: [supplierId], references: [supplierId], onDelete: Restrict)
+  purchase       Purchase?      @relation(fields: [purchaseId], references: [purchaseId], onDelete: SetNull)
+  purchaseId     String?        @map("purchase_id")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  @@map("payables")
+}
+
 model Receivable {
-  id          String        @id @default(uuid())
-  entryId     String        @map("entry_id") @unique
-  customerId  String        @map("customer_id")
-  amount      Decimal       @db.Decimal(15, 2)
-  dueDate     DateTime      @map("due_date")
-  status      PaymentStatus
-  entry       Entry         @relation(fields: [entryId], references: [id])
-  customer    Customer      @relation(fields: [customerId], references: [id])
+  receivableId   String         @id @default(uuid()) @map("receivable_id")
+  journalEntryId String         @unique @map("journal_entry_id")
+  customerId     String         @map("customer_id")
+  amount         Decimal        @db.Decimal(15, 2)
+  dueDate        DateTime       @db.Date @map("due_date")
+  status         PaymentStatus
+  journalEntry   JournalEntry   @relation(fields: [journalEntryId], references: [journalEntryId], onDelete: Restrict)
+  customer       Customer       @relation(fields: [customerId], references: [customerId], onDelete: Restrict)
+  sale           Sale?          @relation(fields: [saleId], references: [saleId], onDelete: SetNull)
+  saleId         String?        @map("sale_id")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
 
   @@map("receivables")
-}
-
-model Equity {
-  id          String   @id @default(uuid())
-  entryId     String   @unique  @map("entry_id") 
-  amount      Decimal  @db.Decimal(15, 2)
-  description String?  @db.VarChar(255)
-  entry       Entry    @relation(fields: [entryId], references: [id])
-
-  @@map("equity")
-}
-
-model Expense {
-  id          String   @id @default(uuid())
-  entryId     String   @unique  @map("entry_id")
-  amount      Decimal  @db.Decimal(15, 2)
-  description String?  @db.VarChar(255)
-  entry       Entry    @relation(fields: [entryId], references: [id])
-
-  @@map("expenses")
 }
