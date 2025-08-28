@@ -1,4 +1,4 @@
-import { InventoryMethod } from '@prisma/client';
+import { AccountType, EntryType, InventoryMethod } from '@prisma/client';
 
 export interface RegisForm {
   name: string;
@@ -88,6 +88,14 @@ export interface VatForm {
 
 export interface SettingForm {
   inventoryMethod: InventoryMethod;
+}
+
+export interface AccountForm {
+  accountCode: string;
+  accountName: string;
+  accountType: AccountType;
+  normalBalance: EntryType;
+  balance: number;
 }
 
 export interface CustomerForm {

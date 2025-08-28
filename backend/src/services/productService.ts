@@ -50,11 +50,18 @@ export class ProductService {
 
       // Ambil produk
       const product = await this.getProductById(id);
+      if (product.productCode !== productReq.productCode) {
+        await this.ensureProductCodeUnique(productReq.productCode);
+      }
+
       let cogs: Decimal = product.avgPurchasePrice; // Harga pokok sebelumnya
       let sellingPrice: Decimal = product.sellingPrice; // Harga jual sebelumnya
 
       // Jika profitMargin berubah, hitung ulang COGS dan sellingPrice
-      if (productReq.profitMargin !== product.profitMargin.toNumber()) {
+      if (
+        productReq.profitMargin &&
+        productReq.profitMargin !== product.profitMargin.toNumber()
+      ) {
         cogs = await recalculateCOGS(
           product.productId,
           inventoryMethod,

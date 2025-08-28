@@ -2,7 +2,7 @@
 CREATE TYPE "UserRoleEnum" AS ENUM ('ADMIN');
 
 -- CreateEnum
-CREATE TYPE "AccountType" AS ENUM ('ASSET', 'LIABILITY', 'EQUITY', 'SALES', 'EXPENSE');
+CREATE TYPE "AccountType" AS ENUM ('ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'COGS', 'EXPENSE', 'OTHER_EXPENSE');
 
 -- CreateEnum
 CREATE TYPE "EntryType" AS ENUM ('DEBIT', 'CREDIT');
@@ -62,6 +62,7 @@ CREATE TABLE "accounts" (
     "balance" DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
+    "deleted_at" TIMESTAMP(3),
 
     CONSTRAINT "accounts_pkey" PRIMARY KEY ("account_id")
 );
@@ -153,6 +154,7 @@ CREATE TABLE "vat_settings" (
     "effective_date" DATE NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
+    "deleted_at" TIMESTAMP(3),
 
     CONSTRAINT "vat_settings_pkey" PRIMARY KEY ("vat_id")
 );

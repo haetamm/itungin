@@ -15,9 +15,11 @@ enum AccountType {
   ASSET
   LIABILITY
   EQUITY
-  SALES
+  REVENUE
+  COGS 
   EXPENSE
-}
+  OTHER_EXPENSE
+} 
 
 enum EntryType {
   DEBIT
@@ -88,6 +90,7 @@ model Account {
   journalEntries JournalEntry[]
   createdAt     DateTime        @default(now()) @map("created_at")
   updatedAt     DateTime        @updatedAt @map("updated_at")
+  deletedAt DateTime?   @map("deleted_at")
 
   @@map("accounts")
 }
