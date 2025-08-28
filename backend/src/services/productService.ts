@@ -1,13 +1,13 @@
 import { ProductForm, ProductUpdate } from '../utils/interface';
 import { validate } from '../validation/validation';
 import { storeProduct, updateProduct } from '../validation/productValidation';
-import { InventoryMethod, Product } from '@prisma/client';
+import { Product } from '@prisma/client';
 import { productRepository } from '../repository/productRepository';
 import { ResponseError } from '../entities/responseError';
-import { inventoryBatchRepository } from '../repository/inventoryBatchRepository';
 import { Decimal } from '@prisma/client/runtime/library';
-import { saleDetailRepository } from '../repository/saleDetailRepository';
 import { generalSettingRepository } from '../repository/generalSettingRepository';
+import { recalculateCOGS } from '../utils/cogs';
+import { prismaClient } from '../application/database';
 
 export class ProductService {
   private async ensureProductCodeUnique(productCode: string) {
@@ -17,56 +17,6 @@ export class ProductService {
     if (existing) {
       throw new ResponseError(400, 'Product code already exists');
     }
-  }
-
-  private async recalculateCOGS(productId: string, method: InventoryMethod) {
-    const batches =
-      await inventoryBatchRepository.getBatchesByProduct(productId);
-    const sales = await saleDetailRepository.getSalesByProduct(productId);
-
-    if (batches.length === 0) return new Decimal(0);
-
-    // hitung remaining stock per batch
-    const batchStock: { batchId: string; remaining: number; price: Decimal }[] =
-      batches.map((b) => ({
-        batchId: b.batchId,
-        remaining: b.remainingStock,
-        price: b.purchasePrice,
-      }));
-
-    // kurangi stock sesuai sale detail
-    for (const s of sales) {
-      if (!s.batchId) continue;
-      const batch = batchStock.find((b) => b.batchId === s.batchId);
-      if (batch) batch.remaining -= s.quantity;
-    }
-
-    // hitung COGS sesuai metode inventory
-    if (method === InventoryMethod.FIFO) {
-      const firstAvailable = batchStock.find((b) => b.remaining > 0);
-      return firstAvailable ? firstAvailable.price : new Decimal(0);
-    }
-
-    if (method === InventoryMethod.LIFO) {
-      const lastAvailable = [...batchStock]
-        .reverse()
-        .find((b) => b.remaining > 0);
-      return lastAvailable ? lastAvailable.price : new Decimal(0);
-    }
-
-    if (method === InventoryMethod.AVG) {
-      const totalQty = batchStock.reduce(
-        (sum, b) => sum + Math.max(b.remaining, 0),
-        0
-      );
-      const totalCost = batchStock.reduce(
-        (sum, b) => sum + Math.max(b.remaining, 0) * b.price.toNumber(),
-        0
-      );
-      return totalQty > 0 ? new Decimal(totalCost / totalQty) : new Decimal(0);
-    }
-
-    return new Decimal(0);
   }
 
   async createProduct({ body }: { body: ProductForm }): Promise<Product> {
@@ -90,31 +40,43 @@ export class ProductService {
   ): Promise<Product> {
     const productReq = validate(updateProduct, body);
 
-    const setting = await generalSettingRepository.getSetting();
-    if (!setting) throw new ResponseError(400, 'Set inventory method first');
-    const inventoryMethod = setting.inventoryMethod;
+    return await prismaClient.$transaction(async (prismaTransaction) => {
+      // Ambil pengaturan saat ini
+      const setting = await generalSettingRepository.getSetting();
+      if (!setting) {
+        throw new ResponseError(400, 'Method inventory not configured');
+      }
+      const inventoryMethod = setting.inventoryMethod;
 
-    const product = await this.getProductById(id);
-    let cogs: Decimal = product.avgPurchasePrice; // harga pokok sebelumnya
-    let sellingPrice: Decimal = product.sellingPrice; // harga jual sebelumnya
+      // Ambil produk
+      const product = await this.getProductById(id);
+      let cogs: Decimal = product.avgPurchasePrice; // Harga pokok sebelumnya
+      let sellingPrice: Decimal = product.sellingPrice; // Harga jual sebelumnya
 
-    // jika profitMargin berubah, hitung ulang sellingPrice (harga jual)
-    if (productReq.profitMargin !== product.profitMargin.toNumber()) {
-      cogs = await this.recalculateCOGS(product.productId, inventoryMethod);
-      sellingPrice = cogs.add(new Decimal(productReq.profitMargin));
-    }
+      // Jika profitMargin berubah, hitung ulang COGS dan sellingPrice
+      if (productReq.profitMargin !== product.profitMargin.toNumber()) {
+        cogs = await recalculateCOGS(
+          product.productId,
+          inventoryMethod,
+          prismaTransaction
+        );
+        const profitMargin = new Decimal(productReq.profitMargin);
+        sellingPrice = cogs.add(profitMargin);
+      }
 
-    // update produk
-    const updated = await productRepository.updateProductById(
-      product.productId,
-      {
-        ...productReq,
-        avgPurchasePrice: cogs,
-        sellingPrice,
-      } as any
-    );
+      // Perbarui produk
+      const updated = await productRepository.updateProductById(
+        product.productId,
+        {
+          ...productReq,
+          avgPurchasePrice: cogs,
+          sellingPrice,
+        } as any,
+        prismaTransaction
+      );
 
-    return updated;
+      return updated;
+    });
   }
 
   async getProductById(id: string) {

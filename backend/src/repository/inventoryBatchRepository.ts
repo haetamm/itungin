@@ -1,8 +1,12 @@
+import { Prisma } from '@prisma/client';
 import { prismaClient } from '../application/database';
 
 export class InventoryBatchRepository {
-  async getBatchesByProduct(productId: string) {
-    return await prismaClient.inventoryBatch.findMany({
+  async getBatchesByProduct(
+    productId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ) {
+    return await prismaTransaction.inventoryBatch.findMany({
       where: { productId },
       orderBy: { purchaseDate: 'asc' },
     });

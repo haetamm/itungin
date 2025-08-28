@@ -1,12 +1,37 @@
-import { Product } from '@prisma/client';
+import { Prisma, Product } from '@prisma/client';
 import { prismaClient } from '../application/database';
 import { ProductCreate, ProductUpdate } from '../utils/interface';
 import { paginate } from '../utils/pagination';
+import { Decimal } from '@prisma/client/runtime/library';
 
 export class ProductRepository {
+  async updateProductPriceById(
+    productId: string,
+    avgPurchasePrice: Decimal,
+    sellingPrice: Decimal,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<Product> {
+    return await prismaTransaction.product.update({
+      where: { productId, deletedAt: null },
+      data: {
+        avgPurchasePrice,
+        sellingPrice,
+      },
+    });
+  }
+
+  async findAll(
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<Product[]> {
+    return await prismaTransaction.product.findMany({
+      where: { deletedAt: null },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async findProductByProductCode(productCode: string): Promise<Product | null> {
     return await prismaClient.product.findUnique({
-      where: { productCode, deletedAt: null },
+      where: { productCode },
     });
   }
 
@@ -18,9 +43,10 @@ export class ProductRepository {
 
   async updateProductById(
     productId: string,
-    data: ProductUpdate
+    data: ProductUpdate,
+    prismaTransaction: Prisma.TransactionClient
   ): Promise<Product> {
-    return await prismaClient.product.update({
+    return await prismaTransaction.product.update({
       where: { productId },
       data: {
         ...data,

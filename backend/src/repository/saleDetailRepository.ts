@@ -1,9 +1,12 @@
-import { SaleDetail } from '@prisma/client';
-import { prismaClient } from '../application/database';
+import { Prisma, SaleDetail } from '@prisma/client';
+// import { prismaClient } from '../application/database';
 
 export class SaleDetailRepository {
-  async getSalesByProduct(productId: string): Promise<SaleDetail[]> {
-    return prismaClient.saleDetail.findMany({
+  async getSalesByProduct(
+    productId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<SaleDetail[]> {
+    return prismaTransaction.saleDetail.findMany({
       where: { productId },
     });
   }

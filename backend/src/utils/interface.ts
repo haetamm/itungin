@@ -1,3 +1,5 @@
+import { InventoryMethod } from '@prisma/client';
+
 export interface RegisForm {
   name: string;
   username: string;
@@ -82,6 +84,10 @@ export interface SupplierForm {
 export interface VatForm {
   vatRate: number;
   effectiveDate: Date;
+}
+
+export interface SettingForm {
+  inventoryMethod: InventoryMethod;
 }
 
 export interface CustomerForm {
