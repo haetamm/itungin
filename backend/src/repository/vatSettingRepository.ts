@@ -1,4 +1,4 @@
-import { VatSetting } from '@prisma/client';
+import { Prisma, VatSetting } from '@prisma/client';
 import { prismaClient } from '../application/database';
 import { VatForm } from '../utils/interface';
 
@@ -34,6 +34,15 @@ export class VatSettingRepository {
   async getAllVat() {
     return await prismaClient.vatSetting.findMany({
       where: { deletedAt: null },
+    });
+  }
+
+  async findVatTransaction(
+    vatId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<VatSetting | null> {
+    return prismaTransaction.vatSetting.findUnique({
+      where: { vatId, deletedAt: null },
     });
   }
 }

@@ -1,11 +1,14 @@
-import { Account } from '@prisma/client';
+import { Account, Prisma } from '@prisma/client';
 import { prismaClient } from '../application/database';
-import { AccountForm } from '../utils/interface';
+import {
+  AccountForm,
+  AccountUpdateByPurchaseTransaction,
+} from '../utils/interface';
 
 export class AccountRepository {
   async findAccountById(accountId: string): Promise<Account | null> {
     return await prismaClient.account.findUnique({
-      where: { accountId, deletedAt: null },
+      where: { accountId },
     });
   }
 
@@ -28,12 +31,35 @@ export class AccountRepository {
   }
 
   async getAllAccount() {
-    return await prismaClient.account.findMany();
+    return await prismaClient.account.findMany({
+      orderBy: {
+        accountCode: 'asc',
+      },
+    });
   }
 
   async findAccountByAccountCode(accountCode: string): Promise<Account | null> {
     return await prismaClient.account.findUnique({
       where: { accountCode },
+    });
+  }
+
+  async findAccountByAccountCodeTransaction(
+    accountCode: string,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<Account | null> {
+    return prismaTransaction.account.findUnique({
+      where: { accountCode },
+    });
+  }
+
+  async updateAccountTransaction(
+    data: AccountUpdateByPurchaseTransaction,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<Account> {
+    return prismaTransaction.account.update({
+      where: { accountCode: data.accountCode },
+      data: { balance: data.balance },
     });
   }
 }

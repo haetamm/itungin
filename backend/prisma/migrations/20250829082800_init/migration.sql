@@ -8,7 +8,7 @@ CREATE TYPE "AccountType" AS ENUM ('ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'C
 CREATE TYPE "EntryType" AS ENUM ('DEBIT', 'CREDIT');
 
 -- CreateEnum
-CREATE TYPE "PaymentType" AS ENUM ('CASH', 'CREDIT');
+CREATE TYPE "PaymentType" AS ENUM ('CASH', 'CREDIT', 'MIXED');
 
 -- CreateEnum
 CREATE TYPE "PaymentStatus" AS ENUM ('PAID', 'UNPAID');
@@ -282,9 +282,6 @@ CREATE UNIQUE INDEX "products_product_code_key" ON "products"("product_code");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "sales_invoice_number_key" ON "sales"("invoice_number");
-
--- CreateIndex
-CREATE UNIQUE INDEX "purchases_invoice_number_key" ON "purchases"("invoice_number");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "payables_journal_entry_id_key" ON "payables"("journal_entry_id");

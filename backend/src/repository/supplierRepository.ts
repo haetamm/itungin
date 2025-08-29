@@ -1,4 +1,4 @@
-import { Supplier } from '@prisma/client';
+import { Prisma, Supplier } from '@prisma/client';
 import { prismaClient } from '../application/database';
 import { SupplierForm } from '../utils/interface';
 import { paginate } from '../utils/pagination';
@@ -57,6 +57,15 @@ export class SupplierRepository {
     await prismaClient.supplier.update({
       where: { supplierId },
       data: { deletedAt: new Date() },
+    });
+  }
+
+  async findSupplierTransaction(
+    supplierId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<Supplier | null> {
+    return prismaTransaction.supplier.findUnique({
+      where: { supplierId, deletedAt: null },
     });
   }
 }

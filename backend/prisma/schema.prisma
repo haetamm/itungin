@@ -29,6 +29,7 @@ enum EntryType {
 enum PaymentType {
   CASH
   CREDIT
+  MIXED
 }
 
 enum PaymentStatus {
@@ -249,7 +250,7 @@ model Purchase {
   purchaseId     String          @id @default(uuid()) @map("purchase_id")
   date           DateTime        @db.Date
   supplierId     String          @map("supplier_id")
-  invoiceNumber  String          @unique @db.VarChar(50) @map("invoice_number")
+  invoiceNumber  String          @db.VarChar(50) @map("invoice_number")
   paymentType    PaymentType     @map("payment_type")
   subtotal       Decimal         @db.Decimal(15, 2)
   vat            Decimal         @db.Decimal(15, 2)

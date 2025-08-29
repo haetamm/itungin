@@ -1,4 +1,14 @@
-import { AccountType, EntryType, InventoryMethod } from '@prisma/client';
+import {
+  Account,
+  AccountType,
+  EntryType,
+  InventoryMethod,
+  Journal,
+  PaymentStatus,
+  PaymentType,
+  Purchase,
+} from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
 
 export interface RegisForm {
   name: string;
@@ -74,6 +84,12 @@ export interface ProductUpdate {
   profitMargin: number; // nominal langsung
 }
 
+export interface ProductUpdateByPurchaseTransaction {
+  productId: string;
+  stock: number;
+  avgPurchasePrice: Decimal;
+}
+
 export interface SupplierForm {
   supplierName: string;
   phone: string;
@@ -98,6 +114,60 @@ export interface AccountForm {
   balance: number;
 }
 
+export interface AccountUpdateByPurchaseTransaction {
+  accountCode: string;
+  balance: Decimal;
+}
+
+export interface JournalForm {
+  date: string | Date;
+  description?: string;
+  reference?: string;
+}
+
+export interface PurchaseForm {
+  date: string | Date;
+  supplierId: string;
+  invoiceNumber: string;
+  paymentType: PaymentType;
+  subtotal: Decimal;
+  vat: Decimal;
+  total: Decimal;
+  journalId: string;
+}
+
+export interface PurchaseDetailForm {
+  purchaseId: string;
+  productId: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+}
+
+export interface InventoryBatchForm {
+  productId: string;
+  purchaseDate: string | Date;
+  quantity: number;
+  purchasePrice: number;
+  remainingStock: number;
+}
+
+export interface JournalEntryForm {
+  journalId: string;
+  accountId: string;
+  debit: Decimal;
+  credit: Decimal;
+}
+
+export interface PayableForm {
+  journalEntryId: string;
+  supplierId: string;
+  purchaseId: string;
+  amount: Decimal;
+  dueDate: Date;
+  status: PaymentStatus;
+}
+
 export interface CustomerForm {
   customerName: string;
   phone: string;
@@ -115,3 +185,65 @@ export type PaginationResponse<T, K extends string> = {
     totalPages: number;
   };
 };
+
+export interface PurchaseItem {
+  productId: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface CreatePurchase {
+  date: string;
+  supplierId: string;
+  invoiceNumber: string;
+  items: PurchaseItem[];
+  vatRateId: string;
+  inventoryAccountCode: string;
+  vatInputAccountCode: string;
+  paymentType: PaymentType;
+}
+
+export interface PurchaseResult {
+  purchase: Purchase;
+  journal: Journal;
+  subtotal: Decimal;
+  vat: Decimal;
+  total: Decimal;
+  inventoryAccount: Account;
+  vatInputAccount: Account;
+}
+
+export interface CashPurchaseRequest {
+  date: string;
+  supplierId: string;
+  invoiceNumber: string;
+  vatRateId: string;
+  items: PurchaseItem[];
+  cashAccountCode: string;
+  inventoryAccountCode: string;
+  vatInputAccountCode: string;
+}
+
+export interface CreditPurchaseRequest {
+  date: string;
+  supplierId: string;
+  invoiceNumber: string;
+  vatRateId: string;
+  items: PurchaseItem[];
+  payableAccountCode: string;
+  inventoryAccountCode: string;
+  vatInputAccountCode: string;
+}
+
+export interface MixedPurchaseRequest {
+  date: string;
+  supplierId: string;
+  invoiceNumber: string;
+  vatRateId: string;
+  items: PurchaseItem[];
+  cashAccountCode: string;
+  cashAmount: Decimal;
+  payableAccountCode: string;
+  inventoryAccountCode: string;
+  vatInputAccountCode: string;
+}

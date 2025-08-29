@@ -1,6 +1,10 @@
 import { Prisma, Product } from '@prisma/client';
 import { prismaClient } from '../application/database';
-import { ProductCreate, ProductUpdate } from '../utils/interface';
+import {
+  ProductCreate,
+  ProductUpdate,
+  ProductUpdateByPurchaseTransaction,
+} from '../utils/interface';
 import { paginate } from '../utils/pagination';
 import { Decimal } from '@prisma/client/runtime/library';
 
@@ -90,6 +94,28 @@ export class ProductRepository {
     });
 
     return { products: result.items, total: result.total };
+  }
+
+  async findProductTransaction(
+    productId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<Product | null> {
+    return prismaTransaction.product.findUnique({
+      where: { productId, deletedAt: null },
+    });
+  }
+
+  async updateProductTransaction(
+    data: ProductUpdateByPurchaseTransaction,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<Product> {
+    return prismaTransaction.product.update({
+      where: { productId: data.productId },
+      data: {
+        stock: data.stock,
+        avgPurchasePrice: data.avgPurchasePrice,
+      },
+    });
   }
 }
 
