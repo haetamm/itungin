@@ -238,8 +238,9 @@ export class PurchaseService {
       );
 
       // Validate cash balance
-      if (cashAccount.balance < total)
-        throw new Error('Insufficient cash balance');
+      if (Number(cashAccount.balance) < Number(total)) {
+        throw new ResponseError(400, 'Insufficient cash balance');
+      }
 
       // Prepare Journal Entries
       const journalEntries: JournalEntryForm[] = [
