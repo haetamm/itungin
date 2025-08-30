@@ -70,7 +70,7 @@ export class PurchaseService {
     );
 
     // Hitung pajak (VAT) = subtotal × persentase pajak (vatRate)
-    const vat = subtotal.times(vatSetting.vatRate);
+    const vat = subtotal.times(vatSetting.vatRate).div(100);
 
     // Hitung total akhir = subtotal + VAT
     const total = subtotal.plus(vat);
