@@ -237,8 +237,7 @@ export class PurchaseService {
         prismaTransaction
       );
 
-      // Validate cash balance
-      if (Number(cashAccount.balance) < Number(total)) {
+      if (cashAccount.balance.comparedTo(total) < 0) {
         throw new ResponseError(400, 'Insufficient cash balance');
       }
 
@@ -481,13 +480,16 @@ export class PurchaseService {
       );
 
       // Validate cash balance
-      if (cashAccount.balance < cashAmount)
+      if (cashAccount.balance.comparedTo(cashAmount) < 0) {
         throw new ResponseError(400, 'Insufficient cash balance');
-      if (cashAmount >= total)
+      }
+
+      if (cashAmount.comparedTo(total) >= 0) {
         throw new ResponseError(
           400,
           'Cash amount must be less than total for mixed payment'
         );
+      }
 
       // Prepare Journal Entries
       const journalEntries: JournalEntryForm[] = [
