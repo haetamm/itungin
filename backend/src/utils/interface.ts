@@ -88,6 +88,8 @@ export interface ProductUpdateByPurchaseTransaction {
   productId: string;
   stock: number;
   avgPurchasePrice: Decimal;
+  profiteMargin: Decimal;
+  sellingPrice: Decimal;
 }
 
 export interface SupplierForm {
@@ -140,15 +142,15 @@ export interface PurchaseDetailForm {
   purchaseId: string;
   productId: string;
   quantity: number;
-  unitPrice: number;
-  subtotal: number;
+  unitPrice: Decimal;
+  subtotal: Decimal;
 }
 
 export interface InventoryBatchForm {
   productId: string;
   purchaseDate: string | Date;
   quantity: number;
-  purchasePrice: number;
+  purchasePrice: Decimal;
   remainingStock: number;
 }
 
@@ -189,7 +191,8 @@ export type PaginationResponse<T, K extends string> = {
 export interface PurchaseItem {
   productId: string;
   quantity: number;
-  unitPrice: number;
+  unitPrice: Decimal;
+  profitMargin: Decimal;
 }
 
 export interface CreatePurchase {
@@ -201,16 +204,6 @@ export interface CreatePurchase {
   inventoryAccountCode: string;
   vatInputAccountCode: string;
   paymentType: PaymentType;
-}
-
-export interface PurchaseResult {
-  purchase: Purchase;
-  journal: Journal;
-  subtotal: Decimal;
-  vat: Decimal;
-  total: Decimal;
-  inventoryAccount: Account;
-  vatInputAccount: Account;
 }
 
 export interface CashPurchaseRequest {
@@ -246,4 +239,14 @@ export interface MixedPurchaseRequest {
   payableAccountCode: string;
   inventoryAccountCode: string;
   vatInputAccountCode: string;
+}
+
+export interface PurchaseResult {
+  purchase: Purchase;
+  journal: Journal;
+  subtotal: Decimal;
+  vat: Decimal;
+  total: Decimal;
+  inventoryAccount: Account;
+  vatInputAccount: Account;
 }

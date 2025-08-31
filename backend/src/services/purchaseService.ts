@@ -32,6 +32,8 @@ import { inventoryBatchRepository } from '../repository/inventoryBatchRepository
 import { prismaClient } from '../application/database';
 import { journalEntryRepository } from '../repository/journalEntryRepository';
 import { payableRepository } from '../repository/paybleRepository';
+import { generalSettingRepository } from '../repository/generalSettingRepository';
+import { recalculateCOGS } from '../utils/cogs';
 
 export class PurchaseService {
   private async createPurchase(
@@ -48,6 +50,11 @@ export class PurchaseService {
       vatInputAccountCode,
       paymentType,
     } = data;
+
+    const setting = await generalSettingRepository.getSetting();
+    if (!setting) {
+      throw new ResponseError(400, 'Method inventory not configured');
+    }
 
     const supplier = await supplierRepository.findSupplierById(supplierId);
     if (!supplier) throw new Error('Supplier not found');
@@ -122,7 +129,7 @@ export class PurchaseService {
         productId: item.productId,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
-        subtotal: item.quantity * item.unitPrice,
+        subtotal: new Decimal(item.quantity).times(item.unitPrice),
       })),
       prismaTransaction
     );
@@ -142,19 +149,41 @@ export class PurchaseService {
       const currentAvgPrice = product.avgPurchasePrice;
 
       let newAvgPrice: Decimal;
-
       if (currentStock === 0) {
-        // Kalau stok awal 0 maka harga rata-rata sama dengan harga beli baru
         newAvgPrice = new Decimal(item.unitPrice);
       } else {
-        // Hitung nilai total lama = stok lama × avgPrice lama
         const oldValue = currentAvgPrice.times(currentStock);
-
-        // Hitung nilai pembelian baru = qty × harga baru
         const newValue = new Decimal(item.unitPrice).times(item.quantity);
-
-        // Hitung harga rata-rata baru = (oldValue + newValue) ÷ stok baru
         newAvgPrice = oldValue.plus(newValue).div(currentStock + item.quantity);
+      }
+
+      // Buat batch baru terlebih dahulu
+      await inventoryBatchRepository.createInventoryBatch(
+        {
+          productId: item.productId,
+          purchaseDate: data.date,
+          quantity: item.quantity,
+          purchasePrice: item.unitPrice,
+          remainingStock: item.quantity,
+        },
+        prismaTransaction
+      );
+
+      // Hitung COGS setelah batch baru disimpan
+      let cogs = await recalculateCOGS(
+        product.productId,
+        setting.inventoryMethod,
+        prismaTransaction
+      );
+
+      const profitMargin = new Decimal(item.profitMargin);
+      const price = new Decimal(item.unitPrice);
+
+      let sellingPrice: Decimal;
+      if (cogs.equals(0)) {
+        sellingPrice = price.add(profitMargin);
+      } else {
+        sellingPrice = cogs.add(profitMargin);
       }
 
       // Update produk
@@ -163,18 +192,8 @@ export class PurchaseService {
           productId: item.productId,
           stock: currentStock + item.quantity,
           avgPurchasePrice: newAvgPrice,
-        },
-        prismaTransaction
-      );
-
-      // Buat Inventory batch
-      await inventoryBatchRepository.createInventoryBatch(
-        {
-          productId: item.productId,
-          purchaseDate: data.date,
-          quantity: item.quantity,
-          purchasePrice: item.unitPrice,
-          remainingStock: item.quantity,
+          profiteMargin: profitMargin,
+          sellingPrice,
         },
         prismaTransaction
       );
@@ -484,7 +503,9 @@ export class PurchaseService {
         throw new ResponseError(400, 'Insufficient cash balance');
       }
 
-      if (cashAmount.comparedTo(total) >= 0) {
+      const cash = new Decimal(cashAmount);
+      const tot = new Decimal(total);
+      if (cash.comparedTo(tot) >= 0) {
         throw new ResponseError(
           400,
           'Cash amount must be less than total for mixed payment'

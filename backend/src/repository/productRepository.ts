@@ -114,6 +114,8 @@ export class ProductRepository {
       data: {
         stock: data.stock,
         avgPurchasePrice: data.avgPurchasePrice,
+        profitMargin: data.profiteMargin,
+        sellingPrice: data.sellingPrice,
       },
     });
   }

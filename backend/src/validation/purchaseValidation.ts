@@ -11,14 +11,27 @@ const date = Joi.date().iso().max('now').required();
 const supplierId = Joi.string().uuid().required();
 const invoiceNumber = Joi.string().max(50).required();
 const vatRateId = Joi.string().uuid().required();
-const productId = Joi.string().uuid().required();
-const quantity = Joi.number().integer().min(1).required();
-const unitPrice = Joi.number().positive().required();
 const inventoryAccountCode = Joi.string().max(50).required();
 const vatInputAccountCode = Joi.string().max(50).required();
 const cashAccountCode = Joi.string().max(50).required();
 const payableAccountCode = Joi.string().max(50).required();
 const cashAmount = Joi.number().positive().required();
+
+const productId = Joi.string().uuid().required().messages({
+  'any.required': 'Product ID is required',
+});
+
+const quantity = Joi.number().integer().min(1).required().messages({
+  'any.required': 'Quantity is required',
+});
+
+const unitPrice = Joi.number().positive().required().messages({
+  'any.required': 'Unit Price is required',
+});
+
+const profitMargin = Joi.number().precision(2).positive().required().messages({
+  'any.required': 'Profit Margin is required',
+});
 
 const items = Joi.array()
   .min(1)
@@ -27,6 +40,7 @@ const items = Joi.array()
       productId,
       quantity,
       unitPrice,
+      profitMargin,
     })
   )
   .required()
