@@ -123,7 +123,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"supplierName\": \"Warung Depok\",\r\n    \"phone\": \"\",\r\n    \"email\": \"\",\r\n    \"address\": \"\"\r\n}",
+							"raw": "{\r\n    \"supplierName\": \"Toko Sejahtera\",\r\n    \"phone\": \"\",\r\n    \"email\": \"\",\r\n    \"address\": \"\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -330,7 +330,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"productCode\": \"GRM-102\",\r\n    \"productName\": \"Gurimi\",\r\n    \"category\": \"\"\r\n}",
+							"raw": "{\r\n    \"productCode\": \"SAB-101\",\r\n    \"productName\": \"Saos ABC\",\r\n    \"category\": \"\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -382,7 +382,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"productCode\": \"SRM-102\",\r\n    \"productName\": \"Sarimi\",\r\n    \"category\": \"\",\r\n    \"profitMargin\": \"600\"\r\n}",
+							"raw": "{\r\n    \"productCode\": \"AQ-102\",\r\n    \"productName\": \"Aqua 100ML\",\r\n    \"category\": \"\",\r\n    \"profitMargin\": \"500\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -593,7 +593,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n                   \"accountCode\": \"1000\",\r\n            \"accountName\": \"Cash\",\r\n            \"accountType\": \"ASSET\",\r\n            \"normalBalance\": \"DEBIT\",\r\n            \"balance\": \"10000000\"\r\n}",
+							"raw": "{\r\n     \"accountCode\": \"3000\",\r\n            \"accountName\": \"Owner's Capital\",\r\n            \"accountType\": \"EQUITY\",\r\n            \"normalBalance\": \"CREDIT\",\r\n            \"balance\": \"10000000\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1023,7 +1023,15 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									""
+									"pm.test('should response 201 status code', () => {\r",
+									"    pm.response.to.have.status(201);\r",
+									"});\r",
+									"\r",
+									"pm.test('should respose with correct property and message', () => {\r",
+									"    const responseJson = pm.response.json();\r",
+									"\r",
+									"    pm.environment.set('purchaseId', responseJson.data.purchaseId);\r",
+									"});"
 								],
 								"type": "text/javascript",
 								"packages": {}
@@ -1045,7 +1053,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-08-10\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"NV-WR-0001\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"cashAccountCode\": \"1000\",\r\n  \"inventoryAccountCode\": \"1100\",\r\n  \"vatInputAccountCode\": \"1200\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"10\",\r\n        \"unitPrice\": \"2400\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-01\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00001\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"cashAccountCode\": \"1000\",\r\n  \"inventoryAccountCode\": \"1100\",\r\n  \"vatInputAccountCode\": \"1200\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"1890\",\r\n        \"unitPrice\": \"11000\",\r\n        \"profitMargin\": \"500\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1064,6 +1072,180 @@
 								"v1",
 								"purchases",
 								"cash"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "create credit purchase",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('should response 201 status code', () => {\r",
+									"    pm.response.to.have.status(201);\r",
+									"});\r",
+									"\r",
+									"pm.test('should respose with correct property and message', () => {\r",
+									"    const responseJson = pm.response.json();\r",
+									"\r",
+									"    pm.environment.set('purchaseId', responseJson.data.purchaseId);\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"date\": \"2025-08-10\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"NV-TG-00010\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"payableAccountCode\": \"2000\",\r\n  \"inventoryAccountCode\": \"1100\",\r\n  \"vatInputAccountCode\": \"1200\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"10\",\r\n        \"unitPrice\": \"2400\",\r\n        \"profitMargin\": \"500\"\r\n    }\r\n  ]\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/v1/purchases/credit",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"purchases",
+								"credit"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "create mixed purchase",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('should response 201 status code', () => {\r",
+									"    pm.response.to.have.status(201);\r",
+									"});\r",
+									"\r",
+									"pm.test('should respose with correct property and message', () => {\r",
+									"    const responseJson = pm.response.json();\r",
+									"\r",
+									"    pm.environment.set('purchaseId', responseJson.data.purchaseId);\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"date\": \"2025-08-10\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TSJ-0825-001\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"cashAccountCode\": \"1000\",\r\n  \"inventoryAccountCode\": \"1100\",\r\n  \"vatInputAccountCode\": \"1200\",\r\n  \"payableAccountCode\": \"2000\",\r\n  \"cashAmount\": \"50000\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"10\",\r\n        \"unitPrice\": \"12000\",\r\n        \"profitMargin\": \"1000\"\r\n    }\r\n  ]\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/v1/purchases/mixed",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"purchases",
+								"mixed"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "delete purchase",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"purchaseId\": \"{{purchaseId}}\",\r\n  \"cashAccountCode\": \"1000\",\r\n  \"inventoryAccountCode\": \"1100\",\r\n  \"vatInputAccountCode\": \"1200\",\r\n  \"payableAccountCode\": \"2000\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/v1/purchases",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"purchases"
 							]
 						}
 					},
@@ -1155,7 +1337,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"inventoryMethod\": \"FIFO\"\r\n}",
+							"raw": "{\r\n  \"inventoryMethod\": \"AVG\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
