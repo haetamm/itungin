@@ -250,3 +250,11 @@ export interface PurchaseResult {
   inventoryAccount: Account;
   vatInputAccount: Account;
 }
+
+export interface DeletePurchaseRequest {
+  purchaseId: string;
+  inventoryAccountCode: string;
+  vatInputAccountCode: string;
+  cashAccountCode: string;
+  payableAccountCode: string;
+}

@@ -14,6 +14,15 @@ export class JournalRepository {
       },
     });
   }
+
+  async deleteJournal(
+    journalId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<void> {
+    await prismaTransaction.journal.delete({
+      where: { journalId },
+    });
+  }
 }
 
 export const journalRepository = new JournalRepository();

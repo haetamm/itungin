@@ -35,6 +35,32 @@ export class PurchaseDetailRepository {
       )
     );
   }
+
+  async deleteManyPurchaseDetails(
+    purchaseDetailIds: string[],
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<void> {
+    await prismaTransaction.purchaseDetail.deleteMany({
+      where: {
+        purchaseDetailId: { in: purchaseDetailIds },
+      },
+    });
+  }
+
+  async findPurchaseDetailById(
+    purchaseDetailId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<
+    | (PurchaseDetail & {
+        purchase: { date: Date };
+      })
+    | null
+  > {
+    return await prismaTransaction.purchaseDetail.findUnique({
+      where: { purchaseDetailId },
+      include: { purchase: { select: { date: true } } },
+    });
+  }
 }
 
 export const purchaseDetailRepository = new PurchaseDetailRepository();

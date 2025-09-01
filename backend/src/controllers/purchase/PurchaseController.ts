@@ -45,6 +45,20 @@ class PurchaseController implements IController {
       next(e);
     }
   }
+
+  async deletePurchase(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const result = await purchaseService.deletePurchase(req);
+      const response = new ResponseSuccess(201, result);
+      res.status(201).json(response);
+    } catch (e) {
+      next(e);
+    }
+  }
 }
 
 export default new PurchaseController();

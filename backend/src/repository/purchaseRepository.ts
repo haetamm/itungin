@@ -1,4 +1,11 @@
-import { Prisma, Purchase } from '@prisma/client';
+import {
+  Journal,
+  JournalEntry,
+  Payable,
+  Prisma,
+  Purchase,
+  PurchaseDetail,
+} from '@prisma/client';
 import { PurchaseForm } from '../utils/interface';
 
 export class PurchaseRepository {
@@ -16,6 +23,31 @@ export class PurchaseRepository {
         vat: data.vat,
         total: data.total,
         journalId: data.journalId,
+      },
+    });
+  }
+
+  async findPurchaseByIdTransaction(
+    purchaseId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<
+    | (Purchase & {
+        journal: Journal & { journalEntries: JournalEntry[] };
+        payables: Payable[];
+        purchaseDetails: PurchaseDetail[];
+      })
+    | null
+  > {
+    return await prismaTransaction.purchase.findUnique({
+      where: { purchaseId },
+      include: {
+        journal: {
+          include: {
+            journalEntries: true,
+          },
+        },
+        payables: true,
+        purchaseDetails: true,
       },
     });
   }

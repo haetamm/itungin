@@ -28,6 +28,15 @@ export class GeneralSettingRepository {
       },
     });
   }
+
+  async getSettingTransaction(
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<GeneralSetting | null> {
+    const setting = await prismaTransaction.generalSetting.findFirst({
+      orderBy: { createdAt: 'desc' },
+    });
+    return setting;
+  }
 }
 
 export const generalSettingRepository = new GeneralSettingRepository();

@@ -27,6 +27,17 @@ export class JournalEntryRepository {
       orderBy: { createdAt: 'desc' },
     });
   }
+
+  async deleteManyJournalEntries(
+    journalEntryIds: string[],
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<void> {
+    await prismaTransaction.journalEntry.deleteMany({
+      where: {
+        journalEntryId: { in: journalEntryIds },
+      },
+    });
+  }
 }
 
 export const journalEntryRepository = new JournalEntryRepository();

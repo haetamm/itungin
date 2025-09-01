@@ -18,4 +18,10 @@ export interface IController {
     res: Response,
     next: NextFunction
   ): Promise<void>;
+
+  deletePurchase(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void>;
 }

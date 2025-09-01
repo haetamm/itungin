@@ -2,6 +2,7 @@ import { ObjectSchema } from 'joi';
 import {
   CashPurchaseRequest,
   CreditPurchaseRequest,
+  DeletePurchaseRequest,
   MixedPurchaseRequest,
 } from '../utils/interface';
 
@@ -9,6 +10,7 @@ const Joi = require('joi');
 
 const date = Joi.date().iso().max('now').required();
 const supplierId = Joi.string().uuid().required();
+const purchaseId = Joi.string().uuid().required();
 const invoiceNumber = Joi.string().max(50).required();
 const vatRateId = Joi.string().uuid().required();
 const inventoryAccountCode = Joi.string().max(50).required();
@@ -86,4 +88,13 @@ export const purchaseMixedSchema: ObjectSchema<MixedPurchaseRequest> =
     payableAccountCode,
     inventoryAccountCode,
     vatInputAccountCode,
+  });
+
+export const deletePurchaseSchema: ObjectSchema<DeletePurchaseRequest> =
+  Joi.object({
+    purchaseId,
+    inventoryAccountCode,
+    vatInputAccountCode,
+    cashAccountCode,
+    payableAccountCode,
   });

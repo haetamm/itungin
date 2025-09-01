@@ -21,6 +21,12 @@ class PurchaseRoutes extends BaseRoutes {
       authMiddleware,
       PurchaseController.createMixedPurchase
     );
+
+    this.router.delete(
+      '/purchases',
+      authMiddleware,
+      PurchaseController.deletePurchase
+    );
   }
 }
 

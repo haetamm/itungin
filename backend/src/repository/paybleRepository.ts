@@ -17,6 +17,15 @@ export class PayableRepository {
       },
     });
   }
+
+  async deletePayable(
+    payableId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<void> {
+    await prismaTransaction.payable.delete({
+      where: { payableId },
+    });
+  }
 }
 
 export const payableRepository = new PayableRepository();
