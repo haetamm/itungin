@@ -93,7 +93,34 @@ model Account {
   updatedAt     DateTime        @updatedAt @map("updated_at")
   deletedAt DateTime?   @map("deleted_at")
 
+  accountDefaultInventory AccountDefault[] @relation("InventoryAccount")
+  accountDefaultVatInput  AccountDefault[] @relation("VatInputAccount")
+  accountDefaultCash      AccountDefault[] @relation("CashAccount")
+  accountDefaultPayable   AccountDefault[] @relation("PayableAccount")
+  accountDefaultOwnerCapital   AccountDefault[] @relation("OwnerCapitalAccount")
+
   @@map("accounts")
+}
+
+model AccountDefault {
+  id              String           @id @default(uuid())
+  inventoryAccountId  String
+  vatInputAccountId   String
+  cashAccountId       String
+  payableAccountId    String
+  ownerCapitalAccountId String
+
+  // Relasi ke Account
+  inventoryAccount    Account  @relation("InventoryAccount", fields: [inventoryAccountId], references: [accountId])
+  vatInputAccount     Account  @relation("VatInputAccount", fields: [vatInputAccountId], references: [accountId])
+  cashAccount         Account  @relation("CashAccount", fields: [cashAccountId], references: [accountId])
+  payableAccount      Account  @relation("PayableAccount", fields: [payableAccountId], references: [accountId])
+  ownerCapitalAccount     Account  @relation("OwnerCapitalAccount", fields: [ownerCapitalAccountId], references: [accountId])
+
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  @@map("account_default")
 }
 
 model Journal {
@@ -178,6 +205,7 @@ model InventoryBatch {
 model GeneralSetting {
   id              String           @id @default(uuid())
   inventoryMethod  InventoryMethod  @default(AVG) @map("inventory_method")
+
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
 

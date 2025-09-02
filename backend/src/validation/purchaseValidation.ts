@@ -1,7 +1,6 @@
 import { ObjectSchema } from 'joi';
 import {
-  CashPurchaseRequest,
-  CreditPurchaseRequest,
+  CashOrCreditPurchaseRequest,
   DeletePurchaseRequest,
   MixedPurchaseRequest,
 } from '../utils/interface';
@@ -13,10 +12,10 @@ const supplierId = Joi.string().uuid().required();
 const purchaseId = Joi.string().uuid().required();
 const invoiceNumber = Joi.string().max(50).required();
 const vatRateId = Joi.string().uuid().required();
-const inventoryAccountCode = Joi.string().max(50).required();
-const vatInputAccountCode = Joi.string().max(50).required();
-const cashAccountCode = Joi.string().max(50).required();
-const payableAccountCode = Joi.string().max(50).required();
+// const inventoryAccountCode = Joi.string().max(50).required();
+// const vatInputAccountCode = Joi.string().max(50).required();
+// const cashAccountCode = Joi.string().max(50).required();
+// const payableAccountCode = Joi.string().max(50).required();
 const cashAmount = Joi.number().positive().required();
 
 const productId = Joi.string().uuid().required().messages({
@@ -51,29 +50,13 @@ const items = Joi.array()
     'any.required': 'Items array is required',
   });
 
-export const purchaseCashSchema: ObjectSchema<CashPurchaseRequest> = Joi.object(
-  {
-    date,
-    supplierId,
-    invoiceNumber,
-    vatRateId,
-    items,
-    cashAccountCode,
-    inventoryAccountCode,
-    vatInputAccountCode,
-  }
-);
-
-export const purchaseCreditSchema: ObjectSchema<CreditPurchaseRequest> =
+export const purchaseCashOrCreditSchema: ObjectSchema<CashOrCreditPurchaseRequest> =
   Joi.object({
     date,
     supplierId,
     invoiceNumber,
     vatRateId,
     items,
-    payableAccountCode,
-    inventoryAccountCode,
-    vatInputAccountCode,
   });
 
 export const purchaseMixedSchema: ObjectSchema<MixedPurchaseRequest> =
@@ -83,18 +66,10 @@ export const purchaseMixedSchema: ObjectSchema<MixedPurchaseRequest> =
     invoiceNumber,
     vatRateId,
     items,
-    cashAccountCode,
     cashAmount,
-    payableAccountCode,
-    inventoryAccountCode,
-    vatInputAccountCode,
   });
 
 export const deletePurchaseSchema: ObjectSchema<DeletePurchaseRequest> =
   Joi.object({
     purchaseId,
-    inventoryAccountCode,
-    vatInputAccountCode,
-    cashAccountCode,
-    payableAccountCode,
   });

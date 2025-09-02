@@ -68,6 +68,20 @@ CREATE TABLE "accounts" (
 );
 
 -- CreateTable
+CREATE TABLE "account_default" (
+    "id" TEXT NOT NULL,
+    "inventoryAccountId" TEXT NOT NULL,
+    "vatInputAccountId" TEXT NOT NULL,
+    "cashAccountId" TEXT NOT NULL,
+    "payableAccountId" TEXT NOT NULL,
+    "ownerCapitalAccountId" TEXT NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "account_default_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "journals" (
     "journal_id" TEXT NOT NULL,
     "date" DATE NOT NULL,
@@ -294,6 +308,21 @@ ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_user_id_fkey" FOREIGN KEY ("
 
 -- AddForeignKey
 ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "roles"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "account_default" ADD CONSTRAINT "account_default_inventoryAccountId_fkey" FOREIGN KEY ("inventoryAccountId") REFERENCES "accounts"("account_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "account_default" ADD CONSTRAINT "account_default_vatInputAccountId_fkey" FOREIGN KEY ("vatInputAccountId") REFERENCES "accounts"("account_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "account_default" ADD CONSTRAINT "account_default_cashAccountId_fkey" FOREIGN KEY ("cashAccountId") REFERENCES "accounts"("account_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "account_default" ADD CONSTRAINT "account_default_payableAccountId_fkey" FOREIGN KEY ("payableAccountId") REFERENCES "accounts"("account_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "account_default" ADD CONSTRAINT "account_default_ownerCapitalAccountId_fkey" FOREIGN KEY ("ownerCapitalAccountId") REFERENCES "accounts"("account_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "journal_entries" ADD CONSTRAINT "journal_entries_journal_id_fkey" FOREIGN KEY ("journal_id") REFERENCES "journals"("journal_id") ON DELETE CASCADE ON UPDATE CASCADE;

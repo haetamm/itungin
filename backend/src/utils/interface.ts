@@ -206,26 +206,12 @@ export interface CreatePurchase {
   paymentType: PaymentType;
 }
 
-export interface CashPurchaseRequest {
+export interface CashOrCreditPurchaseRequest {
   date: string;
   supplierId: string;
   invoiceNumber: string;
   vatRateId: string;
   items: PurchaseItem[];
-  cashAccountCode: string;
-  inventoryAccountCode: string;
-  vatInputAccountCode: string;
-}
-
-export interface CreditPurchaseRequest {
-  date: string;
-  supplierId: string;
-  invoiceNumber: string;
-  vatRateId: string;
-  items: PurchaseItem[];
-  payableAccountCode: string;
-  inventoryAccountCode: string;
-  vatInputAccountCode: string;
 }
 
 export interface MixedPurchaseRequest {
@@ -234,11 +220,7 @@ export interface MixedPurchaseRequest {
   invoiceNumber: string;
   vatRateId: string;
   items: PurchaseItem[];
-  cashAccountCode: string;
   cashAmount: Decimal;
-  payableAccountCode: string;
-  inventoryAccountCode: string;
-  vatInputAccountCode: string;
 }
 
 export interface PurchaseResult {
@@ -253,8 +235,4 @@ export interface PurchaseResult {
 
 export interface DeletePurchaseRequest {
   purchaseId: string;
-  inventoryAccountCode: string;
-  vatInputAccountCode: string;
-  cashAccountCode: string;
-  payableAccountCode: string;
 }
