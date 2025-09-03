@@ -1,17 +1,15 @@
 import {
-  CashOrCreditPurchaseRequest,
-  CreatePurchase,
   DeletePurchaseRequest,
   JournalEntryForm,
-  MixedPurchaseRequest,
+  PurchaseRequest,
   PurchaseResult,
+  UpdatePurchaseDataRelation,
 } from '../utils/interface';
 import { validate } from '../validation/validation';
 import { vatSettingRepository } from '../repository/vatSettingRepository';
 import {
   deletePurchaseSchema,
-  purchaseCashOrCreditSchema,
-  purchaseMixedSchema,
+  purchaseSchema,
 } from '../validation/purchaseValidation';
 import { supplierRepository } from '../repository/supplierRepository';
 import { productRepository } from '../repository/productRepository';
@@ -38,8 +36,8 @@ import { recalculateCOGS } from '../utils/cogs';
 import { accountDefaultRepository } from '../repository/accountDefaultRepository';
 
 export class PurchaseService {
-  private async createPurchase(
-    data: CreatePurchase,
+  private async updatePurchaseDataRelation(
+    data: UpdatePurchaseDataRelation,
     prismaTransaction: Prisma.TransactionClient
   ): Promise<PurchaseResult> {
     const {
@@ -131,19 +129,7 @@ export class PurchaseService {
       prismaTransaction
     );
 
-    // Buat detail pembelian
-    await purchaseDetailRepository.createManyPurchaseDetails(
-      data.items.map((item) => ({
-        purchaseId: purchase.purchaseId,
-        productId: item.productId,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        subtotal: new Decimal(item.quantity).times(item.unitPrice),
-      })),
-      prismaTransaction
-    );
-
-    // Buat Inventory batch dan update stok produk
+    // Buat detail pembelian, Inventory batch dan update stok dan harga produk
     for (const item of data.items) {
       const product = await productRepository.findProductTransaction(
         item.productId,
@@ -153,6 +139,18 @@ export class PurchaseService {
       if (!product) {
         throw new ResponseError(404, 'Product not found');
       }
+
+      // buat detail pembelian
+      const detail = await purchaseDetailRepository.createPurchaseDetail(
+        {
+          purchaseId: purchase.purchaseId,
+          productId: item.productId,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          subtotal: new Decimal(item.quantity).times(item.unitPrice),
+        },
+        prismaTransaction
+      );
 
       const currentStock = product.stock;
       const currentAvgPrice = product.avgPurchasePrice;
@@ -174,6 +172,7 @@ export class PurchaseService {
           quantity: item.quantity,
           purchasePrice: item.unitPrice,
           remainingStock: item.quantity,
+          purchaseDetailId: detail.purchaseDetailId,
         },
         prismaTransaction
       );
@@ -219,27 +218,36 @@ export class PurchaseService {
     };
   }
 
-  async createCashPurchase({
+  async createPurchaseUnified({
     body,
   }: {
-    body: CashOrCreditPurchaseRequest;
+    body: PurchaseRequest;
   }): Promise<Purchase> {
-    const vatReq = validate(purchaseCashOrCreditSchema, body);
-    const { date, supplierId, invoiceNumber, vatRateId, items } = vatReq;
+    const vatReq = validate(purchaseSchema, body);
+
+    const {
+      date,
+      supplierId,
+      invoiceNumber,
+      vatRateId,
+      items,
+      paymentType,
+      cashAmount,
+    } = vatReq;
 
     return await prismaClient.$transaction(async (prismaTransaction) => {
       // Ambil account default
       const accountDefault =
         await accountDefaultRepository.findOne(prismaTransaction);
-      if (!accountDefault) {
+      if (!accountDefault)
         throw new ResponseError(400, 'Account default not configured');
-      }
 
       const { accountCode: inventoryAccountCode } =
         accountDefault.inventoryAccount;
       const { accountCode: vatInputAccountCode } =
         accountDefault.vatInputAccount;
       const cashAccount = accountDefault.cashAccount;
+      const payableAccount = accountDefault.payableAccount;
 
       const {
         purchase,
@@ -249,7 +257,7 @@ export class PurchaseService {
         total,
         inventoryAccount,
         vatInputAccount,
-      } = await this.createPurchase(
+      } = await this.updatePurchaseDataRelation(
         {
           date,
           supplierId,
@@ -258,17 +266,36 @@ export class PurchaseService {
           vatRateId,
           inventoryAccountCode,
           vatInputAccountCode,
-          paymentType: PaymentType.CASH,
+          paymentType,
         },
         prismaTransaction
       );
 
-      // Validate cash balance
-      if (cashAccount.balance.comparedTo(total) < 0) {
-        throw new ResponseError(400, 'Insufficient cash balance');
+      // ==== VALIDASI SALDO CASH ====
+      if (paymentType === PaymentType.CASH) {
+        if (cashAccount.balance.comparedTo(total) < 0) {
+          throw new ResponseError(400, 'Insufficient cash balance');
+        }
       }
 
-      // Prepare Journal Entries
+      let cash: Decimal;
+      if (cashAmount) {
+        cash = new Decimal(cashAmount);
+      }
+
+      if (paymentType === PaymentType.MIXED) {
+        if (cashAccount.balance.comparedTo(cash!) < 0) {
+          throw new ResponseError(400, 'Insufficient cash balance');
+        }
+        if (cash!.comparedTo(total) >= 0) {
+          throw new ResponseError(
+            400,
+            'Cash amount must be less than total for mixed payment'
+          );
+        }
+      }
+
+      // ==== JOURNAL ENTRIES ====
       const journalEntries: JournalEntryForm[] = [
         {
           journalId: journal.journalId,
@@ -282,295 +309,86 @@ export class PurchaseService {
           debit: vat,
           credit: new Decimal(0),
         },
-        {
+      ];
+
+      if (paymentType === PaymentType.CASH) {
+        journalEntries.push({
           journalId: journal.journalId,
           accountId: cashAccount.accountId,
           debit: new Decimal(0),
           credit: total,
-        },
-      ];
-
-      await journalEntryRepository.createManyJournalEntries(
-        journalEntries,
-        prismaTransaction
-      );
-
-      // update account balances
-      await accountRepository.updateAccountTransaction(
-        {
-          accountCode: inventoryAccountCode,
-          balance: inventoryAccount.balance.plus(subtotal),
-        },
-        prismaTransaction
-      );
-
-      await accountRepository.updateAccountTransaction(
-        {
-          accountCode: vatInputAccountCode,
-          balance: vatInputAccount.balance.plus(vat),
-        },
-        prismaTransaction
-      );
-
-      await accountRepository.updateAccountTransaction(
-        {
-          accountCode: cashAccount.accountCode,
-          balance: cashAccount.balance.minus(total),
-        },
-        prismaTransaction
-      );
-
-      return purchase;
-    });
-  }
-
-  async createCreditPurchase({
-    body,
-  }: {
-    body: CashOrCreditPurchaseRequest;
-  }): Promise<Purchase> {
-    const vatReq = validate(purchaseCashOrCreditSchema, body);
-    const { date, supplierId, invoiceNumber, vatRateId, items } = vatReq;
-
-    return await prismaClient.$transaction(async (prismaTransaction) => {
-      // Ambil account default
-      const accountDefault =
-        await accountDefaultRepository.findOne(prismaTransaction);
-      if (!accountDefault) {
-        throw new ResponseError(400, 'Account default not configured');
+        });
       }
 
-      const { accountCode: inventoryAccountCode } =
-        accountDefault.inventoryAccount;
-      const { accountCode: vatInputAccountCode } =
-        accountDefault.vatInputAccount;
-      const payableAccount = accountDefault.payableAccount;
-
-      const {
-        purchase,
-        journal,
-        subtotal,
-        vat,
-        total,
-        inventoryAccount,
-        vatInputAccount,
-      } = await this.createPurchase(
-        {
-          date,
-          supplierId,
-          invoiceNumber,
-          items,
-          vatRateId,
-          inventoryAccountCode,
-          vatInputAccountCode,
-          paymentType: PaymentType.CREDIT,
-        },
-        prismaTransaction
-      );
-
-      // Prepare Journal Entries
-      const journalEntries: JournalEntryForm[] = [
-        {
-          journalId: journal.journalId,
-          accountId: inventoryAccount.accountId,
-          debit: subtotal,
-          credit: new Decimal(0),
-        },
-        {
-          journalId: journal.journalId,
-          accountId: vatInputAccount.accountId,
-          debit: vat,
-          credit: new Decimal(0),
-        },
-        {
+      if (paymentType === PaymentType.CREDIT) {
+        journalEntries.push({
           journalId: journal.journalId,
           accountId: payableAccount.accountId,
           debit: new Decimal(0),
           credit: total,
-        },
-      ];
-
-      await journalEntryRepository.createManyJournalEntries(
-        journalEntries,
-        prismaTransaction
-      );
-
-      // Buat Payable entry
-      const dueDate = new Date(date);
-      dueDate.setDate(dueDate.getDate() + 30); // 30-day credit term
-
-      const journalEntry = await journalEntryRepository.findLatestCreditEntry(
-        journal.journalId,
-        total,
-        prismaTransaction
-      );
-
-      if (!journalEntry) {
-        throw new ResponseError(400, 'Failed to find payable journal entry');
+        });
       }
 
-      await payableRepository.createPayable(
-        {
-          journalEntryId: journalEntry.journalEntryId,
-          supplierId,
-          purchaseId: purchase.purchaseId,
-          amount: total,
-          dueDate,
-          status: PaymentStatus.UNPAID,
-        },
-        prismaTransaction
-      );
-
-      // update account balance
-      await accountRepository.updateAccountTransaction(
-        {
-          accountCode: inventoryAccountCode,
-          balance: inventoryAccount.balance.plus(subtotal),
-        },
-        prismaTransaction
-      );
-
-      await accountRepository.updateAccountTransaction(
-        {
-          accountCode: vatInputAccountCode,
-          balance: vatInputAccount.balance.plus(vat),
-        },
-        prismaTransaction
-      );
-
-      await accountRepository.updateAccountTransaction(
-        {
-          accountCode: payableAccount.accountCode,
-          balance: payableAccount.balance.plus(total),
-        },
-        prismaTransaction
-      );
-
-      return purchase;
-    });
-  }
-
-  async createMixedPurchase({
-    body,
-  }: {
-    body: MixedPurchaseRequest;
-  }): Promise<Purchase> {
-    const vatReq = validate(purchaseMixedSchema, body);
-    const { date, supplierId, invoiceNumber, vatRateId, items, cashAmount } =
-      vatReq;
-
-    return await prismaClient.$transaction(async (prismaTransaction) => {
-      // Ambil account default
-      const accountDefault =
-        await accountDefaultRepository.findOne(prismaTransaction);
-      if (!accountDefault) {
-        throw new ResponseError(400, 'Account default not configured');
-      }
-
-      const { accountCode: inventoryAccountCode } =
-        accountDefault.inventoryAccount;
-      const { accountCode: vatInputAccountCode } =
-        accountDefault.vatInputAccount;
-      const cashAccount = accountDefault.cashAccount;
-      const payableAccount = accountDefault.payableAccount;
-
-      const {
-        purchase,
-        journal,
-        subtotal,
-        vat,
-        total,
-        inventoryAccount,
-        vatInputAccount,
-      } = await this.createPurchase(
-        {
-          date,
-          supplierId,
-          invoiceNumber,
-          items,
-          vatRateId,
-          inventoryAccountCode,
-          vatInputAccountCode,
-          paymentType: PaymentType.MIXED,
-        },
-        prismaTransaction
-      );
-
-      // Validate cash balance
-      const cash = new Decimal(cashAmount);
-      const tot = new Decimal(total);
-      if (cashAccount.balance.comparedTo(cash) < 0) {
-        throw new ResponseError(400, 'Insufficient cash balance');
-      }
-      if (cash.comparedTo(tot) >= 0) {
-        throw new ResponseError(
-          400,
-          'Cash amount must be less than total for mixed payment'
+      if (paymentType === PaymentType.MIXED) {
+        journalEntries.push(
+          {
+            journalId: journal.journalId,
+            accountId: cashAccount.accountId,
+            debit: new Decimal(0),
+            credit: cash!,
+          },
+          {
+            journalId: journal.journalId,
+            accountId: payableAccount.accountId,
+            debit: new Decimal(0),
+            credit: total.minus(cash!),
+          }
         );
       }
 
-      // Prepare Journal Entries
-      const journalEntries: JournalEntryForm[] = [
-        {
-          journalId: journal.journalId,
-          accountId: inventoryAccount.accountId,
-          debit: subtotal,
-          credit: new Decimal(0),
-        },
-        {
-          journalId: journal.journalId,
-          accountId: vatInputAccount.accountId,
-          debit: vat,
-          credit: new Decimal(0),
-        },
-        {
-          journalId: journal.journalId,
-          accountId: cashAccount.accountId,
-          debit: new Decimal(0),
-          credit: cash,
-        },
-        {
-          journalId: journal.journalId,
-          accountId: payableAccount.accountId,
-          debit: new Decimal(0),
-          credit: total.minus(cash),
-        },
-      ];
-
       await journalEntryRepository.createManyJournalEntries(
         journalEntries,
         prismaTransaction
       );
 
-      // Create Payable entry
-      const dueDate = new Date(date);
-      dueDate.setDate(dueDate.getDate() + 30);
+      // ==== PAYABLE ENTRY (CREDIT / MIXED) ====
+      if (
+        paymentType === PaymentType.CREDIT ||
+        paymentType === PaymentType.MIXED
+      ) {
+        const dueDate = new Date(date);
+        dueDate.setDate(dueDate.getDate() + 30);
 
-      const journalEntry = await journalEntryRepository.findLatestCreditEntry(
-        journal.journalId,
-        total.minus(cash),
-        prismaTransaction
-      );
+        const creditAmount =
+          paymentType === PaymentType.CREDIT ? total : total.minus(cash!);
 
-      if (!journalEntry) {
-        throw new ResponseError(400, 'Failed to find payable journal entry');
+        const journalEntry = await journalEntryRepository.findLatestCreditEntry(
+          journal.journalId,
+          creditAmount,
+          prismaTransaction
+        );
+
+        if (!journalEntry) {
+          throw new ResponseError(400, 'Failed to find payable journal entry');
+        }
+
+        await payableRepository.createPayable(
+          {
+            journalEntryId: journalEntry.journalEntryId,
+            supplierId,
+            purchaseId: purchase.purchaseId,
+            amount: creditAmount,
+            dueDate,
+            status: PaymentStatus.UNPAID,
+          },
+          prismaTransaction
+        );
       }
 
-      await payableRepository.createPayable(
-        {
-          journalEntryId: journalEntry.journalEntryId,
-          supplierId,
-          purchaseId: purchase.purchaseId,
-          amount: total.minus(cash),
-          dueDate,
-          status: PaymentStatus.UNPAID,
-        },
-        prismaTransaction
-      );
-
+      // ==== UPDATE ACCOUNT BALANCES ====
       await accountRepository.updateAccountTransaction(
         {
-          accountCode: inventoryAccount.accountCode,
+          accountCode: inventoryAccountCode,
           balance: inventoryAccount.balance.plus(subtotal),
         },
         prismaTransaction
@@ -578,27 +396,49 @@ export class PurchaseService {
 
       await accountRepository.updateAccountTransaction(
         {
-          accountCode: vatInputAccount.accountCode,
+          accountCode: vatInputAccountCode,
           balance: vatInputAccount.balance.plus(vat),
         },
         prismaTransaction
       );
 
-      await accountRepository.updateAccountTransaction(
-        {
-          accountCode: cashAccount.accountCode,
-          balance: cashAccount.balance.minus(cash),
-        },
-        prismaTransaction
-      );
+      if (paymentType === PaymentType.CASH) {
+        await accountRepository.updateAccountTransaction(
+          {
+            accountCode: cashAccount.accountCode,
+            balance: cashAccount.balance.minus(total),
+          },
+          prismaTransaction
+        );
+      }
 
-      await accountRepository.updateAccountTransaction(
-        {
-          accountCode: payableAccount.accountCode,
-          balance: payableAccount.balance.plus(total.minus(cash)),
-        },
-        prismaTransaction
-      );
+      if (paymentType === PaymentType.CREDIT) {
+        await accountRepository.updateAccountTransaction(
+          {
+            accountCode: payableAccount.accountCode,
+            balance: payableAccount.balance.plus(total),
+          },
+          prismaTransaction
+        );
+      }
+
+      if (paymentType === PaymentType.MIXED) {
+        await accountRepository.updateAccountTransaction(
+          {
+            accountCode: cashAccount.accountCode,
+            balance: cashAccount.balance.minus(cash!),
+          },
+          prismaTransaction
+        );
+
+        await accountRepository.updateAccountTransaction(
+          {
+            accountCode: payableAccount.accountCode,
+            balance: payableAccount.balance.plus(total.minus(cash!)),
+          },
+          prismaTransaction
+        );
+      }
 
       return purchase;
     });
@@ -740,12 +580,11 @@ export class PurchaseService {
         }
 
         await inventoryBatchRepository.deleteBatchByPurchaseDetail(
-          purchaseDetail.productId,
-          purchaseDetail.purchase.date,
-          purchaseDetail.unitPrice,
+          purchaseDetail.purchaseId,
           prismaTransaction
         );
 
+        // hitung ulan harga pokok
         const cogs = await recalculateCOGS(
           product.productId,
           setting.inventoryMethod,
@@ -755,6 +594,7 @@ export class PurchaseService {
           ? product.profitMargin
           : cogs.plus(product.profitMargin);
 
+        // update kembali produk
         await productRepository.updateProductTransaction(
           {
             productId: detail.productId,

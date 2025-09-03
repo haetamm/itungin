@@ -645,7 +645,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"accountCode\": \"1000\",\r\n    \"accountName\": \"Cash\",\r\n    \"accountType\": \"ASSET\",\r\n    \"normalBalance\": \"DEBIT\",\r\n    \"balance\": \"100000000\"\r\n}",
+							"raw": "{\r\n     \"accountCode\": \"3000\",\r\n            \"accountName\": \"Owner's Capital\",\r\n            \"accountType\": \"EQUITY\",\r\n            \"normalBalance\": \"CREDIT\",\r\n            \"balance\": \"100000000\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1053,7 +1053,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-01\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00001\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"1890\",\r\n        \"unitPrice\": \"11000\",\r\n        \"profitMargin\": \"500\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-02\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00001\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CASH\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"1890\",\r\n        \"unitPrice\": \"11000\",\r\n        \"profitMargin\": \"500\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1061,7 +1061,7 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost:8000/api/v1/purchases/cash",
+							"raw": "http://localhost:8000/api/v1/purchases",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -1070,8 +1070,7 @@
 							"path": [
 								"api",
 								"v1",
-								"purchases",
-								"cash"
+								"purchases"
 							]
 						}
 					},
@@ -1114,7 +1113,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-08-10\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"NV-TG-00010\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"10\",\r\n        \"unitPrice\": \"2400\",\r\n        \"profitMargin\": \"500\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-02\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00001\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CREDIT\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"1890\",\r\n        \"unitPrice\": \"11000\",\r\n        \"profitMargin\": \"500\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1122,7 +1121,7 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost:8000/api/v1/purchases/credit",
+							"raw": "http://localhost:8000/api/v1/purchases",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -1131,8 +1130,7 @@
 							"path": [
 								"api",
 								"v1",
-								"purchases",
-								"credit"
+								"purchases"
 							]
 						}
 					},
@@ -1175,7 +1173,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-08-10\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TSJ-0825-001\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"cashAmount\": \"50000\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"10\",\r\n        \"unitPrice\": \"12000\",\r\n        \"profitMargin\": \"1000\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-02\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00001\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"MIXED\",\r\n  \"cashAmount\": 1500000,\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"1890\",\r\n        \"unitPrice\": \"11000\",\r\n        \"profitMargin\": \"500\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1183,7 +1181,7 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost:8000/api/v1/purchases/mixed",
+							"raw": "http://localhost:8000/api/v1/purchases",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -1192,8 +1190,7 @@
 							"path": [
 								"api",
 								"v1",
-								"purchases",
-								"mixed"
+								"purchases"
 							]
 						}
 					},

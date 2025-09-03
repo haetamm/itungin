@@ -1,7 +1,6 @@
 import { InventoryBatch, Prisma } from '@prisma/client';
 import { prismaClient } from '../application/database';
 import { InventoryBatchForm } from '../utils/interface';
-import { Decimal } from '@prisma/client/runtime/library';
 
 export class InventoryBatchRepository {
   async getBatchesByProduct(
@@ -35,22 +34,17 @@ export class InventoryBatchRepository {
         quantity: data.quantity,
         purchasePrice: data.purchasePrice,
         remainingStock: data.remainingStock,
+        purchaseDetailId: data.purchaseDetailId,
       },
     });
   }
 
   async deleteBatchByPurchaseDetail(
-    productId: string,
-    purchaseDate: Date,
-    purchasePrice: Decimal,
+    purchaseDetailId: string,
     prismaTransaction: Prisma.TransactionClient
   ): Promise<void> {
     await prismaTransaction.inventoryBatch.deleteMany({
-      where: {
-        productId,
-        purchaseDate,
-        purchasePrice,
-      },
+      where: { purchaseDetailId },
     });
   }
 

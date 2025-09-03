@@ -152,6 +152,7 @@ export interface InventoryBatchForm {
   quantity: number;
   purchasePrice: Decimal;
   remainingStock: number;
+  purchaseDetailId: string;
 }
 
 export interface JournalEntryForm {
@@ -195,7 +196,7 @@ export interface PurchaseItem {
   profitMargin: Decimal;
 }
 
-export interface CreatePurchase {
+export interface UpdatePurchaseDataRelation {
   date: string;
   supplierId: string;
   invoiceNumber: string;
@@ -206,21 +207,14 @@ export interface CreatePurchase {
   paymentType: PaymentType;
 }
 
-export interface CashOrCreditPurchaseRequest {
+export interface PurchaseRequest {
   date: string;
   supplierId: string;
   invoiceNumber: string;
   vatRateId: string;
   items: PurchaseItem[];
-}
-
-export interface MixedPurchaseRequest {
-  date: string;
-  supplierId: string;
-  invoiceNumber: string;
-  vatRateId: string;
-  items: PurchaseItem[];
-  cashAmount: Decimal;
+  paymentType: PaymentType; // CASH | CREDIT | MIXED
+  cashAmount?: Decimal; // opsional
 }
 
 export interface PurchaseResult {

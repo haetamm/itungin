@@ -141,6 +141,7 @@ CREATE TABLE "products" (
 CREATE TABLE "inventory_batches" (
     "batch_id" TEXT NOT NULL,
     "product_id" TEXT NOT NULL,
+    "purchase_detail_id" TEXT NOT NULL,
     "purchase_date" DATE NOT NULL,
     "quantity" INTEGER NOT NULL,
     "purchase_price" DECIMAL(15,2) NOT NULL,
@@ -332,6 +333,9 @@ ALTER TABLE "journal_entries" ADD CONSTRAINT "journal_entries_account_id_fkey" F
 
 -- AddForeignKey
 ALTER TABLE "inventory_batches" ADD CONSTRAINT "inventory_batches_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "products"("product_id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "inventory_batches" ADD CONSTRAINT "inventory_batches_purchase_detail_id_fkey" FOREIGN KEY ("purchase_detail_id") REFERENCES "purchase_details"("purchase_detail_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "sales" ADD CONSTRAINT "sales_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("customer_id") ON DELETE SET NULL ON UPDATE CASCADE;

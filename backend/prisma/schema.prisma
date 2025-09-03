@@ -188,19 +188,22 @@ model Product {
 }
 
 model InventoryBatch {
-  batchId        String    @id @default(uuid()) @map("batch_id")
-  productId      String    @map("product_id")
-  purchaseDate   DateTime  @db.Date @map("purchase_date")
-  quantity       Int
-  purchasePrice  Decimal   @db.Decimal(15, 2) @map("purchase_price")
-  remainingStock Int       @map("remaining_stock")
-  product        Product   @relation(fields: [productId], references: [productId], onDelete: Cascade)
-  saleDetails    SaleDetail[]
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+  batchId          String         @id @default(uuid()) @map("batch_id")
+  productId        String         @map("product_id")
+  purchaseDetailId String         @map("purchase_detail_id")
+  purchaseDate     DateTime       @db.Date @map("purchase_date")
+  quantity         Int
+  purchasePrice    Decimal        @db.Decimal(15, 2) @map("purchase_price")
+  remainingStock   Int            @map("remaining_stock")
+  product          Product        @relation(fields: [productId], references: [productId], onDelete: Cascade)
+  purchaseDetail   PurchaseDetail @relation(fields: [purchaseDetailId], references: [purchaseDetailId], onDelete: Cascade)
+  saleDetails      SaleDetail[]
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
 
   @@map("inventory_batches")
 }
+
 
 model GeneralSetting {
   id              String           @id @default(uuid())
@@ -295,19 +298,23 @@ model Purchase {
 }
 
 model PurchaseDetail {
-  purchaseDetailId String     @id @default(uuid()) @map("purchase_detail_id")
-  purchaseId       String     @map("purchase_id")
-  productId        String     @map("product_id")
+  purchaseDetailId String           @id @default(uuid()) @map("purchase_detail_id")
+  purchaseId       String           @map("purchase_id")
+  productId        String           @map("product_id")
   quantity         Int
-  unitPrice        Decimal    @db.Decimal(15, 2) @map("unit_price")
-  subtotal         Decimal    @db.Decimal(15, 2)
-  purchase         Purchase   @relation(fields: [purchaseId], references: [purchaseId], onDelete: Cascade)
-  product          Product    @relation(fields: [productId], references: [productId], onDelete: Restrict)
-  createdAt        DateTime   @default(now()) @map("created_at")
-  updatedAt        DateTime   @updatedAt @map("updated_at")
+  unitPrice        Decimal          @db.Decimal(15, 2) @map("unit_price")
+  subtotal         Decimal          @db.Decimal(15, 2)
+
+  purchase         Purchase         @relation(fields: [purchaseId], references: [purchaseId], onDelete: Cascade)
+  product          Product          @relation(fields: [productId], references: [productId], onDelete: Restrict)
+  inventoryBatches InventoryBatch[] // 🔑 relasi balik ke batch
+
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
 
   @@map("purchase_details")
 }
+
 
 model Payable {
   payableId      String         @id @default(uuid()) @map("payable_id")

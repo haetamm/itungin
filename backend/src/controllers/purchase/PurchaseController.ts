@@ -4,41 +4,13 @@ import { ResponseSuccess } from '../../entities/responseSuccess';
 import { purchaseService } from '../../services/purchaseService';
 
 class PurchaseController implements IController {
-  async createCashPurchase(
+  async createPurchase(
     req: Request,
     res: Response,
     next: NextFunction
   ): Promise<void> {
     try {
-      const result = await purchaseService.createCashPurchase(req);
-      const response = new ResponseSuccess(201, result);
-      res.status(201).json(response);
-    } catch (e) {
-      next(e);
-    }
-  }
-
-  async createCreditPurchase(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
-    try {
-      const result = await purchaseService.createCreditPurchase(req);
-      const response = new ResponseSuccess(201, result);
-      res.status(201).json(response);
-    } catch (e) {
-      next(e);
-    }
-  }
-
-  async createMixedPurchase(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
-    try {
-      const result = await purchaseService.createMixedPurchase(req);
+      const result = await purchaseService.createPurchaseUnified(req);
       const response = new ResponseSuccess(201, result);
       res.status(201).json(response);
     } catch (e) {

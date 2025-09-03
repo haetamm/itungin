@@ -1,9 +1,5 @@
 import { ObjectSchema } from 'joi';
-import {
-  CashOrCreditPurchaseRequest,
-  DeletePurchaseRequest,
-  MixedPurchaseRequest,
-} from '../utils/interface';
+import { DeletePurchaseRequest, PurchaseRequest } from '../utils/interface';
 
 const Joi = require('joi');
 
@@ -12,11 +8,6 @@ const supplierId = Joi.string().uuid().required();
 const purchaseId = Joi.string().uuid().required();
 const invoiceNumber = Joi.string().max(50).required();
 const vatRateId = Joi.string().uuid().required();
-// const inventoryAccountCode = Joi.string().max(50).required();
-// const vatInputAccountCode = Joi.string().max(50).required();
-// const cashAccountCode = Joi.string().max(50).required();
-// const payableAccountCode = Joi.string().max(50).required();
-const cashAmount = Joi.number().positive().required();
 
 const productId = Joi.string().uuid().required().messages({
   'any.required': 'Product ID is required',
@@ -50,26 +41,23 @@ const items = Joi.array()
     'any.required': 'Items array is required',
   });
 
-export const purchaseCashOrCreditSchema: ObjectSchema<CashOrCreditPurchaseRequest> =
-  Joi.object({
-    date,
-    supplierId,
-    invoiceNumber,
-    vatRateId,
-    items,
-  });
-
-export const purchaseMixedSchema: ObjectSchema<MixedPurchaseRequest> =
-  Joi.object({
-    date,
-    supplierId,
-    invoiceNumber,
-    vatRateId,
-    items,
-    cashAmount,
-  });
-
 export const deletePurchaseSchema: ObjectSchema<DeletePurchaseRequest> =
   Joi.object({
     purchaseId,
   });
+
+export const purchaseSchema: ObjectSchema<PurchaseRequest> = Joi.object({
+  date,
+  supplierId,
+  invoiceNumber,
+  vatRateId,
+  items,
+  paymentType: Joi.string().valid('CASH', 'CREDIT', 'MIXED').required(),
+
+  // cashAmount hanya wajib kalau MIXED
+  cashAmount: Joi.when('paymentType', {
+    is: 'MIXED',
+    then: Joi.number().positive().required(),
+    otherwise: Joi.forbidden(),
+  }),
+});
