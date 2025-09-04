@@ -218,11 +218,7 @@ export class PurchaseService {
     };
   }
 
-  async createPurchaseUnified({
-    body,
-  }: {
-    body: PurchaseRequest;
-  }): Promise<Purchase> {
+  async createPurchase({ body }: { body: PurchaseRequest }): Promise<Purchase> {
     const vatReq = validate(purchaseSchema, body);
 
     const {
@@ -580,16 +576,17 @@ export class PurchaseService {
         }
 
         await inventoryBatchRepository.deleteBatchByPurchaseDetail(
-          purchaseDetail.purchaseId,
+          purchaseDetail.purchaseDetailId,
           prismaTransaction
         );
 
-        // hitung ulan harga pokok
+        // hitung ulang harga pokok
         const cogs = await recalculateCOGS(
           product.productId,
           setting.inventoryMethod,
           prismaTransaction
         );
+
         const sellingPrice = cogs.equals(0)
           ? product.profitMargin
           : cogs.plus(product.profitMargin);
@@ -662,6 +659,51 @@ export class PurchaseService {
         );
       }
     });
+  }
+
+  async getAllPurchase(
+    page: number,
+    limit: number,
+    search: string,
+    paymentType?: PaymentType,
+    from?: Date,
+    to?: Date
+  ) {
+    if (page < 1 || limit < 1) {
+      throw new ResponseError(400, 'Halaman dan batas harus bilangan positif');
+    }
+
+    if (paymentType && !Object.values(PaymentType).includes(paymentType)) {
+      throw new ResponseError(
+        400,
+        `Invalid paymentType '${paymentType}' Allowed values are: ${Object.values(PaymentType).join(', ')}`
+      );
+    }
+
+    const { purchases, total } = await purchaseRepository.getAllPurchase(
+      page,
+      limit,
+      search,
+      paymentType,
+      from,
+      to
+    );
+
+    return {
+      purchases,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPage: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async getPurchaseById(id: string) {
+    const purchase = await purchaseRepository.findPurchaseDetailById(id);
+    if (!purchase) throw new ResponseError(404, 'Purchase not found');
+    return purchase;
   }
 
   private async findAccountByAccountCode(

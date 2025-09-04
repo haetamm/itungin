@@ -10,12 +10,13 @@ class SupplierController implements IController {
     next: NextFunction
   ): Promise<void> {
     try {
-      // Ambil query params
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 10;
-      const search = (req.query.search as string) || '';
+      const { page = '1', limit = '10', search = '' } = req.query;
 
-      const result = await supplierService.getAllSupplier(page, limit, search);
+      const result = await supplierService.getAllSupplier(
+        parseInt(page as string),
+        parseInt(limit as string),
+        search as string
+      );
       const response = new ResponseSuccess(200, result);
       res.status(200).json(response);
     } catch (e) {

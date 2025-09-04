@@ -31,9 +31,30 @@ export class CustomerService {
     return customer;
   }
 
-  async getAllCustomer() {
-    const customers = await customerRepository.getAllCustomer();
-    return customers;
+  async getAllCustomer(
+    page: number = 1,
+    limit: number = 10,
+    search: string = ''
+  ) {
+    if (page < 1 || limit < 1) {
+      throw new ResponseError(400, 'Halaman dan batas harus bilangan positif');
+    }
+
+    const { customers, total } = await customerRepository.getAllCustomer(
+      page,
+      limit,
+      search
+    );
+
+    return {
+      customers,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPage: Math.ceil(total / limit),
+      },
+    };
   }
 
   async deleteCustomerById(id: string) {

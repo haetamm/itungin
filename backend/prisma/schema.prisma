@@ -44,17 +44,17 @@ enum InventoryMethod {
 }
 
 model Role {
-  id        String     @id @default(uuid())
-  role      UserRoleEnum @unique
+  id        String        @id @default(uuid())
+  role      UserRoleEnum  @unique
   userRoles UserRole[]
-  createdAt DateTime     @default(now()) @map("created_at")
-  updatedAt DateTime     @updatedAt @map("updated_at")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
 
   @@map("roles")
 }
 
 model User {
-  id        String     @id @default(uuid())
+  id        String      @id @default(uuid())
   name      String      @db.VarChar(100)
   username  String      @unique @db.VarChar(100)
   password  String      @db.VarChar(100)
@@ -103,19 +103,19 @@ model Account {
 }
 
 model AccountDefault {
-  id              String           @id @default(uuid())
-  inventoryAccountId  String
-  vatInputAccountId   String
-  cashAccountId       String
-  payableAccountId    String
+  id                    String           @id @default(uuid())
+  inventoryAccountId    String
+  vatInputAccountId     String
+  cashAccountId         String
+  payableAccountId      String
   ownerCapitalAccountId String
 
   // Relasi ke Account
-  inventoryAccount    Account  @relation("InventoryAccount", fields: [inventoryAccountId], references: [accountId])
-  vatInputAccount     Account  @relation("VatInputAccount", fields: [vatInputAccountId], references: [accountId])
-  cashAccount         Account  @relation("CashAccount", fields: [cashAccountId], references: [accountId])
-  payableAccount      Account  @relation("PayableAccount", fields: [payableAccountId], references: [accountId])
-  ownerCapitalAccount     Account  @relation("OwnerCapitalAccount", fields: [ownerCapitalAccountId], references: [accountId])
+  inventoryAccount      Account    @relation("InventoryAccount", fields: [inventoryAccountId], references: [accountId])
+  vatInputAccount       Account    @relation("VatInputAccount", fields: [vatInputAccountId], references: [accountId])
+  cashAccount           Account    @relation("CashAccount", fields: [cashAccountId], references: [accountId])
+  payableAccount        Account    @relation("PayableAccount", fields: [payableAccountId], references: [accountId])
+  ownerCapitalAccount   Account    @relation("OwnerCapitalAccount", fields: [ownerCapitalAccountId], references: [accountId])
 
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
@@ -204,28 +204,6 @@ model InventoryBatch {
   @@map("inventory_batches")
 }
 
-
-model GeneralSetting {
-  id              String           @id @default(uuid())
-  inventoryMethod  InventoryMethod  @default(AVG) @map("inventory_method")
-
-  createdAt       DateTime         @default(now()) @map("created_at")
-  updatedAt       DateTime         @updatedAt @map("updated_at")
-
-  @@map("general_settings")
-}
-
-model VatSetting {
-  vatId         String   @id @default(uuid()) @map("vat_id")
-  vatRate       Decimal  @db.Decimal(5, 2) @map("vat_rate")
-  effectiveDate DateTime @db.Date @map("effective_date")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-  deletedAt    DateTime?   @map("deleted_at")
-
-  @@map("vat_settings")
-}
-
 model Customer {
   customerId   String      @id @default(uuid()) @map("customer_id")
   customerName String      @db.VarChar(100) @map("customer_name")
@@ -281,16 +259,18 @@ model Purchase {
   purchaseId     String          @id @default(uuid()) @map("purchase_id")
   date           DateTime        @db.Date
   supplierId     String          @map("supplier_id")
+  journalId      String          @map("journal_id")
   invoiceNumber  String          @db.VarChar(50) @map("invoice_number")
   paymentType    PaymentType     @map("payment_type")
   subtotal       Decimal         @db.Decimal(15, 2)
   vat            Decimal         @db.Decimal(15, 2)
   total          Decimal         @db.Decimal(15, 2)
-  journalId      String          @map("journal_id")
+  
   supplier       Supplier        @relation(fields: [supplierId], references: [supplierId], onDelete: Restrict)
   journal        Journal         @relation(fields: [journalId], references: [journalId], onDelete: Cascade)
   purchaseDetails PurchaseDetail[]
   payables       Payable[]
+  
   createdAt      DateTime        @default(now()) @map("created_at")
   updatedAt      DateTime        @updatedAt @map("updated_at")
 
@@ -348,4 +328,26 @@ model Receivable {
   updatedAt      DateTime       @updatedAt @map("updated_at")
 
   @@map("receivables")
+}
+
+model GeneralSetting {
+  id              String           @id @default(uuid())
+  inventoryMethod  InventoryMethod  @default(AVG) @map("inventory_method")
+
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  @@map("general_settings")
+}
+
+model VatSetting {
+  vatId         String   @id @default(uuid()) @map("vat_id")
+  vatRate       Decimal  @db.Decimal(5, 2) @map("vat_rate")
+  effectiveDate DateTime @db.Date @map("effective_date")
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  deletedAt    DateTime?   @map("deleted_at")
+
+  @@map("vat_settings")
 }

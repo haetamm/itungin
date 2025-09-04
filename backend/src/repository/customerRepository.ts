@@ -1,6 +1,7 @@
 import { Customer } from '@prisma/client';
 import { prismaClient } from '../application/database';
 import { CustomerForm } from '../utils/interface';
+import { paginate } from '../utils/pagination';
 
 export class CustomerRepository {
   async findCustomerById(customerId: string): Promise<Customer | null> {
@@ -34,10 +35,29 @@ export class CustomerRepository {
     });
   }
 
-  async getAllCustomer() {
-    return await prismaClient.customer.findMany({
-      where: { deletedAt: null },
+  async getAllCustomer(
+    page: number = 1,
+    limit: number = 10,
+    search: string = ''
+  ) {
+    const searchFilter = search
+      ? {
+          OR: [
+            { phone: { contains: search, mode: 'insensitive' } },
+            { customerName: { contains: search, mode: 'insensitive' } },
+          ],
+          deletedAt: null,
+        }
+      : { deletedAt: null };
+
+    const result = await paginate<Customer>(prismaClient.customer, {
+      page,
+      limit,
+      where: searchFilter,
+      orderBy: { createdAt: 'desc' },
     });
+
+    return { customers: result.items, total: result.total };
   }
 }
 
