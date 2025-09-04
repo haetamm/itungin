@@ -5,12 +5,18 @@ import { ResponseSuccess } from '../../entities/responseSuccess';
 
 class CustomerController implements IController {
   async getAllCustomer(
-    _req: Request,
+    req: Request,
     res: Response,
     next: NextFunction
   ): Promise<void> {
     try {
-      const results = await customerService.getAllCustomer();
+      const { page = '1', limit = '10', search = '' } = req.query;
+
+      const results = await customerService.getAllCustomer(
+        parseInt(page as string),
+        parseInt(limit as string),
+        search as string
+      );
       const response = new ResponseSuccess(200, results);
       res.status(200).json(response);
     } catch (e) {

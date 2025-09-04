@@ -2,7 +2,7 @@ import Joi, { ObjectSchema } from 'joi';
 import { CustomerForm } from '../utils/interface';
 
 export const formCustomer: ObjectSchema<CustomerForm> = Joi.object({
-  name: Joi.string().trim().min(1).required(),
+  customerName: Joi.string().trim().min(1).required(),
   phone: Joi.string()
     .trim()
     .min(6)

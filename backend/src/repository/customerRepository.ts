@@ -4,6 +4,31 @@ import { CustomerForm } from '../utils/interface';
 import { paginate } from '../utils/pagination';
 
 export class CustomerRepository {
+  async getAllCustomer(
+    page: number = 1,
+    limit: number = 10,
+    search: string = ''
+  ) {
+    const searchFilter = search
+      ? {
+          OR: [
+            { phone: { contains: search, mode: 'insensitive' } },
+            { customerName: { contains: search, mode: 'insensitive' } },
+          ],
+          deletedAt: null,
+        }
+      : { deletedAt: null };
+
+    const result = await paginate<Customer>(prismaClient.customer, {
+      page,
+      limit,
+      where: searchFilter,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return { customers: result.items, total: result.total };
+  }
+
   async findCustomerById(customerId: string): Promise<Customer | null> {
     return await prismaClient.customer.findUnique({
       where: { customerId, deletedAt: null },
@@ -33,31 +58,6 @@ export class CustomerRepository {
       where: { customerId },
       data: { deletedAt: new Date() },
     });
-  }
-
-  async getAllCustomer(
-    page: number = 1,
-    limit: number = 10,
-    search: string = ''
-  ) {
-    const searchFilter = search
-      ? {
-          OR: [
-            { phone: { contains: search, mode: 'insensitive' } },
-            { customerName: { contains: search, mode: 'insensitive' } },
-          ],
-          deletedAt: null,
-        }
-      : { deletedAt: null };
-
-    const result = await paginate<Customer>(prismaClient.customer, {
-      page,
-      limit,
-      where: searchFilter,
-      orderBy: { createdAt: 'desc' },
-    });
-
-    return { customers: result.items, total: result.total };
   }
 }
 
