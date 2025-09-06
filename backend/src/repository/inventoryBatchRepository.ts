@@ -1,6 +1,7 @@
 import { InventoryBatch, Prisma } from '@prisma/client';
 import { prismaClient } from '../application/database';
 import { InventoryBatchForm } from '../utils/interface';
+import { Decimal } from '@prisma/client/runtime/library';
 
 export class InventoryBatchRepository {
   async getBatchesByProduct(
@@ -55,6 +56,57 @@ export class InventoryBatchRepository {
     return await prismaTransaction.inventoryBatch.findMany({
       where: { productId },
     });
+  }
+
+  async findBatchesForProduct(
+    productId: string,
+    inventoryMethod: 'FIFO' | 'LIFO' | 'AVG',
+    prismaTransaction: Prisma.TransactionClient
+  ) {
+    return await prismaTransaction.inventoryBatch.findMany({
+      where: {
+        productId,
+        remainingStock: { gt: 0 },
+      },
+      orderBy:
+        inventoryMethod === 'FIFO'
+          ? { purchaseDate: 'asc' }
+          : { purchaseDate: 'desc' },
+    });
+  }
+
+  async decrementBatchStock(
+    batchId: string,
+    quantity: number,
+    prismaTransaction: Prisma.TransactionClient
+  ) {
+    return await prismaTransaction.inventoryBatch.update({
+      where: { batchId },
+      data: { remainingStock: { decrement: quantity } },
+    });
+  }
+
+  async calculateAvgPurchasePrice(
+    productId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ) {
+    const batches = await prismaTransaction.inventoryBatch.findMany({
+      where: {
+        productId,
+        remainingStock: { gt: 0 },
+      },
+    });
+
+    const totalQuantity = batches.reduce(
+      (sum, batch) => sum + batch.remainingStock,
+      0
+    );
+    const totalCost = batches.reduce(
+      (sum, batch) =>
+        sum.plus(new Decimal(batch.purchasePrice).times(batch.remainingStock)),
+      new Decimal(0)
+    );
+    return totalCost.div(totalQuantity || 1).toDecimalPlaces(2);
   }
 }
 

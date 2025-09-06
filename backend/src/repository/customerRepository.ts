@@ -1,4 +1,4 @@
-import { Customer } from '@prisma/client';
+import { Customer, Prisma } from '@prisma/client';
 import { prismaClient } from '../application/database';
 import { CustomerForm } from '../utils/interface';
 import { paginate } from '../utils/pagination';
@@ -57,6 +57,15 @@ export class CustomerRepository {
     await prismaClient.customer.update({
       where: { customerId },
       data: { deletedAt: new Date() },
+    });
+  }
+
+  async findCustomerTransaction(
+    customerId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<Customer | null> {
+    return await prismaTransaction.customer.findUnique({
+      where: { customerId, deletedAt: null },
     });
   }
 }

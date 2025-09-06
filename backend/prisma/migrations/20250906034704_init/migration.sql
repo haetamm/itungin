@@ -75,6 +75,10 @@ CREATE TABLE "account_default" (
     "cashAccountId" TEXT NOT NULL,
     "payableAccountId" TEXT NOT NULL,
     "ownerCapitalAccountId" TEXT NOT NULL,
+    "salesAccountId" TEXT NOT NULL,
+    "vatOutputAccountId" TEXT NOT NULL,
+    "receivableAccountId" TEXT NOT NULL,
+    "costOfGoodsSoldAccountId" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -153,28 +157,6 @@ CREATE TABLE "inventory_batches" (
 );
 
 -- CreateTable
-CREATE TABLE "general_settings" (
-    "id" TEXT NOT NULL,
-    "inventory_method" "InventoryMethod" NOT NULL DEFAULT 'AVG',
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "general_settings_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "vat_settings" (
-    "vat_id" TEXT NOT NULL,
-    "vat_rate" DECIMAL(5,2) NOT NULL,
-    "effective_date" DATE NOT NULL,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-    "deleted_at" TIMESTAMP(3),
-
-    CONSTRAINT "vat_settings_pkey" PRIMARY KEY ("vat_id")
-);
-
--- CreateTable
 CREATE TABLE "customers" (
     "customer_id" TEXT NOT NULL,
     "customer_name" VARCHAR(100) NOT NULL,
@@ -192,12 +174,12 @@ CREATE TABLE "sales" (
     "sale_id" TEXT NOT NULL,
     "date" DATE NOT NULL,
     "customer_id" TEXT,
+    "journal_id" TEXT NOT NULL,
     "invoice_number" VARCHAR(50) NOT NULL,
     "payment_type" "PaymentType" NOT NULL,
     "subtotal" DECIMAL(15,2) NOT NULL,
     "vat" DECIMAL(15,2) NOT NULL,
     "total" DECIMAL(15,2) NOT NULL,
-    "journal_id" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -224,12 +206,12 @@ CREATE TABLE "purchases" (
     "purchase_id" TEXT NOT NULL,
     "date" DATE NOT NULL,
     "supplier_id" TEXT NOT NULL,
+    "journal_id" TEXT NOT NULL,
     "invoice_number" VARCHAR(50) NOT NULL,
     "payment_type" "PaymentType" NOT NULL,
     "subtotal" DECIMAL(15,2) NOT NULL,
     "vat" DECIMAL(15,2) NOT NULL,
     "total" DECIMAL(15,2) NOT NULL,
-    "journal_id" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -280,6 +262,28 @@ CREATE TABLE "receivables" (
     CONSTRAINT "receivables_pkey" PRIMARY KEY ("receivable_id")
 );
 
+-- CreateTable
+CREATE TABLE "general_settings" (
+    "id" TEXT NOT NULL,
+    "inventory_method" "InventoryMethod" NOT NULL DEFAULT 'AVG',
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "general_settings_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "vat_settings" (
+    "vat_id" TEXT NOT NULL,
+    "vat_rate" DECIMAL(5,2) NOT NULL,
+    "effective_date" DATE NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+    "deleted_at" TIMESTAMP(3),
+
+    CONSTRAINT "vat_settings_pkey" PRIMARY KEY ("vat_id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "roles_role_key" ON "roles"("role");
 
@@ -311,19 +315,31 @@ ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_user_id_fkey" FOREIGN KEY ("
 ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "roles"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "account_default" ADD CONSTRAINT "account_default_cashAccountId_fkey" FOREIGN KEY ("cashAccountId") REFERENCES "accounts"("account_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "account_default" ADD CONSTRAINT "account_default_inventoryAccountId_fkey" FOREIGN KEY ("inventoryAccountId") REFERENCES "accounts"("account_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "account_default" ADD CONSTRAINT "account_default_vatInputAccountId_fkey" FOREIGN KEY ("vatInputAccountId") REFERENCES "accounts"("account_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "account_default" ADD CONSTRAINT "account_default_cashAccountId_fkey" FOREIGN KEY ("cashAccountId") REFERENCES "accounts"("account_id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "account_default" ADD CONSTRAINT "account_default_payableAccountId_fkey" FOREIGN KEY ("payableAccountId") REFERENCES "accounts"("account_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "account_default" ADD CONSTRAINT "account_default_ownerCapitalAccountId_fkey" FOREIGN KEY ("ownerCapitalAccountId") REFERENCES "accounts"("account_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "account_default" ADD CONSTRAINT "account_default_salesAccountId_fkey" FOREIGN KEY ("salesAccountId") REFERENCES "accounts"("account_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "account_default" ADD CONSTRAINT "account_default_vatOutputAccountId_fkey" FOREIGN KEY ("vatOutputAccountId") REFERENCES "accounts"("account_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "account_default" ADD CONSTRAINT "account_default_receivableAccountId_fkey" FOREIGN KEY ("receivableAccountId") REFERENCES "accounts"("account_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "account_default" ADD CONSTRAINT "account_default_costOfGoodsSoldAccountId_fkey" FOREIGN KEY ("costOfGoodsSoldAccountId") REFERENCES "accounts"("account_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "journal_entries" ADD CONSTRAINT "journal_entries_journal_id_fkey" FOREIGN KEY ("journal_id") REFERENCES "journals"("journal_id") ON DELETE CASCADE ON UPDATE CASCADE;

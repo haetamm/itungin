@@ -13,6 +13,7 @@ import GeneralSettingRoutes from '../routers/GeneralSettingRoutes';
 import AccountRoutes from '../routers/AccountRoutes';
 import PurchaseRoutes from '../routers/PurchaseRoutes';
 import CustomerRoutes from '../routers/CustomerRoutes';
+import SaleRoutes from '../routers/SaleRoutes';
 
 class App {
   public app: Application;
@@ -55,6 +56,7 @@ class App {
     this.app.use('/api/v1', AccountRoutes);
     this.app.use('/api/v1', PurchaseRoutes);
     this.app.use('/api/v1', CustomerRoutes);
+    this.app.use('/api/v1', SaleRoutes);
     this.app.use(errorMiddleware);
   }
 }

@@ -119,6 +119,17 @@ export class ProductRepository {
       },
     });
   }
+
+  async decrementStock(
+    productId: string,
+    quantity: number,
+    prismaTransaction: Prisma.TransactionClient
+  ) {
+    return await prismaTransaction.product.update({
+      where: { productId },
+      data: { stock: { decrement: quantity } },
+    });
+  }
 }
 
 export const productRepository = new ProductRepository();

@@ -1,5 +1,5 @@
 import { Prisma, SaleDetail } from '@prisma/client';
-// import { prismaClient } from '../application/database';
+import { SaleDetailForm } from '../utils/interface';
 
 export class SaleDetailRepository {
   async getSalesByProduct(
@@ -8,6 +8,22 @@ export class SaleDetailRepository {
   ): Promise<SaleDetail[]> {
     return prismaTransaction.saleDetail.findMany({
       where: { productId },
+    });
+  }
+
+  async createSaleDetail(
+    data: SaleDetailForm,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<SaleDetail> {
+    return prismaTransaction.saleDetail.create({
+      data: {
+        saleId: data.saleId,
+        batchId: data.batchId,
+        productId: data.productId,
+        quantity: data.quantity,
+        unitPrice: data.unitPrice,
+        subtotal: data.subtotal,
+      },
     });
   }
 }

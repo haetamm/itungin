@@ -1,5 +1,4 @@
 import {
-  Account,
   AccountType,
   EntryType,
   InventoryMethod,
@@ -177,6 +176,35 @@ export interface CustomerForm {
   address: string;
 }
 
+export interface SaleForm {
+  date: string | Date;
+  customerId: string;
+  journalId: string;
+  invoiceNumber: string;
+  paymentType: PaymentType;
+  subtotal: Decimal;
+  vat: Decimal;
+  total: Decimal;
+}
+
+export interface SaleDetailForm {
+  saleId: string;
+  batchId?: string | null;
+  productId: string;
+  quantity: number;
+  unitPrice: Decimal;
+  subtotal: Decimal;
+}
+
+export interface ReceivableForm {
+  journalEntryId: string;
+  status: PaymentStatus;
+  customerId: string;
+  saleId: string;
+  amount: Decimal;
+  dueDate: Date;
+}
+
 // types/pagination.ts
 export type PaginationResponse<T, K extends string> = {
   [key in K]: T[];
@@ -202,8 +230,6 @@ export interface UpdatePurchaseDataRelation {
   invoiceNumber: string;
   items: PurchaseItem[];
   vatRateId: string;
-  inventoryAccountCode: string;
-  vatInputAccountCode: string;
   paymentType: PaymentType;
 }
 
@@ -223,10 +249,23 @@ export interface PurchaseResult {
   subtotal: Decimal;
   vat: Decimal;
   total: Decimal;
-  inventoryAccount: Account;
-  vatInputAccount: Account;
 }
 
 export interface DeletePurchaseRequest {
   purchaseId: string;
+}
+
+export interface SaleItem {
+  productId: string;
+  quantity: number;
+}
+
+export interface SaleRequest {
+  date: string;
+  customerId: string;
+  invoiceNumber: string;
+  vatRateId: string;
+  items: SaleItem[];
+  paymentType: PaymentType; // CASH | CREDIT | MIXED
+  cashAmount?: Decimal; // opsional
 }

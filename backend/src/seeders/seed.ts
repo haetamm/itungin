@@ -1,4 +1,3 @@
-// seed.ts
 import { PrismaClient, AccountType, EntryType } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
@@ -54,28 +53,52 @@ async function main() {
       normalBalance: EntryType.DEBIT,
     },
     {
+      accountCode: '1100',
+      accountName: 'Account Receivable',
+      accountType: AccountType.ASSET,
+      normalBalance: EntryType.DEBIT,
+    },
+    {
+      accountCode: '1200',
+      accountName: 'Merchandise Inventory',
+      accountType: AccountType.ASSET,
+      normalBalance: EntryType.DEBIT,
+    },
+    {
+      accountCode: '1300',
+      accountName: 'VAT Input',
+      accountType: AccountType.ASSET,
+      normalBalance: EntryType.DEBIT,
+    },
+    {
       accountCode: '2000',
       accountName: 'Accounts Payable',
       accountType: AccountType.LIABILITY,
       normalBalance: EntryType.CREDIT,
     },
     {
-      accountCode: '1100',
-      accountName: 'Merchandise Inventory',
-      accountType: AccountType.ASSET,
-      normalBalance: EntryType.DEBIT,
-    },
-    {
-      accountCode: '1200',
-      accountName: 'VAT Input',
-      accountType: AccountType.ASSET,
-      normalBalance: EntryType.DEBIT,
-    },
-    {
       accountCode: '3000',
       accountName: "Owner's Capital",
       accountType: AccountType.EQUITY,
       normalBalance: EntryType.CREDIT,
+    },
+    {
+      accountCode: '4000',
+      accountName: 'Sales',
+      accountType: AccountType.REVENUE,
+      normalBalance: EntryType.CREDIT,
+    },
+    {
+      accountCode: '4100',
+      accountName: 'VAT Output',
+      accountType: AccountType.LIABILITY,
+      normalBalance: EntryType.CREDIT,
+    },
+    {
+      accountCode: '6000',
+      accountName: 'Cost Of Goods Sold',
+      accountType: AccountType.EXPENSE,
+      normalBalance: EntryType.DEBIT,
     },
   ];
 
@@ -92,21 +115,29 @@ async function main() {
 
   // ====== GENERAL SETTINGS ======
   await prisma.accountDefault.upsert({
-    where: { id: 'default-setting' }, // pastikan id ini ada di schema
+    where: { id: 'default-setting' },
     update: {
+      cashAccountId: accounts['Cash'].accountId,
+      receivableAccountId: accounts['Account Receivable'].accountId,
       inventoryAccountId: accounts['Merchandise Inventory'].accountId,
       vatInputAccountId: accounts['VAT Input'].accountId,
-      cashAccountId: accounts['Cash'].accountId,
       payableAccountId: accounts['Accounts Payable'].accountId,
       ownerCapitalAccountId: accounts["Owner's Capital"].accountId,
+      salesAccountId: accounts['Sales'].accountId,
+      vatOutputAccountId: accounts['VAT Output'].accountId,
+      costOfGoodsSoldAccountId: accounts['Cost Of Goods Sold'].accountId,
     },
     create: {
       id: 'default-setting',
+      cashAccountId: accounts['Cash'].accountId,
+      receivableAccountId: accounts['Account Receivable'].accountId,
       inventoryAccountId: accounts['Merchandise Inventory'].accountId,
       vatInputAccountId: accounts['VAT Input'].accountId,
-      cashAccountId: accounts['Cash'].accountId,
       payableAccountId: accounts['Accounts Payable'].accountId,
       ownerCapitalAccountId: accounts["Owner's Capital"].accountId,
+      salesAccountId: accounts['Sales'].accountId,
+      vatOutputAccountId: accounts['VAT Output'].accountId,
+      costOfGoodsSoldAccountId: accounts['Cost Of Goods Sold'].accountId,
     },
   });
   console.log('✅ General Settings berhasil dibuat / diupdate.');

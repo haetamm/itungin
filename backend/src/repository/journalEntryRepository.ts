@@ -38,6 +38,21 @@ export class JournalEntryRepository {
       },
     });
   }
+
+  async createJournalEntries(
+    data: JournalEntryForm,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<JournalEntry> {
+    const result = await prismaTransaction.journalEntry.create({
+      data: {
+        journalId: data.journalId,
+        accountId: data.accountId,
+        debit: data.debit,
+        credit: data.credit,
+      },
+    });
+    return result;
+  }
 }
 
 export const journalEntryRepository = new JournalEntryRepository();

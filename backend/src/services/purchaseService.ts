@@ -16,7 +16,6 @@ import { productRepository } from '../repository/productRepository';
 import { Decimal } from '@prisma/client/runtime/library';
 import { ResponseError } from '../entities/responseError';
 import {
-  Account,
   JournalEntry,
   PaymentStatus,
   PaymentType,
@@ -40,16 +39,8 @@ export class PurchaseService {
     data: UpdatePurchaseDataRelation,
     prismaTransaction: Prisma.TransactionClient
   ): Promise<PurchaseResult> {
-    const {
-      date,
-      supplierId,
-      invoiceNumber,
-      items,
-      vatRateId,
-      inventoryAccountCode,
-      vatInputAccountCode,
-      paymentType,
-    } = data;
+    const { date, supplierId, invoiceNumber, items, vatRateId, paymentType } =
+      data;
 
     const setting =
       await generalSettingRepository.getSettingTransaction(prismaTransaction);
@@ -91,18 +82,6 @@ export class PurchaseService {
 
     // Hitung total akhir = subtotal + VAT
     const total = subtotal.plus(vat);
-
-    // Validasi inventory account and VAT Input accounts
-    const inventoryAccount = await this.findAccountByAccountCode(
-      'Inventory',
-      inventoryAccountCode,
-      prismaTransaction
-    );
-    const vatInputAccount = await this.findAccountByAccountCode(
-      'Input VAT',
-      vatInputAccountCode,
-      prismaTransaction
-    );
 
     // Buat Journal (header)
     const journal = await journalRepository.createJournal(
@@ -213,13 +192,11 @@ export class PurchaseService {
       subtotal,
       vat,
       total,
-      inventoryAccount,
-      vatInputAccount,
     };
   }
 
   async createPurchase({ body }: { body: PurchaseRequest }): Promise<Purchase> {
-    const vatReq = validate(purchaseSchema, body);
+    const purchaseReq = validate(purchaseSchema, body);
 
     const {
       date,
@@ -229,43 +206,30 @@ export class PurchaseService {
       items,
       paymentType,
       cashAmount,
-    } = vatReq;
+    } = purchaseReq;
 
     return await prismaClient.$transaction(async (prismaTransaction) => {
       // Ambil account default
       const accountDefault =
         await accountDefaultRepository.findOne(prismaTransaction);
       if (!accountDefault)
-        throw new ResponseError(400, 'Account default not configured');
+        throw new ResponseError(400, 'Account not configured');
 
-      const { accountCode: inventoryAccountCode } =
-        accountDefault.inventoryAccount;
-      const { accountCode: vatInputAccountCode } =
-        accountDefault.vatInputAccount;
-      const cashAccount = accountDefault.cashAccount;
-      const payableAccount = accountDefault.payableAccount;
+      const { cashAccount, payableAccount, inventoryAccount, vatInputAccount } =
+        accountDefault;
 
-      const {
-        purchase,
-        journal,
-        subtotal,
-        vat,
-        total,
-        inventoryAccount,
-        vatInputAccount,
-      } = await this.updatePurchaseDataRelation(
-        {
-          date,
-          supplierId,
-          invoiceNumber,
-          items,
-          vatRateId,
-          inventoryAccountCode,
-          vatInputAccountCode,
-          paymentType,
-        },
-        prismaTransaction
-      );
+      const { purchase, journal, subtotal, vat, total } =
+        await this.updatePurchaseDataRelation(
+          {
+            date,
+            supplierId,
+            invoiceNumber,
+            items,
+            vatRateId,
+            paymentType,
+          },
+          prismaTransaction
+        );
 
       // ==== VALIDASI SALDO CASH ====
       if (paymentType === PaymentType.CASH) {
@@ -384,7 +348,7 @@ export class PurchaseService {
       // ==== UPDATE ACCOUNT BALANCES ====
       await accountRepository.updateAccountTransaction(
         {
-          accountCode: inventoryAccountCode,
+          accountCode: inventoryAccount.accountCode,
           balance: inventoryAccount.balance.plus(subtotal),
         },
         prismaTransaction
@@ -392,7 +356,7 @@ export class PurchaseService {
 
       await accountRepository.updateAccountTransaction(
         {
-          accountCode: vatInputAccountCode,
+          accountCode: vatInputAccount.accountCode,
           balance: vatInputAccount.balance.plus(vat),
         },
         prismaTransaction
@@ -464,10 +428,8 @@ export class PurchaseService {
         throw new ResponseError(400, 'Account default not configured');
       }
 
-      const inventoryAccount = accountDefault.inventoryAccount;
-      const vatInputAccount = accountDefault.vatInputAccount;
-      const cashAccount = accountDefault.cashAccount;
-      const payableAccount = accountDefault.payableAccount;
+      const { cashAccount, payableAccount, inventoryAccount, vatInputAccount } =
+        accountDefault;
 
       // Ambil journal entries
       const journalEntries: JournalEntry[] = purchase.journal.journalEntries;
@@ -704,23 +666,6 @@ export class PurchaseService {
     const purchase = await purchaseRepository.findPurchaseDetailById(id);
     if (!purchase) throw new ResponseError(404, 'Purchase not found');
     return purchase;
-  }
-
-  private async findAccountByAccountCode(
-    accountName: string,
-    accountCode: string,
-    prismaTransaction: Prisma.TransactionClient
-  ): Promise<Account> {
-    const account = await accountRepository.findAccountByAccountCodeTransaction(
-      accountCode,
-      prismaTransaction
-    );
-
-    if (!account) {
-      throw new ResponseError(404, `${accountName} account not found`);
-    }
-
-    return account;
   }
 }
 
