@@ -19,6 +19,12 @@ export interface IController {
     next: NextFunction
   ): Promise<void>;
 
+  updatePurchaseById(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void>;
+
   deletePurchase(
     req: Request,
     res: Response,

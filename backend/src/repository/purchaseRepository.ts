@@ -7,7 +7,7 @@ import {
   Purchase,
   PurchaseDetail,
 } from '@prisma/client';
-import { PurchaseForm } from '../utils/interface';
+import { PurchaseForm, UpdatePurchaseForm } from '../utils/interface';
 import { paginate } from '../utils/pagination';
 import { prismaClient } from '../application/database';
 
@@ -57,7 +57,7 @@ export class PurchaseRepository {
   ): Promise<Purchase> {
     return prismaTransaction.purchase.create({
       data: {
-        date: data.date instanceof Date ? data.date : new Date(data.date),
+        date: data.date,
         supplierId: data.supplierId,
         invoiceNumber: data.invoiceNumber,
         paymentType: data.paymentType,
@@ -115,7 +115,7 @@ export class PurchaseRepository {
   ): Promise<
     | (Purchase & {
         journal: Journal & { journalEntries: JournalEntry[] };
-        payables: Payable[];
+        payable: Payable | null;
         purchaseDetails: PurchaseDetail[];
       })
     | null
@@ -128,8 +128,23 @@ export class PurchaseRepository {
             journalEntries: true,
           },
         },
-        payables: true,
+        payable: true,
         purchaseDetails: true,
+      },
+    });
+  }
+
+  async updatePurchaseTransaction(
+    data: UpdatePurchaseForm,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<Purchase> {
+    return prismaTransaction.purchase.update({
+      where: { purchaseId: data.purchaseId },
+      data: {
+        date: data.date,
+        supplierId: data.supplierId,
+        invoiceNumber: data.invoiceNumber,
+        paymentType: data.paymentType,
       },
     });
   }

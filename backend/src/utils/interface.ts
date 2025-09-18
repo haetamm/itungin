@@ -126,6 +126,13 @@ export interface JournalForm {
   reference?: string;
 }
 
+export interface UpdateJournalForm {
+  journalId: string;
+  date: string | Date;
+  description?: string;
+  reference?: string;
+}
+
 export interface PurchaseForm {
   date: string | Date;
   supplierId: string;
@@ -135,6 +142,14 @@ export interface PurchaseForm {
   vat: Decimal;
   total: Decimal;
   journalId: string;
+}
+
+export interface UpdatePurchaseForm {
+  purchaseId: string;
+  date: string | Date;
+  supplierId: string;
+  invoiceNumber: string;
+  paymentType: PaymentType;
 }
 
 export interface PurchaseDetailForm {
@@ -167,6 +182,14 @@ export interface PayableForm {
   purchaseId: string;
   amount: Decimal;
   dueDate: Date;
+  status: PaymentStatus;
+}
+
+export interface UpdatePayableForm {
+  payableId: string;
+  supplierId: string;
+  dueDate: Date;
+  amount: Decimal;
   status: PaymentStatus;
 }
 
@@ -241,6 +264,16 @@ export interface PurchaseRequest {
   items: PurchaseItem[];
   paymentType: PaymentType; // CASH | CREDIT | MIXED
   cashAmount?: Decimal; // opsional
+  dueDate?: string; // opsional, wajib jika CREDIT atau MIXED
+}
+
+export interface UpdatePurchaseRequest {
+  date: string;
+  supplierId: string;
+  invoiceNumber: string;
+  paymentType: PaymentType; // CASH | CREDIT | MIXED
+  cashAmount?: Decimal; // opsional
+  dueDate?: string; // opsional, wajib jika CREDIT atau MIXED
 }
 
 export interface PurchaseResult {
@@ -268,4 +301,5 @@ export interface SaleRequest {
   items: SaleItem[];
   paymentType: PaymentType; // CASH | CREDIT | MIXED
   cashAmount?: Decimal; // opsional
+  dueDate?: string; // opsional, wajib jika CREDIT atau MIXED
 }

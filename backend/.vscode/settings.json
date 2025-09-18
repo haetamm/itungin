@@ -15,5 +15,11 @@
   "files.autoSaveDelay": 1000,
   "editor.rulers": [80],
   "eslint.format.enable": true,
-  "prettier.requireConfig": false
+  "prettier.requireConfig": false,
+  "prettier.singleQuote": true,
+  "prettier.semi": true,
+  "prettier.trailingComma": "es5",
+  "prettier.printWidth": 80,
+  "prettier.tabWidth": 2,
+  "prettier.endOfLine": "lf"
 }

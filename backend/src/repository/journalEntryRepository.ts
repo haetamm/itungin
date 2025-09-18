@@ -1,5 +1,6 @@
 import { JournalEntry, Prisma } from '@prisma/client';
 import { JournalEntryForm } from '../utils/interface';
+import { Decimal } from '@prisma/client/runtime/library';
 
 export class JournalEntryRepository {
   async createManyJournalEntries(
@@ -52,6 +53,32 @@ export class JournalEntryRepository {
       },
     });
     return result;
+  }
+
+  async updateJournalEntryAmounts(
+    {
+      journalEntryId,
+      debit,
+      credit,
+    }: { journalEntryId: string; debit: Decimal; credit: Decimal },
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<void> {
+    await prismaTransaction.journalEntry.update({
+      where: { journalEntryId },
+      data: { debit, credit },
+    });
+  }
+
+  async deleteJournalEntriesByIds(
+    journalEntryIds: string[],
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<void> {
+    if (journalEntryIds.length === 0) return; // amankan jika array kosong
+    await prismaTransaction.journalEntry.deleteMany({
+      where: {
+        journalEntryId: { in: journalEntryIds },
+      },
+    });
   }
 }
 

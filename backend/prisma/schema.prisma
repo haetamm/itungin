@@ -163,6 +163,8 @@ model JournalEntry {
   account        Account   @relation(fields: [accountId], references: [accountId], onDelete: Restrict)
   payables       Payable[]
   receivables    Receivable[]
+  payment        Payment?  @relation("PaymentJournalEntry") // Opposite relation
+
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
@@ -277,26 +279,27 @@ model SaleDetail {
 }
 
 model Purchase {
-  purchaseId     String          @id @default(uuid()) @map("purchase_id")
-  date           DateTime        @db.Date
-  supplierId     String          @map("supplier_id")
-  journalId      String          @map("journal_id")
-  invoiceNumber  String          @db.VarChar(50) @map("invoice_number")
-  paymentType    PaymentType     @map("payment_type")
-  subtotal       Decimal         @db.Decimal(15, 2)
-  vat            Decimal         @db.Decimal(15, 2)
-  total          Decimal         @db.Decimal(15, 2)
-  
-  supplier       Supplier        @relation(fields: [supplierId], references: [supplierId], onDelete: Restrict)
-  journal        Journal         @relation(fields: [journalId], references: [journalId], onDelete: Cascade)
+  purchaseId      String          @id @default(uuid()) @map("purchase_id")
+  date            DateTime        @db.Date
+  supplierId      String          @map("supplier_id")
+  journalId       String          @map("journal_id")
+  invoiceNumber   String          @db.VarChar(50) @map("invoice_number")
+  paymentType     PaymentType     @map("payment_type")
+  subtotal        Decimal         @db.Decimal(15, 2)
+  vat             Decimal         @db.Decimal(15, 2)
+  total           Decimal         @db.Decimal(15, 2)
+
+  supplier        Supplier        @relation(fields: [supplierId], references: [supplierId], onDelete: Restrict)
+  journal         Journal         @relation(fields: [journalId], references: [journalId], onDelete: Cascade)
   purchaseDetails PurchaseDetail[]
-  payables       Payable[]
-  
-  createdAt      DateTime        @default(now()) @map("created_at")
-  updatedAt      DateTime        @updatedAt @map("updated_at")
+  payable         Payable?        // 👉 satu purchase hanya punya satu payable
+
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
 
   @@map("purchases")
 }
+
 
 model PurchaseDetail {
   purchaseDetailId String           @id @default(uuid()) @map("purchase_detail_id")
@@ -316,20 +319,22 @@ model PurchaseDetail {
   @@map("purchase_details")
 }
 
-
 model Payable {
-  payableId      String         @id @default(uuid()) @map("payable_id")
-  journalEntryId String         @unique @map("journal_entry_id")
-  supplierId     String         @map("supplier_id")
-  amount         Decimal        @db.Decimal(15, 2)
-  dueDate        DateTime       @db.Date @map("due_date")
-  status         PaymentStatus
-  journalEntry   JournalEntry   @relation(fields: [journalEntryId], references: [journalEntryId], onDelete: Restrict)
-  supplier       Supplier       @relation(fields: [supplierId], references: [supplierId], onDelete: Restrict)
-  purchase       Purchase?      @relation(fields: [purchaseId], references: [purchaseId], onDelete: SetNull)
-  purchaseId     String?        @map("purchase_id")
-  createdAt      DateTime       @default(now()) @map("created_at")
-  updatedAt      DateTime       @updatedAt @map("updated_at")
+  payableId       String        @id @default(uuid()) @map("payable_id")
+  journalEntryId  String        @unique @map("journal_entry_id")
+  supplierId      String        @map("supplier_id")
+  purchaseId      String?       @unique @map("purchase_id") // 👉 1 purchase = 1 payable
+  amount          Decimal       @db.Decimal(15, 2)
+  dueDate         DateTime      @db.Date @map("due_date")
+  status          PaymentStatus // PENDING / PARTIAL / PAID
+
+  journalEntry    JournalEntry  @relation(fields: [journalEntryId], references: [journalEntryId], onDelete: Restrict)
+  supplier        Supplier      @relation(fields: [supplierId], references: [supplierId], onDelete: Restrict)
+  purchase        Purchase?     @relation(fields: [purchaseId], references: [purchaseId], onDelete: Cascade)
+  payments        Payment[]     // 👉 1 payable bisa banyak payment (angsuran)
+
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
 
   @@map("payables")
 }
@@ -351,6 +356,23 @@ model Receivable {
   updatedAt      DateTime       @updatedAt @map("updated_at")
 
   @@map("receivables")
+}
+
+model Payment {
+  paymentId       String        @id @default(uuid()) @map("payment_id")
+  payableId       String        @map("payable_id")
+  journalEntryId  String        @unique @map("journal_entry_id")
+  amount          Decimal       @db.Decimal(15, 2)
+  paymentDate     DateTime      @db.Date @map("payment_date")
+  method          String        @db.VarChar(50)
+
+  payable         Payable       @relation(fields: [payableId], references: [payableId], onDelete: Cascade)
+  journalEntry JournalEntry @relation("PaymentJournalEntry", fields: [journalEntryId], references: [journalEntryId], onDelete: Restrict)
+
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  @@map("payments")
 }
 
 model GeneralSetting {

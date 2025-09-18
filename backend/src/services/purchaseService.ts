@@ -4,12 +4,14 @@ import {
   PurchaseRequest,
   PurchaseResult,
   UpdatePurchaseDataRelation,
+  UpdatePurchaseRequest,
 } from '../utils/interface';
 import { validate } from '../validation/validation';
 import { vatSettingRepository } from '../repository/vatSettingRepository';
 import {
   deletePurchaseSchema,
   purchaseSchema,
+  updatePurchaseSchema,
 } from '../validation/purchaseValidation';
 import { supplierRepository } from '../repository/supplierRepository';
 import { productRepository } from '../repository/productRepository';
@@ -86,7 +88,7 @@ export class PurchaseService {
     // Buat Journal (header)
     const journal = await journalRepository.createJournal(
       {
-        date: data.date,
+        date: new Date(data.date),
         description: `Pembelian ${paymentType.toLowerCase()} ${invoiceNumber}`,
         reference: invoiceNumber,
       },
@@ -96,7 +98,7 @@ export class PurchaseService {
     // Buat pembelian
     const purchase = await purchaseRepository.createPurchase(
       {
-        date: data.date,
+        date: new Date(data.date),
         supplierId: data.supplierId,
         invoiceNumber: data.invoiceNumber,
         paymentType: data.paymentType,
@@ -147,7 +149,7 @@ export class PurchaseService {
       await inventoryBatchRepository.createInventoryBatch(
         {
           productId: item.productId,
-          purchaseDate: data.date,
+          purchaseDate: new Date(data.date),
           quantity: item.quantity,
           purchasePrice: item.unitPrice,
           remainingStock: item.quantity,
@@ -206,6 +208,7 @@ export class PurchaseService {
       items,
       paymentType,
       cashAmount,
+      dueDate,
     } = purchaseReq;
 
     return await prismaClient.$transaction(async (prismaTransaction) => {
@@ -316,9 +319,6 @@ export class PurchaseService {
         paymentType === PaymentType.CREDIT ||
         paymentType === PaymentType.MIXED
       ) {
-        const dueDate = new Date(date);
-        dueDate.setDate(dueDate.getDate() + 30);
-
         const creditAmount =
           paymentType === PaymentType.CREDIT ? total : total.minus(cash!);
 
@@ -338,7 +338,7 @@ export class PurchaseService {
             supplierId,
             purchaseId: purchase.purchaseId,
             amount: creditAmount,
-            dueDate,
+            dueDate: new Date(dueDate!),
             status: PaymentStatus.UNPAID,
           },
           prismaTransaction
@@ -417,6 +417,8 @@ export class PurchaseService {
         purchaseId,
         prismaTransaction
       );
+
+      console.log(purchase);
       if (!purchase) {
         throw new ResponseError(404, 'Purchase not found');
       }
@@ -494,9 +496,9 @@ export class PurchaseService {
           throw new ResponseError(400, 'Invalid payment type');
       }
 
-      for (const payable of purchase.payables) {
+      if (purchase.payable) {
         await payableRepository.deletePayable(
-          payable.payableId,
+          purchase.payable.payableId,
           prismaTransaction
         );
       }
@@ -666,6 +668,346 @@ export class PurchaseService {
     const purchase = await purchaseRepository.findPurchaseDetailById(id);
     if (!purchase) throw new ResponseError(404, 'Purchase not found');
     return purchase;
+  }
+
+  async updatePurchase(
+    { body }: { body: UpdatePurchaseRequest },
+    purchaseId: string
+  ): Promise<Purchase> {
+    const purchaseReq = validate(updatePurchaseSchema, body);
+    const {
+      date,
+      supplierId,
+      invoiceNumber,
+      paymentType,
+      cashAmount,
+      dueDate,
+    } = purchaseReq;
+
+    return await prismaClient.$transaction(async (prismaTransaction) => {
+      // 1. Ambil akun default (kas dan hutang)
+      const accountDefault =
+        await accountDefaultRepository.findOne(prismaTransaction);
+      if (!accountDefault)
+        throw new ResponseError(400, 'Account has not been configured');
+
+      let { cashAccount, payableAccount } = accountDefault;
+
+      // 2. Ambil data pembelian existing beserta relasinya
+      const existingPurchase =
+        await purchaseRepository.findPurchaseByIdTransaction(
+          purchaseId,
+          prismaTransaction
+        );
+      if (!existingPurchase) throw new ResponseError(404, 'Purchase not found');
+
+      // Simpan data lama untuk keperluan perbandingan
+      const oldPaymentType = existingPurchase.paymentType;
+      const { total, purchaseDetails } = existingPurchase;
+
+      // 3. Update tabel Purchase
+      const purchase = await purchaseRepository.updatePurchaseTransaction(
+        {
+          purchaseId,
+          date: new Date(date),
+          supplierId,
+          invoiceNumber,
+          paymentType,
+        },
+        prismaTransaction
+      );
+
+      // 4. Update header jurnal
+      await journalRepository.updateJournalTransaction(
+        {
+          journalId: existingPurchase.journalId,
+          date: new Date(date),
+          description: `Pembelian ${paymentType.toLowerCase()} ${invoiceNumber}`,
+          reference: invoiceNumber,
+        },
+        prismaTransaction
+      );
+
+      // 5. Update batch inventory untuk setiap detail pembelian
+      for (const detail of purchaseDetails) {
+        await inventoryBatchRepository.updateBatchByPurchaseDetailId(
+          {
+            purchaseDetailId: detail.purchaseDetailId,
+            productId: detail.productId,
+            purchaseDate: new Date(date),
+            quantity: detail.quantity,
+            purchasePrice: detail.unitPrice,
+            remainingStock: detail.quantity,
+          },
+          prismaTransaction
+        );
+      }
+
+      // 6. Update hutang (Payable) - buat atau perbarui journal entry untuk payable
+      let payableJournalEntryId: string | null = null; // Simpan ID journal entry untuk payable
+      if (
+        paymentType === PaymentType.CREDIT ||
+        paymentType === PaymentType.MIXED
+      ) {
+        const payable = existingPurchase.payable;
+
+        if (payable) {
+          // Jika hutang sudah ada (jika dari CREDIT ke MIXED)
+          const creditAmount =
+            paymentType === PaymentType.CREDIT
+              ? total
+              : total.minus(new Decimal(cashAmount!));
+
+          // Perbarui journal entry yang sudah ada untuk payable
+          await journalEntryRepository.updateJournalEntryAmounts(
+            {
+              journalEntryId: payable.journalEntryId,
+              debit: new Decimal(0),
+              credit: creditAmount,
+            },
+            prismaTransaction
+          );
+          payableJournalEntryId = payable.journalEntryId;
+
+          // Perbarui data hutang, termasuk amount untuk MIXED
+          await payableRepository.updatePayableByPayableId(
+            {
+              payableId: payable.payableId,
+              supplierId,
+              dueDate: new Date(dueDate!),
+              amount: creditAmount, // Update amount untuk mencerminkan MIXED
+              status: PaymentStatus.UNPAID,
+            },
+            prismaTransaction
+          );
+        } else {
+          // Jika belum ada hutang (misalnya dari CASH ke CREDIT/MIXED)
+          const creditAmount =
+            paymentType === PaymentType.CREDIT
+              ? total
+              : total.minus(new Decimal(cashAmount!));
+
+          // Buat journal entry baru untuk hutang
+          const journalEntry =
+            await journalEntryRepository.createJournalEntries(
+              {
+                journalId: existingPurchase.journalId,
+                accountId: payableAccount.accountId,
+                debit: new Decimal(0),
+                credit: creditAmount,
+              },
+              prismaTransaction
+            );
+          payableJournalEntryId = journalEntry.journalEntryId;
+
+          // Buat hutang baru dengan journal entry baru
+          await payableRepository.createPayable(
+            {
+              journalEntryId: payableJournalEntryId,
+              supplierId,
+              purchaseId: existingPurchase.purchaseId,
+              amount: creditAmount,
+              dueDate: new Date(dueDate!),
+              status: PaymentStatus.UNPAID,
+            },
+            prismaTransaction
+          );
+        }
+      } else if (paymentType === PaymentType.CASH && existingPurchase.payable) {
+        // Jika beralih ke CASH dan ada hutang, hapus hutang
+        await payableRepository.deletePayable(
+          existingPurchase.payable.payableId,
+          prismaTransaction
+        );
+      }
+
+      // 7. Update Journal Entries (hapus yang lama, buat yang baru hanya jika perlu)
+      if (oldPaymentType !== paymentType) {
+        // Cari journal entries lama terkait pembayaran, kecualikan journal entry untuk payable
+        const paymentEntries = existingPurchase.journal.journalEntries.filter(
+          (entry) =>
+            entry.accountId === cashAccount.accountId ||
+            (entry.accountId === payableAccount.accountId &&
+              entry.journalEntryId !== payableJournalEntryId)
+        );
+
+        const paymentEntryIds = paymentEntries.map((e) => e.journalEntryId);
+
+        // Hapus journal entries lama
+        await journalEntryRepository.deleteJournalEntriesByIds(
+          paymentEntryIds,
+          prismaTransaction
+        );
+
+        // Buat journal entries baru sesuai tipe pembayaran
+        if (paymentType === PaymentType.CASH) {
+          await journalEntryRepository.createJournalEntries(
+            {
+              journalId: existingPurchase.journalId,
+              accountId: cashAccount.accountId,
+              debit: new Decimal(0),
+              credit: new Decimal(total),
+            },
+            prismaTransaction
+          );
+        }
+
+        if (paymentType === PaymentType.MIXED) {
+          if (!cashAmount) {
+            throw new ResponseError(
+              400,
+              'Cash amount must be less than total for mixed payment'
+            );
+          }
+          // Hanya buat journal entry untuk kas, karena journal entry untuk hutang sudah diperbarui di langkah 6
+          await journalEntryRepository.createJournalEntries(
+            {
+              journalId: existingPurchase.journalId,
+              accountId: cashAccount.accountId,
+              debit: new Decimal(0),
+              credit: new Decimal(cashAmount),
+            },
+            prismaTransaction
+          );
+        }
+      }
+
+      // 8. Update Saldo Akun (jika tipe pembayaran berubah)
+      if (oldPaymentType !== paymentType) {
+        // Batalkan saldo lama
+        let oldPayableAmount = new Decimal(0);
+        if (oldPaymentType === PaymentType.CASH) {
+          const updatedCashAccount =
+            await accountRepository.updateAccountTransaction(
+              {
+                accountCode: cashAccount.accountCode,
+                balance: cashAccount.balance.plus(total),
+              },
+              prismaTransaction
+            );
+          cashAccount = { ...cashAccount, balance: updatedCashAccount.balance }; // Update cashAccount
+        } else if (oldPaymentType === PaymentType.CREDIT) {
+          oldPayableAmount = total; // Simpan jumlah hutang lama
+          const updatedPayableAccount =
+            await accountRepository.updateAccountTransaction(
+              {
+                accountCode: payableAccount.accountCode,
+                balance: payableAccount.balance.minus(total),
+              },
+              prismaTransaction
+            );
+          payableAccount = {
+            ...payableAccount,
+            balance: updatedPayableAccount.balance,
+          }; // Update payableAccount
+        } else if (oldPaymentType === PaymentType.MIXED) {
+          const oldCashEntry = existingPurchase.journal.journalEntries.find(
+            (e) => e.accountId === cashAccount.accountId
+          );
+          const oldCashAmount = oldCashEntry
+            ? new Decimal(oldCashEntry.credit)
+            : new Decimal(0);
+          oldPayableAmount = total.minus(oldCashAmount); // Simpan jumlah hutang lama
+
+          const updatedCashAccount =
+            await accountRepository.updateAccountTransaction(
+              {
+                accountCode: cashAccount.accountCode,
+                balance: cashAccount.balance.plus(oldCashAmount),
+              },
+              prismaTransaction
+            );
+          cashAccount = { ...cashAccount, balance: updatedCashAccount.balance }; // Update cashAccount
+
+          const updatedPayableAccount =
+            await accountRepository.updateAccountTransaction(
+              {
+                accountCode: payableAccount.accountCode,
+                balance: payableAccount.balance.minus(oldPayableAmount),
+              },
+              prismaTransaction
+            );
+          payableAccount = {
+            ...payableAccount,
+            balance: updatedPayableAccount.balance,
+          }; // Update payableAccount
+        }
+
+        // Terapkan saldo baru
+        if (paymentType === PaymentType.CASH) {
+          const updatedCashAccount =
+            await accountRepository.updateAccountTransaction(
+              {
+                accountCode: cashAccount.accountCode,
+                balance: cashAccount.balance.minus(total),
+              },
+              prismaTransaction
+            );
+          cashAccount = { ...cashAccount, balance: updatedCashAccount.balance }; // Update cashAccount
+        } else if (paymentType === PaymentType.CREDIT) {
+          const updatedPayableAccount =
+            await accountRepository.updateAccountTransaction(
+              {
+                accountCode: payableAccount.accountCode,
+                balance: payableAccount.balance.plus(total),
+              },
+              prismaTransaction
+            );
+          payableAccount = {
+            ...payableAccount,
+            balance: updatedPayableAccount.balance,
+          }; // Update payableAccount
+        } else if (paymentType === PaymentType.MIXED) {
+          if (!cashAmount) {
+            throw new ResponseError(
+              400,
+              'Cash amount must be less than total for mixed payment'
+            );
+          }
+
+          const newPayableAmount = total.minus(new Decimal(cashAmount));
+          const updatedCashAccount =
+            await accountRepository.updateAccountTransaction(
+              {
+                accountCode: cashAccount.accountCode,
+                balance: cashAccount.balance.minus(cashAmount),
+              },
+              prismaTransaction
+            );
+          const updatedPayableAccount =
+            await accountRepository.updateAccountTransaction(
+              {
+                accountCode: payableAccount.accountCode,
+                balance: payableAccount.balance.plus(newPayableAmount),
+              },
+              prismaTransaction
+            );
+          cashAccount = { ...cashAccount, balance: updatedCashAccount.balance }; // Update cashAccount
+          payableAccount = {
+            ...payableAccount,
+            balance: updatedPayableAccount.balance,
+          }; // Update payableAccount
+        }
+
+        // Validasi saldo Accounts Payable
+        const totalPayables = await prismaTransaction.payable.aggregate({
+          _sum: { amount: true },
+        });
+        const expectedPayableBalance = new Decimal(
+          totalPayables._sum.amount || 0
+        );
+
+        if (!payableAccount.balance.equals(expectedPayableBalance)) {
+          throw new ResponseError(
+            500,
+            `Accounts Payable balance mismatch: expected ${expectedPayableBalance.toString()}, but got ${payableAccount.balance.toString()}`
+          );
+        }
+      }
+
+      // Kembalikan data pembelian yang sudah diperbarui
+      return purchase;
+    });
   }
 }
 

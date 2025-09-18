@@ -44,15 +44,6 @@ export class AccountRepository {
     });
   }
 
-  async findAccountByAccountCodeTransaction(
-    accountCode: string,
-    prismaTransaction: Prisma.TransactionClient
-  ): Promise<Account | null> {
-    return prismaTransaction.account.findUnique({
-      where: { accountCode },
-    });
-  }
-
   async updateAccountTransaction(
     data: AccountUpdateByPurchaseTransaction,
     prismaTransaction: Prisma.TransactionClient

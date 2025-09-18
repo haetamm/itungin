@@ -67,6 +67,21 @@ class PurchaseController implements IController {
     }
   }
 
+  async updatePurchaseById(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+      const result = await purchaseService.updatePurchase(req, id);
+      const response = new ResponseSuccess(200, result);
+      res.status(200).json(response);
+    } catch (e) {
+      next(e);
+    }
+  }
+
   async deletePurchase(
     req: Request,
     res: Response,

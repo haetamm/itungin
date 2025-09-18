@@ -22,6 +22,12 @@ class PurchaseRoutes extends BaseRoutes {
       PurchaseController.createPurchase
     );
 
+    this.router.put(
+      '/purchases/:id',
+      authMiddleware,
+      PurchaseController.updatePurchaseById
+    );
+
     this.router.delete(
       '/purchases',
       authMiddleware,

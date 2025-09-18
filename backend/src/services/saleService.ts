@@ -44,6 +44,7 @@ export class SaleService {
       items,
       paymentType,
       cashAmount,
+      dueDate,
     } = saleReq;
 
     return await prismaClient.$transaction(async (prismaTransaction) => {
@@ -390,9 +391,7 @@ export class SaleService {
             customerId,
             saleId: sale.saleId,
             amount: receivableAmount,
-            dueDate: new Date(
-              new Date(date).setDate(new Date(date).getDate() + 30)
-            ),
+            dueDate: new Date(dueDate!),
           },
           prismaTransaction
         );

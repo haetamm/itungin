@@ -1,5 +1,4 @@
 import { InventoryBatch, Prisma } from '@prisma/client';
-import { prismaClient } from '../application/database';
 import { InventoryBatchForm } from '../utils/interface';
 import { Decimal } from '@prisma/client/runtime/library';
 
@@ -14,13 +13,6 @@ export class InventoryBatchRepository {
     });
   }
 
-  async updateRemainingStock(batchId: string, remainingStock: number) {
-    return prismaClient.inventoryBatch.update({
-      where: { batchId },
-      data: { remainingStock },
-    });
-  }
-
   async createInventoryBatch(
     data: InventoryBatchForm,
     prismaTransaction: Prisma.TransactionClient
@@ -28,10 +20,7 @@ export class InventoryBatchRepository {
     return prismaTransaction.inventoryBatch.create({
       data: {
         productId: data.productId,
-        purchaseDate:
-          data.purchaseDate instanceof Date
-            ? data.purchaseDate
-            : new Date(data.purchaseDate),
+        purchaseDate: data.purchaseDate,
         quantity: data.quantity,
         purchasePrice: data.purchasePrice,
         remainingStock: data.remainingStock,
@@ -46,15 +35,6 @@ export class InventoryBatchRepository {
   ): Promise<void> {
     await prismaTransaction.inventoryBatch.deleteMany({
       where: { purchaseDetailId },
-    });
-  }
-
-  async findBatchesByProduct(
-    productId: string,
-    prismaTransaction: Prisma.TransactionClient
-  ): Promise<InventoryBatch[]> {
-    return await prismaTransaction.inventoryBatch.findMany({
-      where: { productId },
     });
   }
 
@@ -96,7 +76,6 @@ export class InventoryBatchRepository {
         remainingStock: { gt: 0 },
       },
     });
-
     const totalQuantity = batches.reduce(
       (sum, batch) => sum + batch.remainingStock,
       0
@@ -107,6 +86,23 @@ export class InventoryBatchRepository {
       new Decimal(0)
     );
     return totalCost.div(totalQuantity || 1).toDecimalPlaces(2);
+  }
+
+  async updateBatchByPurchaseDetailId(
+    data: InventoryBatchForm,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<void> {
+    await prismaTransaction.inventoryBatch.updateMany({
+      data: {
+        purchaseDetailId: data.purchaseDetailId,
+        productId: data.productId,
+        purchaseDate: data.purchaseDate,
+        quantity: data.quantity,
+        purchasePrice: data.purchasePrice,
+        remainingStock: data.remainingStock,
+      },
+      where: { purchaseDetailId: data.purchaseDetailId },
+    });
   }
 }
 
