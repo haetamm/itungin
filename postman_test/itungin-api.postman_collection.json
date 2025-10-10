@@ -613,7 +613,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"productCode\": \"SAB-101\",\r\n    \"productName\": \"Saos ABC\",\r\n    \"category\": \"\"\r\n}",
+							"raw": "{\r\n    \"productCode\": \"SAB-101\",\r\n    \"productName\": \"Saos ABC\",\r\n    \"category\": \"\",\r\n    \"unit\": \"pcs\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -673,7 +673,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"productCode\": \"Idm-101\",\r\n    \"productName\": \"Indomie Goreng\",\r\n    \"category\": \"\"\r\n}",
+							"raw": "{\r\n    \"productCode\": \"Idm-101\",\r\n    \"productName\": \"Indomie Goreng\",\r\n    \"category\": \"\",\r\n    \"unit\": \"pcs\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -977,7 +977,8 @@
 									""
 								],
 								"type": "text/javascript",
-								"packages": {}
+								"packages": {},
+								"requests": {}
 							}
 						}
 					],
@@ -996,7 +997,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n     \"accountCode\": \"2000\",\r\n            \"accountName\": \"Accounts Payable\",\r\n            \"accountType\": \"LIABILITY\",\r\n            \"normalBalance\": \"CREDIT\",\r\n            \"balance\": \"0\"\r\n}",
+							"raw": "{\r\n          \"accountCode\": \"3000\",\r\n            \"accountName\": \"Owner's Capital\",\r\n            \"accountType\": \"EQUITY\",\r\n            \"normalBalance\": \"CREDIT\",\r\n            \"balance\": \"100000000\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2426,7 +2427,8 @@
 									""
 								],
 								"type": "text/javascript",
-								"packages": {}
+								"packages": {},
+								"requests": {}
 							}
 						}
 					],
@@ -2445,59 +2447,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"inventoryMethod\": \"AVG\"\r\n}\r\n",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "http://localhost:8000/api/v1/settings",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "8000",
-							"path": [
-								"api",
-								"v1",
-								"settings"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "update setting",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									""
-								],
-								"type": "text/javascript",
-								"packages": {}
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "PUT",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n  \"inventoryMethod\": \"AVG\"\r\n}",
+							"raw": "{\r\n  \"inventoryMethod\": \"FIFO\"\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"

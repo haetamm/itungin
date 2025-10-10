@@ -896,6 +896,7 @@ export class PurchaseService {
               },
               prismaTransaction
             );
+
           payableAccount = {
             ...payableAccount,
             balance: updatedPayableAccount.balance,

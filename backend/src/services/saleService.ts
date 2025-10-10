@@ -35,7 +35,6 @@ export class SaleService {
 
   async createSales({ body }: { body: SaleRequest }) {
     const saleReq = validate(saleSchema, body);
-
     const {
       date,
       customerId,
@@ -48,7 +47,6 @@ export class SaleService {
     } = saleReq;
 
     return await prismaClient.$transaction(async (prismaTransaction) => {
-      // Ambil akun default
       const accountDefault =
         await accountDefaultRepository.findOne(prismaTransaction);
       if (!accountDefault)
@@ -87,14 +85,12 @@ export class SaleService {
       if (vatSetting.effectiveDate > new Date(date))
         throw new ResponseError(400, 'VAT rate not effective');
 
-      // Hitung subtotal & COGS (Cost of Goods Sold)
+      // Hitung subtotal & COGS
       let subtotal = new Decimal(0);
       let cogs = new Decimal(0);
       const saleDetailsData: SaleDetailForm[] = [];
 
-      // Loop semua item yang dijual
       for (const item of items) {
-        // Validasi produk
         const product = await productRepository.findProductTransaction(
           item.productId,
           prismaTransaction
@@ -110,109 +106,52 @@ export class SaleService {
           );
         }
 
-        let unitPrice: Decimal;
-        let itemCogs: Decimal = new Decimal(0);
+        const unitPrice = new Decimal(product.sellingPrice);
+        let itemCogs = new Decimal(0);
         const batchAssignments: {
           batchId: string | null;
           quantity: number;
           purchasePrice: Decimal;
         }[] = [];
 
-        // Perhitungan untuk metode AVG
-        if (setting.inventoryMethod === 'AVG') {
-          const avgPurchasePrice =
-            await inventoryBatchRepository.calculateAvgPurchasePrice(
-              item.productId,
-              prismaTransaction
-            );
+        // Ambil batch sesuai metode (AVG, FIFO, LIFO)
+        const batches = await inventoryBatchRepository.findBatchesForProduct(
+          item.productId,
+          setting.inventoryMethod,
+          prismaTransaction
+        );
+        const totalAvailable = batches.reduce(
+          (sum, b) => sum + b.remainingStock,
+          0
+        );
+        if (totalAvailable < item.quantity) {
+          throw new ResponseError(
+            400,
+            `Insufficient stock for product ${item.productId}`
+          );
+        }
 
-          unitPrice = avgPurchasePrice
-            .times(
-              new Decimal(1).plus(new Decimal(product.profitMargin).div(100))
-            )
-            .toDecimalPlaces(2);
+        let remainingToDeduct = item.quantity;
+        for (const batch of batches) {
+          if (remainingToDeduct <= 0) break;
+          const deduct = Math.min(batch.remainingStock, remainingToDeduct);
 
-          itemCogs = new Decimal(item.quantity).times(avgPurchasePrice);
-
-          const batches = await inventoryBatchRepository.findBatchesForProduct(
-            item.productId,
-            setting.inventoryMethod,
+          await inventoryBatchRepository.decrementBatchStock(
+            batch.batchId,
+            deduct,
             prismaTransaction
           );
-          if (
-            batches.reduce((sum, b) => sum + b.remainingStock, 0) <
-            item.quantity
-          ) {
-            throw new ResponseError(
-              400,
-              `Insufficient stock for product ${item.productId}`
-            );
-          }
 
-          let remainingToDeduct = item.quantity;
-          for (const batch of batches) {
-            if (remainingToDeduct <= 0) break;
-            const deduct = Math.min(batch.remainingStock, remainingToDeduct);
+          batchAssignments.push({
+            batchId: setting.inventoryMethod === 'AVG' ? null : batch.batchId,
+            quantity: deduct,
+            purchasePrice: new Decimal(batch.purchasePrice),
+          });
 
-            await inventoryBatchRepository.decrementBatchStock(
-              batch.batchId,
-              deduct,
-              prismaTransaction
-            );
-
-            batchAssignments.push({
-              batchId: null,
-              quantity: deduct,
-              purchasePrice: new Decimal(batch.purchasePrice),
-            });
-
-            remainingToDeduct -= deduct;
-          }
-        } else {
-          // FIFO / LIFO
-          const batches = await inventoryBatchRepository.findBatchesForProduct(
-            item.productId,
-            setting.inventoryMethod,
-            prismaTransaction
+          itemCogs = itemCogs.plus(
+            new Decimal(deduct).times(batch.purchasePrice)
           );
-          if (
-            batches.reduce((sum, b) => sum + b.remainingStock, 0) <
-            item.quantity
-          ) {
-            throw new ResponseError(
-              400,
-              `Insufficient stock for product ${item.productId}`
-            );
-          }
-
-          let remainingToDeduct = item.quantity;
-          for (const batch of batches) {
-            if (remainingToDeduct <= 0) break;
-            const deduct = Math.min(batch.remainingStock, remainingToDeduct);
-
-            await inventoryBatchRepository.decrementBatchStock(
-              batch.batchId,
-              deduct,
-              prismaTransaction
-            );
-
-            batchAssignments.push({
-              batchId: batch.batchId,
-              quantity: deduct,
-              purchasePrice: new Decimal(batch.purchasePrice),
-            });
-
-            itemCogs = itemCogs.plus(
-              new Decimal(deduct).times(batch.purchasePrice)
-            );
-            remainingToDeduct -= deduct;
-          }
-
-          unitPrice = new Decimal(batches[0].purchasePrice)
-            .times(
-              new Decimal(1).plus(new Decimal(product.profitMargin).div(100))
-            )
-            .toDecimalPlaces(2);
+          remainingToDeduct -= deduct;
         }
 
         cogs = cogs.plus(itemCogs);
@@ -242,36 +181,25 @@ export class SaleService {
       const vat = subtotal.times(vatSetting.vatRate).div(100);
       const total = subtotal.plus(vat);
 
-      // ===== Validasi & penentuan cash berdasarkan paymentType =====
-      // - CASH  => otomatis cash = total
-      // - MIXED => cashAmount wajib dan harus < total
-      // - CREDIT => cash tetap null (seluruhnya piutang)
+      //= Validasi cash / credit / mixed=
       let cash: Decimal | null = null;
-
       if (paymentType === 'CASH') {
-        // Untuk CASH kita anggap tunai penuh (tidak perlu cashAmount di request)
         cash = total;
       } else if (paymentType === 'MIXED') {
-        // Untuk MIXED, cashAmount wajib dan < total
-        if (cashAmount === undefined || cashAmount === null) {
+        if (cashAmount === undefined || cashAmount === null)
           throw new ResponseError(
             400,
             'Cash amount is required for MIXED payment'
           );
-        }
         cash = new Decimal(cashAmount);
-        if (cash.comparedTo(total) >= 0) {
+        if (cash.comparedTo(total) >= 0)
           throw new ResponseError(
             400,
             'Cash amount must be less than total for mixed payment'
           );
-        }
-      } else {
-        // CREDIT -> tidak ada cash, semua piutang
-        cash = null;
       }
 
-      // Buat Journal (header)
+      // Journal header
       const journal = await journalRepository.createJournal(
         {
           date,
@@ -281,7 +209,7 @@ export class SaleService {
         prismaTransaction
       );
 
-      // Buat Sale (header)
+      // Sale header
       const sale = await saleRepository.createSale(
         {
           date,
@@ -297,14 +225,12 @@ export class SaleService {
       );
 
       saleDetailsData.forEach((d) => (d.saleId = sale.saleId));
-
       for (const detail of saleDetailsData) {
         await saleDetailRepository.createSaleDetail(detail, prismaTransaction);
       }
 
-      // Journal Entries
+      // Journal entries
       let receivableJournalEntryId: string | null = null;
-
       const journalEntries = [
         {
           accountId: salesAccount.accountId,
@@ -341,7 +267,6 @@ export class SaleService {
           credit: new Decimal(0),
         });
       } else if (paymentType === 'MIXED') {
-        // safe: cash sudah di-set dan dipastikan < total
         journalEntries.push(
           {
             accountId: cashAccount.accountId,
@@ -380,9 +305,8 @@ export class SaleService {
         const receivableAmount =
           paymentType === 'CREDIT' ? total : total.minus(cash!);
 
-        if (!receivableJournalEntryId) {
+        if (!receivableJournalEntryId)
           throw new ResponseError(500, 'Receivable journal entry id not found');
-        }
 
         await receivableRepository.createReceivable(
           {
@@ -460,7 +384,6 @@ export class SaleService {
         );
       }
 
-      // Return sale sebagai hasil transaksi
       return sale;
     });
   }

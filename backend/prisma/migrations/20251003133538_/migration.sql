@@ -130,6 +130,7 @@ CREATE TABLE "products" (
     "product_code" VARCHAR(20) NOT NULL,
     "product_name" VARCHAR(255) NOT NULL,
     "category" VARCHAR(100),
+    "unit" VARCHAR(20) NOT NULL,
     "avg_purchase_price" DECIMAL(15,2) NOT NULL,
     "profit_margin" DECIMAL(15,2) NOT NULL,
     "selling_price" DECIMAL(15,2) NOT NULL,

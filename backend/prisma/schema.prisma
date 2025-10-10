@@ -191,6 +191,7 @@ model Product {
   productCode      String           @unique @db.VarChar(20) @map("product_code")
   productName      String           @db.VarChar(255) @map("product_name")
   category         String?          @db.VarChar(100)
+  unit             String           @db.VarChar(20) 
   avgPurchasePrice Decimal          @db.Decimal(15, 2) @map("avg_purchase_price")
   profitMargin     Decimal          @db.Decimal(15, 2) @map("profit_margin")
   sellingPrice     Decimal          @db.Decimal(15, 2) @map("selling_price")

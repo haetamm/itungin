@@ -69,7 +69,8 @@ export class AuthService {
       );
     }
 
-    const { id, username, password, userRoles } = user;
+    const { id, name, imageUrl, username, password, userRoles, createdAt } =
+      user;
     const isPasswordValid = await securityService.passwordCompare(
       loginReq.password,
       password
@@ -90,10 +91,12 @@ export class AuthService {
     await userRepository.updateUserToken(username, token);
 
     return {
+      name: name,
+      username: username,
+      imageUrl: imageUrl ? imageUrl : null,
+      createdAt: createdAt,
       token,
-      userRoles: userRoles.map(
-        (userRole: { role: Role }) => userRole.role.role
-      ),
+      roleUser: userRoles.map((userRole: { role: Role }) => userRole.role.role),
     };
   }
 

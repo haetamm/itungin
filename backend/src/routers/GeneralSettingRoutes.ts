@@ -15,12 +15,6 @@ class GeneralSettingRoutes extends BaseRoutes {
       authMiddleware,
       GeneralSettingController.getSetting
     );
-
-    this.router.put(
-      '/settings',
-      authMiddleware,
-      GeneralSettingController.updateSettingById
-    );
   }
 }
 

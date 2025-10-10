@@ -4,20 +4,6 @@ import { ResponseSuccess } from '../../entities/responseSuccess';
 import { generalsettingService } from '../../services/generalSettingService';
 
 class GeneralSettingController implements IController {
-  async updateSettingById(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
-    try {
-      const result = await generalsettingService.updateSetting(req);
-      const response = new ResponseSuccess(200, result);
-      res.status(200).json(response);
-    } catch (e) {
-      next(e);
-    }
-  }
-
   async getSetting(
     req: Request,
     res: Response,

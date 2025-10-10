@@ -21,8 +21,12 @@ export interface LoginForm {
 }
 
 export interface LoginRes {
+  name: string;
+  imageUrl: string | null;
+  username: string;
   token: string;
-  userRoles: string[];
+  roleUser: string[];
+  createdAt: Date;
 }
 
 export interface UserRes {
@@ -64,12 +68,14 @@ export interface ProductForm {
   productCode: string;
   productName: string;
   category: string;
+  unit: string;
 }
 
 export interface ProductCreate {
   productCode: string;
   productName: string;
   category: string;
+  unit: string;
   avgPurchasePrice: number;
   profitMargin: number;
   sellingPrice: number;
@@ -80,6 +86,7 @@ export interface ProductUpdate {
   productCode: string;
   productName: string;
   category: string;
+  unit: string;
   profitMargin: number; // nominal langsung
 }
 

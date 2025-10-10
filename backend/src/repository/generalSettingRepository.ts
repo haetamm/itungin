@@ -16,19 +16,6 @@ export class GeneralSettingRepository {
     return setting;
   }
 
-  async updateSettingById(
-    id: string,
-    data: SettingForm,
-    prismaTransaction: Prisma.TransactionClient
-  ): Promise<GeneralSetting> {
-    return await prismaTransaction.generalSetting.update({
-      where: { id },
-      data: {
-        ...data,
-      },
-    });
-  }
-
   async getSettingTransaction(
     prismaTransaction: Prisma.TransactionClient
   ): Promise<GeneralSetting | null> {
