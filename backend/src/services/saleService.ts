@@ -109,7 +109,7 @@ export class SaleService {
         const unitPrice = new Decimal(product.sellingPrice);
         let itemCogs = new Decimal(0);
         const batchAssignments: {
-          batchId: string | null;
+          batchId: string;
           quantity: number;
           purchasePrice: Decimal;
         }[] = [];
@@ -143,7 +143,7 @@ export class SaleService {
           );
 
           batchAssignments.push({
-            batchId: setting.inventoryMethod === 'AVG' ? null : batch.batchId,
+            batchId: batch.batchId,
             quantity: deduct,
             purchasePrice: new Decimal(batch.purchasePrice),
           });
@@ -169,7 +169,7 @@ export class SaleService {
           saleDetailsData.push({
             saleId: '',
             productId: item.productId,
-            batchId: a.batchId,
+            batchId: a.batchId, // Gunakan batchId dari batchAssignments
             quantity: a.quantity,
             unitPrice,
             subtotal: new Decimal(a.quantity).times(unitPrice),

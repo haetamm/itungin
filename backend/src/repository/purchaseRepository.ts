@@ -148,6 +148,10 @@ export class PurchaseRepository {
       },
     });
   }
+
+  async getPurchaseCount(): Promise<number> {
+    return await prismaClient.purchase.count();
+  }
 }
 
 export const purchaseRepository = new PurchaseRepository();

@@ -26,6 +26,15 @@ export class SaleDetailRepository {
       },
     });
   }
+
+  async countByBatchId(
+    batchId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<number> {
+    return await prismaTransaction.saleDetail.count({
+      where: { batchId },
+    });
+  }
 }
 
 export const saleDetailRepository = new SaleDetailRepository();

@@ -301,7 +301,6 @@ model Purchase {
   @@map("purchases")
 }
 
-
 model PurchaseDetail {
   purchaseDetailId String           @id @default(uuid()) @map("purchase_detail_id")
   purchaseId       String           @map("purchase_id")

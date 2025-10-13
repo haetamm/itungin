@@ -35,6 +35,7 @@ import { payableRepository } from '../repository/paybleRepository';
 import { generalSettingRepository } from '../repository/generalSettingRepository';
 import { recalculateCOGS } from '../utils/cogs';
 import { accountDefaultRepository } from '../repository/accountDefaultRepository';
+import { saleDetailRepository } from '../repository/saleDetailRepository';
 
 export class PurchaseService {
   private async updatePurchaseDataRelation(
@@ -181,7 +182,7 @@ export class PurchaseService {
           productId: item.productId,
           stock: currentStock + item.quantity,
           avgPurchasePrice: newAvgPrice,
-          profiteMargin: profitMargin,
+          profitMargin: profitMargin,
           sellingPrice,
         },
         prismaTransaction
@@ -418,7 +419,6 @@ export class PurchaseService {
         prismaTransaction
       );
 
-      console.log(purchase);
       if (!purchase) {
         throw new ResponseError(404, 'Purchase not found');
       }
@@ -432,6 +432,29 @@ export class PurchaseService {
 
       const { cashAccount, payableAccount, inventoryAccount, vatInputAccount } =
         accountDefault;
+
+      // Validasi apakah ada SaleDetail yang menggunakan batchId dari pembelian ini
+      for (const detail of purchase.purchaseDetails) {
+        const inventoryBatches =
+          await inventoryBatchRepository.findBatchesByPurchaseDetail(
+            detail.purchaseDetailId,
+            prismaTransaction
+          );
+
+        for (const batch of inventoryBatches) {
+          const saleDetailCount = await saleDetailRepository.countByBatchId(
+            batch.batchId,
+            prismaTransaction
+          );
+
+          if (saleDetailCount > 0) {
+            throw new ResponseError(
+              400,
+              `Cannot delete purchase because its inventory batch (ID: ${batch.batchId}) is used in sales. Please process a purchase return instead.`
+            );
+          }
+        }
+      }
 
       // Ambil journal entries
       const journalEntries: JournalEntry[] = purchase.journal.journalEntries;
@@ -544,7 +567,7 @@ export class PurchaseService {
           prismaTransaction
         );
 
-        // hitung ulang harga pokok
+        // Hitung ulang harga pokok
         const cogs = await recalculateCOGS(
           product.productId,
           setting.inventoryMethod,
@@ -555,13 +578,13 @@ export class PurchaseService {
           ? product.profitMargin
           : cogs.plus(product.profitMargin);
 
-        // update kembali produk
+        // Update kembali produk
         await productRepository.updateProductTransaction(
           {
             productId: detail.productId,
             stock: newStock,
             avgPurchasePrice: cogs,
-            profiteMargin: product.profitMargin,
+            profitMargin: product.profitMargin,
             sellingPrice,
           },
           prismaTransaction
@@ -705,7 +728,30 @@ export class PurchaseService {
       const oldPaymentType = existingPurchase.paymentType;
       const { total, purchaseDetails } = existingPurchase;
 
-      // 3. Update tabel Purchase
+      // 3. Validasi apakah ada SaleDetail yang menggunakan batchId dari pembelian ini
+      for (const detail of purchaseDetails) {
+        const inventoryBatches =
+          await inventoryBatchRepository.findBatchesByPurchaseDetail(
+            detail.purchaseDetailId,
+            prismaTransaction
+          );
+
+        for (const batch of inventoryBatches) {
+          const saleDetailCount = await saleDetailRepository.countByBatchId(
+            batch.batchId,
+            prismaTransaction
+          );
+
+          if (saleDetailCount > 0) {
+            throw new ResponseError(
+              400,
+              `Cannot delete purchase because its inventory batch (ID: ${batch.batchId}) is used in sales. Please process a purchase return instead.`
+            );
+          }
+        }
+      }
+
+      // 4. Update tabel Purchase
       const purchase = await purchaseRepository.updatePurchaseTransaction(
         {
           purchaseId,
@@ -717,7 +763,7 @@ export class PurchaseService {
         prismaTransaction
       );
 
-      // 4. Update header jurnal
+      // 5. Update header jurnal
       await journalRepository.updateJournalTransaction(
         {
           journalId: existingPurchase.journalId,
@@ -728,7 +774,7 @@ export class PurchaseService {
         prismaTransaction
       );
 
-      // 5. Update batch inventory untuk setiap detail pembelian
+      // 6. Update batch inventory untuk setiap detail pembelian
       for (const detail of purchaseDetails) {
         await inventoryBatchRepository.updateBatchByPurchaseDetailId(
           {
@@ -743,7 +789,7 @@ export class PurchaseService {
         );
       }
 
-      // 6. Update hutang (Payable) - buat atau perbarui journal entry untuk payable
+      // 7. Update hutang (Payable) - buat atau perbarui journal entry untuk payable
       let payableJournalEntryId: string | null = null; // Simpan ID journal entry untuk payable
       if (
         paymentType === PaymentType.CREDIT ||
@@ -821,7 +867,7 @@ export class PurchaseService {
         );
       }
 
-      // 7. Update Journal Entries (hapus yang lama, buat yang baru hanya jika perlu)
+      // 8. Update Journal Entries (hapus yang lama, buat yang baru hanya jika perlu)
       if (oldPaymentType !== paymentType) {
         // Cari journal entries lama terkait pembayaran, kecualikan journal entry untuk payable
         const paymentEntries = existingPurchase.journal.journalEntries.filter(
@@ -859,7 +905,7 @@ export class PurchaseService {
               'Cash amount must be less than total for mixed payment'
             );
           }
-          // Hanya buat journal entry untuk kas, karena journal entry untuk hutang sudah diperbarui di langkah 6
+          // Hanya buat journal entry untuk kas, karena journal entry untuk hutang sudah diperbarui di langkah 7
           await journalEntryRepository.createJournalEntries(
             {
               journalId: existingPurchase.journalId,
@@ -872,7 +918,7 @@ export class PurchaseService {
         }
       }
 
-      // 8. Update Saldo Akun (jika tipe pembayaran berubah)
+      // 9. Update Saldo Akun (jika tipe pembayaran berubah)
       if (oldPaymentType !== paymentType) {
         // Batalkan saldo lama
         let oldPayableAmount = new Decimal(0);
@@ -896,7 +942,6 @@ export class PurchaseService {
               },
               prismaTransaction
             );
-
           payableAccount = {
             ...payableAccount,
             balance: updatedPayableAccount.balance,

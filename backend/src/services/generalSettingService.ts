@@ -4,6 +4,7 @@ import { validate } from '../validation/validation';
 import { ResponseError } from '../entities/responseError';
 import { storeSettings } from '../validation/settingValidation';
 import { generalSettingRepository } from '../repository/generalSettingRepository';
+import { purchaseRepository } from '../repository/purchaseRepository';
 
 export class GeneralSettingService {
   async createSetting({
@@ -31,6 +32,29 @@ export class GeneralSettingService {
       throw new ResponseError(404, 'General setting not configured');
     }
     return setting;
+  }
+
+  async updateSetting({
+    body,
+  }: {
+    body: SettingForm;
+  }): Promise<GeneralSetting> {
+    const settingReq = validate(storeSettings, body);
+    const currentSetting = await this.getSetting();
+
+    const purchaseCount = await purchaseRepository.getPurchaseCount();
+    if (purchaseCount > 0) {
+      throw new ResponseError(
+        400,
+        'General settings cannot be updated because purchases have already occurred.'
+      );
+    }
+
+    // Perbarui pengaturan
+    return await generalSettingRepository.updateSettingById(
+      currentSetting.id,
+      settingReq
+    );
   }
 }
 

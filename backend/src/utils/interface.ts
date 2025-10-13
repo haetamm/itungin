@@ -94,7 +94,7 @@ export interface ProductUpdateByPurchaseTransaction {
   productId: string;
   stock: number;
   avgPurchasePrice: Decimal;
-  profiteMargin: Decimal;
+  profitMargin: Decimal;
   sellingPrice: Decimal;
 }
 

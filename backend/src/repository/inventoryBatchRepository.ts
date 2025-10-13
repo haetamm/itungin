@@ -104,6 +104,15 @@ export class InventoryBatchRepository {
       where: { purchaseDetailId: data.purchaseDetailId },
     });
   }
+
+  async findBatchesByPurchaseDetail(
+    purchaseDetailId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<InventoryBatch[]> {
+    return await prismaTransaction.inventoryBatch.findMany({
+      where: { purchaseDetailId },
+    });
+  }
 }
 
 export const inventoryBatchRepository = new InventoryBatchRepository();

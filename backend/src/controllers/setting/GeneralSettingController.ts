@@ -31,6 +31,20 @@ class GeneralSettingController implements IController {
       next(e);
     }
   }
+
+  async updateSettingById(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const result = await generalsettingService.updateSetting(req);
+      const response = new ResponseSuccess(200, result);
+      res.status(200).json(response);
+    } catch (e) {
+      next(e);
+    }
+  }
 }
 
 export default new GeneralSettingController();

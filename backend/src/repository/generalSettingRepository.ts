@@ -24,6 +24,18 @@ export class GeneralSettingRepository {
     });
     return setting;
   }
+
+  async updateSettingById(
+    id: string,
+    data: SettingForm
+  ): Promise<GeneralSetting> {
+    return await prismaClient.generalSetting.update({
+      where: { id },
+      data: {
+        ...data,
+      },
+    });
+  }
 }
 
 export const generalSettingRepository = new GeneralSettingRepository();
