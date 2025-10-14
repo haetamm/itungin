@@ -7,7 +7,11 @@ import {
   Purchase,
   PurchaseDetail,
 } from '@prisma/client';
-import { PurchaseForm, UpdatePurchaseForm } from '../utils/interface';
+import {
+  PurchaseForm,
+  UpdatePurchaseForm,
+  UpdatePurchaseTotal,
+} from '../utils/interface';
 import { paginate } from '../utils/pagination';
 import { prismaClient } from '../application/database';
 
@@ -151,6 +155,21 @@ export class PurchaseRepository {
 
   async getPurchaseCount(): Promise<number> {
     return await prismaClient.purchase.count();
+  }
+
+  async updatePurchaseTotals(
+    purchaseId: string,
+    data: UpdatePurchaseTotal,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<Purchase> {
+    return await prismaTransaction.purchase.update({
+      where: { purchaseId },
+      data: {
+        vat: data.vat,
+        subtotal: data.subtotal,
+        total: data.total,
+      },
+    });
   }
 }
 

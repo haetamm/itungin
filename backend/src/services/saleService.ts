@@ -95,6 +95,7 @@ export class SaleService {
           item.productId,
           prismaTransaction
         );
+
         if (!product)
           throw new ResponseError(404, `Product ${item.productId} not found`);
 
@@ -120,10 +121,23 @@ export class SaleService {
           setting.inventoryMethod,
           prismaTransaction
         );
+
+        // ✅ Validasi tanggal batch vs tanggal penjualan
+        const saleDate = new Date(date);
+        for (const batch of batches) {
+          if (batch.purchaseDate > saleDate) {
+            throw new ResponseError(
+              400,
+              `Invalid sale date for product ${item.productId}: sale date (${saleDate.toISOString().split('T')[0]}) must be after batch purchase date (${batch.purchaseDate.toISOString().split('T')[0]})`
+            );
+          }
+        }
+
         const totalAvailable = batches.reduce(
           (sum, b) => sum + b.remainingStock,
           0
         );
+
         if (totalAvailable < item.quantity) {
           throw new ResponseError(
             400,

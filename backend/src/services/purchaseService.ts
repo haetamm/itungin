@@ -36,6 +36,7 @@ import { generalSettingRepository } from '../repository/generalSettingRepository
 import { recalculateCOGS } from '../utils/cogs';
 import { accountDefaultRepository } from '../repository/accountDefaultRepository';
 import { saleDetailRepository } from '../repository/saleDetailRepository';
+import { saleRepository } from '../repository/saleRepository';
 
 export class PurchaseService {
   private async updatePurchaseDataRelation(
@@ -450,7 +451,7 @@ export class PurchaseService {
           if (saleDetailCount > 0) {
             throw new ResponseError(
               400,
-              `Cannot delete purchase because its inventory batch (ID: ${batch.batchId}) is used in sales. Please process a purchase return instead.`
+              `Cannot delete purchase because its inventory batch (ID: ${batch.batchId}) has been used in sales. Please process a purchase return instead.`
             );
           }
         }
@@ -728,7 +729,7 @@ export class PurchaseService {
       const oldPaymentType = existingPurchase.paymentType;
       const { total, purchaseDetails } = existingPurchase;
 
-      // 3. Validasi apakah ada SaleDetail yang menggunakan batchId dari pembelian ini
+      // 3. Validasi apakah tanggal pembelian baru tidak melanggar kronologi dengan sales
       for (const detail of purchaseDetails) {
         const inventoryBatches =
           await inventoryBatchRepository.findBatchesByPurchaseDetail(
@@ -737,16 +738,32 @@ export class PurchaseService {
           );
 
         for (const batch of inventoryBatches) {
-          const saleDetailCount = await saleDetailRepository.countByBatchId(
+          // Ambil semua sale detail yang pakai batch ini
+          const saleDetails = await saleDetailRepository.findSalesByBatchId(
             batch.batchId,
             prismaTransaction
           );
 
-          if (saleDetailCount > 0) {
-            throw new ResponseError(
-              400,
-              `Cannot delete purchase because its inventory batch (ID: ${batch.batchId}) is used in sales. Please process a purchase return instead.`
+          for (const saleDetail of saleDetails) {
+            const sale = await saleRepository.findSaleByIdTransaction(
+              saleDetail.saleId,
+              prismaTransaction
             );
+
+            if (sale && new Date(date) > new Date(sale.date)) {
+              const formattedPurchaseDate = new Date(date)
+                .toISOString()
+                .slice(0, 10);
+
+              const formattedSaleDate = new Date(sale.date)
+                .toISOString()
+                .slice(0, 10);
+
+              throw new ResponseError(
+                400,
+                `Invalid purchase date: new purchase date (${formattedPurchaseDate}) cannot be after sale date (${formattedSaleDate}) for product ${detail.productId}`
+              );
+            }
           }
         }
       }

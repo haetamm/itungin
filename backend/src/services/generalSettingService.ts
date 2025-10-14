@@ -18,7 +18,7 @@ export class GeneralSettingService {
     if (setting?.inventoryMethod) {
       throw new ResponseError(
         400,
-        'The inventory method has already been configured and cannot be changed'
+        'The inventory method has already been configured'
       );
     }
 

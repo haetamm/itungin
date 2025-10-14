@@ -35,6 +35,15 @@ export class SaleDetailRepository {
       where: { batchId },
     });
   }
+
+  async findSalesByBatchId(
+    batchId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<SaleDetail[]> {
+    return await prismaTransaction.saleDetail.findMany({
+      where: { batchId },
+    });
+  }
 }
 
 export const saleDetailRepository = new SaleDetailRepository();

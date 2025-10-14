@@ -159,6 +159,12 @@ export interface UpdatePurchaseForm {
   paymentType: PaymentType;
 }
 
+export interface UpdatePurchaseTotal {
+  subtotal: Decimal;
+  vat: Decimal;
+  total: Decimal;
+}
+
 export interface PurchaseDetailForm {
   purchaseId: string;
   productId: string;
@@ -281,6 +287,12 @@ export interface UpdatePurchaseRequest {
   paymentType: PaymentType; // CASH | CREDIT | MIXED
   cashAmount?: Decimal; // opsional
   dueDate?: string; // opsional, wajib jika CREDIT atau MIXED
+}
+
+export interface UpdatePurchaseDetail {
+  purchaseId: string;
+  vatRateId: string;
+  items: PurchaseItem[];
 }
 
 export interface PurchaseResult {

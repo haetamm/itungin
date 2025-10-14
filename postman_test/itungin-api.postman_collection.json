@@ -997,7 +997,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n          \"accountCode\": \"3000\",\r\n            \"accountName\": \"Owner's Capital\",\r\n            \"accountType\": \"EQUITY\",\r\n            \"normalBalance\": \"CREDIT\",\r\n            \"balance\": \"100000000\"\r\n}",
+							"raw": "{\r\n          \"accountCode\": \"1000\",\r\n            \"accountName\": \"Cash\",\r\n            \"accountType\": \"ASSET\",\r\n            \"normalBalance\": \"DEBIT\",\r\n            \"balance\": \"100000000\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1783,7 +1783,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-17\",\r\n  \"supplierId\": \"{{supplierId2}}\",\r\n  \"invoiceNumber\": \"TS-0019\",\r\n  \"paymentType\": \"CREDIT\",\r\n  \"dueDate\": \"2025-10-17\"\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-01\",\r\n  \"supplierId\": \"{{supplierId2}}\",\r\n  \"invoiceNumber\": \"TS-0019\",\r\n  \"paymentType\": \"CREDIT\",\r\n  \"dueDate\": \"2025-10-17\"\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2231,6 +2231,170 @@
 			]
 		},
 		{
+			"name": "PURCHASE DETAIL",
+			"item": [
+				{
+					"name": "update purchase detail | 1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"purchaseId\": \"{{purchaseId}}\",\r\n    \"vatRateId\": \"{{vatId}}\",\r\n    \"items\": [\r\n        {\r\n            \"productId\": \"{{productId}}\",\r\n            \"quantity\": \"100\",\r\n            \"unitPrice\": \"8900\",\r\n            \"profitMargin\": \"800\"\r\n        }\r\n    ]\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/v1/purchases-detail",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"purchases-detail"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update purchase detail | 2",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"purchaseId\": \"{{purchaseId2}}\",\r\n    \"vatRateId\": \"{{vatId}}\",\r\n    \"items\": [\r\n        {\r\n            \"productId\": \"{{productId2}}\",\r\n            \"quantity\": \"100\",\r\n            \"unitPrice\": \"8900\",\r\n            \"profitMargin\": \"800\"\r\n        }\r\n    ]\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/v1/purchases-detail",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"purchases-detail"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update purchase detail | 3",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"purchaseId\": {{purchaseId3}},\r\n    \"vatRateId\": \"{{vatId}}\",\r\n    \"items\": [\r\n        {\r\n            \"productId\": \"{{productId2}}\",\r\n            \"quantity\": \"100\",\r\n            \"unitPrice\": \"18000\",\r\n            \"profitMargin\": \"1500\"\r\n        }\r\n    ]\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/v1/purchases-detail",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"purchases-detail"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
 			"name": "SALE",
 			"item": [
 				{
@@ -2251,7 +2415,8 @@
 									"});"
 								],
 								"type": "text/javascript",
-								"packages": {}
+								"packages": {},
+								"requests": {}
 							}
 						}
 					],

@@ -28,6 +28,15 @@ export class SaleRepository {
       },
     });
   }
+
+  async findSaleByIdTransaction(
+    saleId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<Sale | null> {
+    return await prismaTransaction.sale.findUnique({
+      where: { saleId },
+    });
+  }
 }
 
 export const saleRepository = new SaleRepository();

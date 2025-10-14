@@ -1,5 +1,6 @@
 import { Payable, Prisma, PaymentStatus } from '@prisma/client';
 import { PayableForm, UpdatePayableForm } from '../utils/interface';
+import { Decimal } from '@prisma/client/runtime/library';
 
 export class PayableRepository {
   async createPayable(
@@ -41,6 +42,15 @@ export class PayableRepository {
         amount: data.amount,
       },
     });
+  }
+
+  async getTotalPayables(
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<Decimal> {
+    const result = await prismaTransaction.payable.aggregate({
+      _sum: { amount: true },
+    });
+    return new Decimal(result._sum.amount || 0);
   }
 }
 
