@@ -16,7 +16,7 @@ import { journalEntryRepository } from '../repository/journalEntryRepository';
 import { receivableRepository } from '../repository/receivableRepository';
 import { accountRepository } from '../repository/accountRepository';
 import { Decimal } from '@prisma/client/runtime/library';
-import { PaymentStatus, Prisma } from '@prisma/client';
+import { PaymentStatus, PaymentType, Prisma } from '@prisma/client';
 
 export class SaleService {
   private async ensureInvoiceNumberUnique(
@@ -103,7 +103,7 @@ export class SaleService {
         if (product.stock < item.quantity) {
           throw new ResponseError(
             400,
-            `Insufficient stock for product ${item.productId}`
+            `Insufficient stock for product ${product.productName}`
           );
         }
 
@@ -183,7 +183,7 @@ export class SaleService {
           saleDetailsData.push({
             saleId: '',
             productId: item.productId,
-            batchId: a.batchId, // Gunakan batchId dari batchAssignments
+            batchId: a.batchId,
             quantity: a.quantity,
             unitPrice,
             subtotal: new Decimal(a.quantity).times(unitPrice),
@@ -320,7 +320,7 @@ export class SaleService {
           paymentType === 'CREDIT' ? total : total.minus(cash!);
 
         if (!receivableJournalEntryId)
-          throw new ResponseError(500, 'Receivable journal entry id not found');
+          throw new ResponseError(400, 'Receivable journal entry id not found');
 
         await receivableRepository.createReceivable(
           {
@@ -400,6 +400,51 @@ export class SaleService {
 
       return sale;
     });
+  }
+
+  async getAllSale(
+    page: number,
+    limit: number,
+    search: string,
+    paymentType?: PaymentType,
+    from?: Date,
+    to?: Date
+  ) {
+    if (page < 1 || limit < 1) {
+      throw new ResponseError(400, 'Halaman dan batas harus bilangan positif');
+    }
+
+    if (paymentType && !Object.values(PaymentType).includes(paymentType)) {
+      throw new ResponseError(
+        400,
+        `Invalid paymentType '${paymentType}' Allowed values are: ${Object.values(PaymentType).join(', ')}`
+      );
+    }
+
+    const { sales, total } = await saleRepository.getAllSale(
+      page,
+      limit,
+      search,
+      paymentType,
+      from,
+      to
+    );
+
+    return {
+      sales,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPage: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async getSaleById(id: string) {
+    const sale = await saleRepository.findSaleDetailById(id);
+    if (!sale) throw new ResponseError(404, 'Sale not found');
+    return sale;
   }
 }
 

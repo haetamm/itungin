@@ -997,7 +997,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n          \"accountCode\": \"1000\",\r\n            \"accountName\": \"Cash\",\r\n            \"accountType\": \"ASSET\",\r\n            \"normalBalance\": \"DEBIT\",\r\n            \"balance\": \"100000000\"\r\n}",
+							"raw": "{\r\n          \"accountCode\": \"3000\",\r\n            \"accountName\": \"Owner's Capital\",\r\n            \"accountType\": \"EQUITY\",\r\n            \"normalBalance\": \"CREDIT\",\r\n            \"balance\": \"100000000\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1631,7 +1631,8 @@
 									""
 								],
 								"type": "text/javascript",
-								"packages": {}
+								"packages": {},
+								"requests": {}
 							}
 						}
 					],
@@ -2316,7 +2317,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"purchaseId\": \"{{purchaseId2}}\",\r\n    \"vatRateId\": \"{{vatId}}\",\r\n    \"items\": [\r\n        {\r\n            \"productId\": \"{{productId2}}\",\r\n            \"quantity\": \"100\",\r\n            \"unitPrice\": \"8900\",\r\n            \"profitMargin\": \"800\"\r\n        }\r\n    ]\r\n}\r\n",
+							"raw": "{\r\n    \"purchaseId\": \"{{purchaseId2}}\",\r\n    \"vatRateId\": \"{{vatId}}\",\r\n    \"items\": [\r\n        {\r\n            \"productId\": \"{{productId2}}\",\r\n            \"quantity\": \"100\",\r\n            \"unitPrice\": \"9000\",\r\n            \"profitMargin\": \"1000\"\r\n        }\r\n    ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2398,7 +2399,7 @@
 			"name": "SALE",
 			"item": [
 				{
-					"name": "create cash sale",
+					"name": "create cash sale | 1",
 					"event": [
 						{
 							"listen": "test",
@@ -2411,7 +2412,7 @@
 									"pm.test('should respose with correct property and message', () => {\r",
 									"    const responseJson = pm.response.json();\r",
 									"\r",
-									"    pm.environment.set('purchaseId', responseJson.data.purchaseId);\r",
+									"    pm.environment.set('saleId', responseJson.data.saleId);\r",
 									"});"
 								],
 								"type": "text/javascript",
@@ -2459,7 +2460,7 @@
 					"response": []
 				},
 				{
-					"name": "create credit sale",
+					"name": "create credit sale | 2",
 					"event": [
 						{
 							"listen": "test",
@@ -2472,11 +2473,12 @@
 									"pm.test('should respose with correct property and message', () => {\r",
 									"    const responseJson = pm.response.json();\r",
 									"\r",
-									"    pm.environment.set('purchaseId', responseJson.data.purchaseId);\r",
+									"    pm.environment.set('saleId2', responseJson.data.saleId);\r",
 									"});"
 								],
 								"type": "text/javascript",
-								"packages": {}
+								"packages": {},
+								"requests": {}
 							}
 						}
 					],
@@ -2495,7 +2497,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-02\",\r\n  \"customerId\": \"{{customerId}}\",\r\n  \"invoiceNumber\": \"BG-00002\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CREDIT\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"30\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"20\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-02\",\r\n  \"customerId\": \"{{customerId}}\",\r\n  \"invoiceNumber\": \"BG-00002\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CREDIT\",\r\n  \"dueDate\": \"2025-10-02\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"30\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"20\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2519,7 +2521,7 @@
 					"response": []
 				},
 				{
-					"name": "create mixed sale",
+					"name": "create mixed sale | 3",
 					"event": [
 						{
 							"listen": "test",
@@ -2532,11 +2534,12 @@
 									"pm.test('should respose with correct property and message', () => {\r",
 									"    const responseJson = pm.response.json();\r",
 									"\r",
-									"    pm.environment.set('purchaseId', responseJson.data.purchaseId);\r",
+									"    pm.environment.set('saleId3', responseJson.data.saleId);\r",
 									"});"
 								],
 								"type": "text/javascript",
-								"packages": {}
+								"packages": {},
+								"requests": {}
 							}
 						}
 					],
@@ -2555,7 +2558,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-02\",\r\n  \"customerId\": \"{{customerId}}\",\r\n  \"invoiceNumber\": \"BG-00003\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"MIXED\",\r\n  \"cashAmount\": \"1000000\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"100\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-02\",\r\n  \"customerId\": \"{{customerId}}\",\r\n  \"invoiceNumber\": \"BG-00003\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"MIXED\",\r\n  \"cashAmount\": \"1000000\",\r\n  \"dueDate\": \"2025-10-02\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"100\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"

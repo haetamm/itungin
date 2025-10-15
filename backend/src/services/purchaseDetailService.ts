@@ -50,7 +50,7 @@ export class PurchaseDetailService {
       const initialPayableBalance = new Decimal(totalPayables || 0);
       if (!payableAccount.balance.equals(initialPayableBalance)) {
         throw new ResponseError(
-          500,
+          400,
           `Payable account balance inconsistent before transaction: expected ${initialPayableBalance.toString()}, but got ${payableAccount.balance.toString()}`
         );
       }
@@ -177,7 +177,7 @@ export class PurchaseDetailService {
         );
         if (!cashEntry) {
           throw new ResponseError(
-            500,
+            400,
             'Cash journal entry not found for MIXED payment'
           );
         }
@@ -212,14 +212,14 @@ export class PurchaseDetailService {
         };
       }
 
-      // 8️⃣ Update tabel purchases
+      // 8 Update tabel purchases
       const updatedPurchase = await purchaseRepository.updatePurchaseTotals(
         purchaseId,
         { subtotal, vat, total },
         prismaTransaction
       );
 
-      // 9️⃣ Sinkronisasi purchase_details dan inventory_batches
+      // 9 Sinkronisasi purchase_details dan inventory_batches
       const existingDetailsMap = new Map(
         purchaseDetails.map((d) => [d.productId, d])
       );
@@ -461,6 +461,7 @@ export class PurchaseDetailService {
           },
           prismaTransaction
         );
+
       inventoryAccount = {
         ...inventoryAccount,
         balance: updatedInventoryAccount2.balance,
@@ -475,6 +476,7 @@ export class PurchaseDetailService {
           },
           prismaTransaction
         );
+
       vatInputAccount = {
         ...vatInputAccount,
         balance: updatedVatInputAccount2.balance,
@@ -490,6 +492,7 @@ export class PurchaseDetailService {
             },
             prismaTransaction
           );
+
         cashAccount = { ...cashAccount, balance: updatedCashAccount.balance };
       } else if (
         paymentType === PaymentType.CREDIT ||
@@ -508,6 +511,7 @@ export class PurchaseDetailService {
             },
             prismaTransaction
           );
+
         payableAccount = {
           ...payableAccount,
           balance: updatedPayableAccount.balance,
@@ -521,7 +525,7 @@ export class PurchaseDetailService {
 
       if (!payableAccount.balance.equals(expectedPayableBalance)) {
         throw new ResponseError(
-          500,
+          400,
           `Payable account balance mismatch: expected ${expectedPayableBalance.toString()}, but got ${payableAccount.balance.toString()}`
         );
       }
