@@ -51,6 +51,7 @@ async function main() {
       accountName: 'Cash',
       accountType: AccountType.ASSET,
       normalBalance: EntryType.DEBIT,
+      balance: 100000000,
     },
     {
       accountCode: '1100',
@@ -81,6 +82,7 @@ async function main() {
       accountName: "Owner's Capital",
       accountType: AccountType.EQUITY,
       normalBalance: EntryType.CREDIT,
+      balance: 100000000,
     },
     {
       accountCode: '4000',

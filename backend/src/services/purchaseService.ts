@@ -922,6 +922,7 @@ export class PurchaseService {
               'Cash amount must be less than total for mixed payment'
             );
           }
+
           // Hanya buat journal entry untuk kas, karena journal entry untuk hutang sudah diperbarui di langkah 7
           await journalEntryRepository.createJournalEntries(
             {
@@ -948,9 +949,11 @@ export class PurchaseService {
               },
               prismaTransaction
             );
+
           cashAccount = { ...cashAccount, balance: updatedCashAccount.balance }; // Update cashAccount
         } else if (oldPaymentType === PaymentType.CREDIT) {
           oldPayableAmount = total; // Simpan jumlah hutang lama
+
           const updatedPayableAccount =
             await accountRepository.updateAccountTransaction(
               {
@@ -959,6 +962,7 @@ export class PurchaseService {
               },
               prismaTransaction
             );
+
           payableAccount = {
             ...payableAccount,
             balance: updatedPayableAccount.balance,
@@ -980,6 +984,7 @@ export class PurchaseService {
               },
               prismaTransaction
             );
+
           cashAccount = { ...cashAccount, balance: updatedCashAccount.balance }; // Update cashAccount
 
           const updatedPayableAccount =
@@ -990,6 +995,7 @@ export class PurchaseService {
               },
               prismaTransaction
             );
+
           payableAccount = {
             ...payableAccount,
             balance: updatedPayableAccount.balance,
@@ -1006,6 +1012,7 @@ export class PurchaseService {
               },
               prismaTransaction
             );
+
           cashAccount = { ...cashAccount, balance: updatedCashAccount.balance }; // Update cashAccount
         } else if (paymentType === PaymentType.CREDIT) {
           const updatedPayableAccount =
@@ -1016,6 +1023,7 @@ export class PurchaseService {
               },
               prismaTransaction
             );
+
           payableAccount = {
             ...payableAccount,
             balance: updatedPayableAccount.balance,
@@ -1029,6 +1037,7 @@ export class PurchaseService {
           }
 
           const newPayableAmount = total.minus(new Decimal(cashAmount));
+
           const updatedCashAccount =
             await accountRepository.updateAccountTransaction(
               {
@@ -1037,6 +1046,7 @@ export class PurchaseService {
               },
               prismaTransaction
             );
+
           const updatedPayableAccount =
             await accountRepository.updateAccountTransaction(
               {
@@ -1045,7 +1055,9 @@ export class PurchaseService {
               },
               prismaTransaction
             );
+
           cashAccount = { ...cashAccount, balance: updatedCashAccount.balance }; // Update cashAccount
+
           payableAccount = {
             ...payableAccount,
             balance: updatedPayableAccount.balance,
@@ -1053,22 +1065,18 @@ export class PurchaseService {
         }
 
         // Validasi saldo Accounts Payable
-        const totalPayables = await prismaTransaction.payable.aggregate({
-          _sum: { amount: true },
-        });
-        const expectedPayableBalance = new Decimal(
-          totalPayables._sum.amount || 0
-        );
+        const totalPayables =
+          await payableRepository.getTotalPayables(prismaTransaction);
+        const expectedPayableBalance = new Decimal(totalPayables || 0);
 
         if (!payableAccount.balance.equals(expectedPayableBalance)) {
           throw new ResponseError(
-            500,
+            400,
             `Accounts Payable balance mismatch: expected ${expectedPayableBalance.toString()}, but got ${payableAccount.balance.toString()}`
           );
         }
       }
 
-      // Kembalikan data pembelian yang sudah diperbarui
       return purchase;
     });
   }

@@ -41,6 +41,7 @@ export class PurchaseDetailService {
       if (!accountDefault) {
         throw new ResponseError(400, 'Default accounts are not configured');
       }
+
       let { inventoryAccount, vatInputAccount, cashAccount, payableAccount } =
         accountDefault;
 
@@ -64,6 +65,7 @@ export class PurchaseDetailService {
       if (!existingPurchase) {
         throw new ResponseError(404, 'Purchase not found');
       }
+
       const { journal, payable, purchaseDetails } = existingPurchase;
       const paymentType = existingPurchase.paymentType;
 
@@ -86,11 +88,13 @@ export class PurchaseDetailService {
             detail.purchaseDetailId,
             prismaTransaction
           );
+
         for (const batch of inventoryBatches) {
           const saleDetailCount = await saleDetailRepository.countByBatchId(
             batch.batchId,
             prismaTransaction
           );
+
           if (saleDetailCount > 0) {
             throw new ResponseError(
               400,
@@ -175,12 +179,14 @@ export class PurchaseDetailService {
         const cashEntry = journal.journalEntries.find(
           (e) => e.accountId === cashAccount.accountId
         );
+
         if (!cashEntry) {
           throw new ResponseError(
             400,
             'Cash journal entry not found for MIXED payment'
           );
         }
+
         const oldCashAmount = new Decimal(cashEntry.credit || 0);
         const oldPayableAmount = oldTotal.minus(oldCashAmount);
 
@@ -225,13 +231,48 @@ export class PurchaseDetailService {
       );
       const newItemsMap = new Map(items.map((i) => [i.productId, i]));
 
-      // --- Hapus detail yang sudah tidak ada di request ---
+      // Hapus detail yang sudah tidak ada di request
       for (const [productId, oldDetail] of existingDetailsMap.entries()) {
         if (!newItemsMap.has(productId)) {
+          const product = await productRepository.findProductTransaction(
+            productId,
+            prismaTransaction
+          );
+          if (!product) continue;
+
+          // Kurangi stok lama
+          const newStock = new Decimal(product.stock).minus(oldDetail.quantity);
+          const cogs = await recalculateCOGS(
+            productId,
+            setting.inventoryMethod,
+            prismaTransaction
+          );
+
+          const sellingPrice =
+            newStock.lessThanOrEqualTo(0) || cogs.equals(0)
+              ? new Decimal(0)
+              : cogs.add(product.profitMargin);
+
+          await productRepository.updateProductTransaction(
+            {
+              productId,
+              stock: Number(newStock.lessThan(0) ? 0 : newStock),
+              avgPurchasePrice: newStock.lessThanOrEqualTo(0)
+                ? new Decimal(0)
+                : product.avgPurchasePrice,
+              profitMargin: newStock.lessThanOrEqualTo(0)
+                ? new Decimal(0)
+                : product.profitMargin,
+              sellingPrice,
+            },
+            prismaTransaction
+          );
+
           await inventoryBatchRepository.deleteBatchByPurchaseDetail(
             oldDetail.purchaseDetailId,
             prismaTransaction
           );
+
           await purchaseDetailRepository.deletePurchaseDetailById(
             oldDetail.purchaseDetailId,
             prismaTransaction
@@ -239,7 +280,7 @@ export class PurchaseDetailService {
         }
       }
 
-      // --- Tambah/update detail baru ---
+      // Tambah/update detail baru
       for (const item of items) {
         const existingDetail = existingDetailsMap.get(item.productId);
         const product = await productRepository.findProductTransaction(
@@ -301,24 +342,31 @@ export class PurchaseDetailService {
           );
         }
 
-        // Update stok & harga produk
-        // Hitung stok baru berdasarkan kuantitas dari item request
-        const newStock = new Decimal(item.quantity);
+        // Update stok & harga produk dengan reset stok lama ---
+        let currentStock = new Decimal(product.stock);
+        if (existingDetail) {
+          currentStock = currentStock.minus(existingDetail.quantity);
+        }
+        const newStock = currentStock.plus(item.quantity);
 
-        // Hitung harga beli rata-rata baru
-        const newAvgPrice = new Decimal(item.unitPrice); // Harga baru langsung dari item.unitPrice
+        const currentAvgPrice = product.avgPurchasePrice;
+        let newAvgPrice: Decimal;
+
+        if (newStock.equals(0)) {
+          newAvgPrice = new Decimal(0);
+        } else {
+          const oldValue = currentAvgPrice.times(currentStock);
+          const newValue = new Decimal(item.unitPrice).times(item.quantity);
+          newAvgPrice = oldValue.plus(newValue).div(newStock);
+        }
+
+        // Update product with new stock and price
         const cogs = await recalculateCOGS(
           product.productId,
           setting.inventoryMethod,
           prismaTransaction
         );
-
-        let sellingPrice: Decimal;
-        if (cogs.equals(0)) {
-          sellingPrice = new Decimal(item.unitPrice).add(profitMargin);
-        } else {
-          sellingPrice = cogs.add(profitMargin);
-        }
+        const sellingPrice = cogs.add(profitMargin);
 
         await productRepository.updateProductTransaction(
           {
@@ -330,23 +378,6 @@ export class PurchaseDetailService {
           },
           prismaTransaction
         );
-      }
-
-      // --- Update stok produk yang dihapus jadi 0 ---
-      for (const [productId] of existingDetailsMap.entries()) {
-        if (!newItemsMap.has(productId)) {
-          // Set stok produk jadi 0 karena sudah dihapus dari pembelian
-          await productRepository.updateProductTransaction(
-            {
-              productId,
-              stock: 0,
-              avgPurchasePrice: new Decimal(0), // Opsional: reset avgPurchasePrice
-              profitMargin: new Decimal(0), // Opsional: reset profitMargin
-              sellingPrice: new Decimal(0), // Opsional: reset sellingPrice
-            },
-            prismaTransaction
-          );
-        }
       }
 
       // 10 Update journal entries
@@ -395,6 +426,7 @@ export class PurchaseDetailService {
         );
       } else if (cashEntry && paymentType === PaymentType.MIXED) {
         const cashAmount = new Decimal(cashEntry.credit || 0);
+
         await journalEntryRepository.updateJournalEntryAmounts(
           {
             journalEntryId: cashEntry.journalEntryId,
@@ -414,6 +446,7 @@ export class PurchaseDetailService {
           : new Decimal(0);
         const creditAmount =
           paymentType === PaymentType.CREDIT ? total : total.minus(cashAmount);
+
         await journalEntryRepository.updateJournalEntryAmounts(
           {
             journalEntryId: payableEntry.journalEntryId,
@@ -424,7 +457,7 @@ export class PurchaseDetailService {
         );
       }
 
-      // 11 Update payable jika perlu
+      // 11 Update payable jika credit atau mixed
       if (
         payable &&
         (paymentType === PaymentType.CREDIT ||
@@ -452,7 +485,6 @@ export class PurchaseDetailService {
       }
 
       // 12 Terapkan saldo akun baru
-      // Terapkan saldo akun inventory
       const updatedInventoryAccount2 =
         await accountRepository.updateAccountTransaction(
           {
@@ -467,7 +499,6 @@ export class PurchaseDetailService {
         balance: updatedInventoryAccount2.balance,
       };
 
-      // Terapkan saldo akun VAT input
       const updatedVatInputAccount2 =
         await accountRepository.updateAccountTransaction(
           {
@@ -483,7 +514,6 @@ export class PurchaseDetailService {
       };
 
       if (paymentType === PaymentType.CASH) {
-        // Terapkan saldo akun kas
         const updatedCashAccount =
           await accountRepository.updateAccountTransaction(
             {
@@ -498,7 +528,6 @@ export class PurchaseDetailService {
         paymentType === PaymentType.CREDIT ||
         paymentType === PaymentType.MIXED
       ) {
-        // Hitung ulang total payable untuk memastikan konsistensi
         const updatedTotalPayables =
           await payableRepository.getTotalPayables(prismaTransaction);
         const newPayableBalance = new Decimal(updatedTotalPayables || 0);
@@ -518,7 +547,7 @@ export class PurchaseDetailService {
         };
       }
 
-      // 13 Validasi saldo akun utang
+      // 13 Validasi saldo akun utang akhir
       const finalTotalPayables =
         await payableRepository.getTotalPayables(prismaTransaction);
       const expectedPayableBalance = new Decimal(finalTotalPayables || 0);
