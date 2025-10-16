@@ -1,4 +1,12 @@
-import { PaymentType, Prisma, Sale } from '@prisma/client';
+import {
+  Journal,
+  JournalEntry,
+  PaymentType,
+  Prisma,
+  Receivable,
+  Sale,
+  SaleDetail,
+} from '@prisma/client';
 import { SaleForm } from '../utils/interface';
 import { paginate } from '../utils/pagination';
 import { prismaClient } from '../application/database';
@@ -115,6 +123,40 @@ export class SaleRepository {
     prismaTransaction: Prisma.TransactionClient
   ): Promise<Sale | null> {
     return await prismaTransaction.sale.findUnique({
+      where: { saleId },
+    });
+  }
+
+  async getSaleByIdTransaction(
+    saleId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<
+    | (Sale & {
+        journal: Journal & { journalEntries: JournalEntry[] };
+        receivables: Receivable[];
+        saleDetails: SaleDetail[];
+      })
+    | null
+  > {
+    return await prismaTransaction.sale.findUnique({
+      where: { saleId },
+      include: {
+        journal: {
+          include: {
+            journalEntries: true,
+          },
+        },
+        receivables: true,
+        saleDetails: true,
+      },
+    });
+  }
+
+  async deleteSaleByIdTransaction(
+    saleId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<void> {
+    await prismaTransaction.sale.delete({
       where: { saleId },
     });
   }

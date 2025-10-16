@@ -171,6 +171,25 @@ export class PurchaseRepository {
       },
     });
   }
+
+  async findSubsequentPurchases(
+    productId: string,
+    transactionDate: Date,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<Purchase[]> {
+    return await prismaTransaction.purchase.findMany({
+      where: {
+        purchaseDetails: {
+          some: {
+            productId: productId,
+          },
+        },
+        date: {
+          gt: transactionDate, // Pembelian setelah tanggal penjualan
+        },
+      },
+    });
+  }
 }
 
 export const purchaseRepository = new PurchaseRepository();

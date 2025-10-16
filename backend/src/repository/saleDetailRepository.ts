@@ -44,6 +44,17 @@ export class SaleDetailRepository {
       where: { batchId },
     });
   }
+
+  async deleteManySaleDetails(
+    saleDetailIds: string[],
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<void> {
+    await prismaTransaction.saleDetail.deleteMany({
+      where: {
+        saleDetailId: { in: saleDetailIds },
+      },
+    });
+  }
 }
 
 export const saleDetailRepository = new SaleDetailRepository();

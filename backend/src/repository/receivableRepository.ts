@@ -17,6 +17,15 @@ export class ReceivableRepository {
       },
     });
   }
+
+  async deleteReceivable(
+    receivableId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<void> {
+    await prismaTransaction.receivable.delete({
+      where: { receivableId },
+    });
+  }
 }
 
 export const receivableRepository = new ReceivableRepository();

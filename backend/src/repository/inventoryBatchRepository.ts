@@ -66,6 +66,17 @@ export class InventoryBatchRepository {
     });
   }
 
+  async incrementBatchStock(
+    batchId: string,
+    quantity: number,
+    prismaTransaction: Prisma.TransactionClient
+  ) {
+    return await prismaTransaction.inventoryBatch.update({
+      where: { batchId },
+      data: { remainingStock: { increment: quantity } },
+    });
+  }
+
   async calculateAvgPurchasePrice(
     productId: string,
     prismaTransaction: Prisma.TransactionClient
@@ -111,6 +122,16 @@ export class InventoryBatchRepository {
   ): Promise<InventoryBatch[]> {
     return await prismaTransaction.inventoryBatch.findMany({
       where: { purchaseDetailId },
+    });
+  }
+
+  async findBatchById(
+    batchId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ) {
+    return await prismaTransaction.inventoryBatch.findMany({
+      where: { batchId },
+      orderBy: { purchaseDate: 'asc' },
     });
   }
 }

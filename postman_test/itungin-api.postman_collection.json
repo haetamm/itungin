@@ -422,6 +422,67 @@
 					"response": []
 				},
 				{
+					"name": "create customer2",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('should response 201 status code', () => {\r",
+									"    pm.response.to.have.status(201);\r",
+									"});\r",
+									"\r",
+									"pm.test('should respose with correct property and message', () => {\r",
+									"    const responseJson = pm.response.json();\r",
+									"\r",
+									"    pm.environment.set('customerId2', responseJson.data.customerId);\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"customerName\": \"Warung Galang\",\r\n    \"phone\": \"\",\r\n    \"address\": \"\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/v1/customers",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"customers"
+							]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "update customer",
 					"request": {
 						"auth": {
@@ -997,7 +1058,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n          \"accountCode\": \"3000\",\r\n            \"accountName\": \"Owner's Capital\",\r\n            \"accountType\": \"EQUITY\",\r\n            \"normalBalance\": \"CREDIT\",\r\n            \"balance\": \"100000000\"\r\n}",
+							"raw": "{\r\n          \"accountCode\": \"1000\",\r\n            \"accountName\": \"Cash\",\r\n            \"accountType\": \"ASSET\",\r\n            \"normalBalance\": \"DEBIT\",\r\n            \"balance\": \"100000000\"\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1386,7 +1447,8 @@
 									"});"
 								],
 								"type": "text/javascript",
-								"packages": {}
+								"packages": {},
+								"requests": {}
 							}
 						}
 					],
@@ -1405,7 +1467,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-02\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00001\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CASH\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"140\",\r\n        \"unitPrice\": \"8900\",\r\n        \"profitMargin\": \"800\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"80\",\r\n        \"unitPrice\": \"3500\",\r\n        \"profitMargin\": \"500\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-02\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00001\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CASH\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"140\",\r\n        \"unitPrice\": \"8900\",\r\n        \"profitMargin\": \"800\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"80\",\r\n        \"unitPrice\": \"6000\",\r\n        \"profitMargin\": \"500\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1446,7 +1508,8 @@
 									"});"
 								],
 								"type": "text/javascript",
-								"packages": {}
+								"packages": {},
+								"requests": {}
 							}
 						}
 					],
@@ -1465,7 +1528,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-02\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00002\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CREDIT\",\r\n  \"dueDate\": \"2025-09-10\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"240\",\r\n        \"unitPrice\": \"8900\",\r\n        \"profitMargin\": \"800\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"180\",\r\n        \"unitPrice\": \"3500\",\r\n        \"profitMargin\": \"500\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-02\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00002\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CREDIT\",\r\n  \"dueDate\": \"2025-09-10\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"240\",\r\n        \"unitPrice\": \"10000\",\r\n        \"profitMargin\": \"800\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"180\",\r\n        \"unitPrice\": \"6500\",\r\n        \"profitMargin\": \"500\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1506,7 +1569,8 @@
 									"});"
 								],
 								"type": "text/javascript",
-								"packages": {}
+								"packages": {},
+								"requests": {}
 							}
 						}
 					],
@@ -1525,7 +1589,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-04\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00010\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"MIXED\",\r\n  \"cashAmount\": 500000,\r\n  \"dueDate\": \"2025-09-28\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"100\",\r\n        \"unitPrice\": \"18000\",\r\n        \"profitMargin\": \"1500\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-10\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00010\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"MIXED\",\r\n  \"cashAmount\": 200000,\r\n  \"dueDate\": \"2025-09-28\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"100\",\r\n        \"unitPrice\": \"7000\",\r\n        \"profitMargin\": \"1000\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2264,7 +2328,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"purchaseId\": \"{{purchaseId}}\",\r\n    \"vatRateId\": \"{{vatId}}\",\r\n    \"items\": [\r\n        {\r\n            \"productId\": \"{{productId}}\",\r\n            \"quantity\": \"100\",\r\n            \"unitPrice\": \"8900\",\r\n            \"profitMargin\": \"800\"\r\n        }\r\n    ]\r\n}\r\n",
+							"raw": "{\r\n    \"purchaseId\": \"{{purchaseId}}\",\r\n    \"vatRateId\": \"{{vatId}}\",\r\n    \"items\": [\r\n        {\r\n            \"productId\": \"{{productId}}\",\r\n            \"quantity\": \"100\",\r\n            \"unitPrice\": \"9000\",\r\n            \"profitMargin\": \"700\"\r\n        }\r\n    ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2317,7 +2381,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"purchaseId\": \"{{purchaseId2}}\",\r\n    \"vatRateId\": \"{{vatId}}\",\r\n    \"items\": [\r\n        {\r\n            \"productId\": \"{{productId2}}\",\r\n            \"quantity\": \"100\",\r\n            \"unitPrice\": \"9000\",\r\n            \"profitMargin\": \"1000\"\r\n        }\r\n    ]\r\n}\r\n",
+							"raw": "{\r\n    \"purchaseId\": \"{{purchaseId2}}\",\r\n    \"vatRateId\": \"{{vatId}}\",\r\n    \"items\": [\r\n        {\r\n            \"productId\": \"{{productId2}}\",\r\n            \"quantity\": \"100\",\r\n            \"unitPrice\": \"9000\",\r\n            \"profitMargin\": \"500\"\r\n        }\r\n    ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2370,7 +2434,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"purchaseId\": {{purchaseId3}},\r\n    \"vatRateId\": \"{{vatId}}\",\r\n    \"items\": [\r\n        {\r\n            \"productId\": \"{{productId2}}\",\r\n            \"quantity\": \"100\",\r\n            \"unitPrice\": \"18000\",\r\n            \"profitMargin\": \"1500\"\r\n        }\r\n    ]\r\n}\r\n",
+							"raw": "{\r\n    \"purchaseId\": \"{{purchaseId3}}\",\r\n    \"vatRateId\": \"{{vatId}}\",\r\n    \"items\": [\r\n        {\r\n            \"productId\": \"{{productId2}}\",\r\n            \"quantity\": \"50\",\r\n            \"unitPrice\": \"4000\",\r\n            \"profitMargin\": \"500\"\r\n        }\r\n    ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2436,7 +2500,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-02\",\r\n  \"customerId\": \"{{customerId}}\",\r\n  \"invoiceNumber\": \"BG-00001\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CASH\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"30\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"20\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-04\",\r\n  \"customerId\": \"{{customerId}}\",\r\n  \"invoiceNumber\": \"BG-00001\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CASH\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"30\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"20\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2497,7 +2561,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-02\",\r\n  \"customerId\": \"{{customerId}}\",\r\n  \"invoiceNumber\": \"BG-00002\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CREDIT\",\r\n  \"dueDate\": \"2025-10-02\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"30\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"20\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-08\",\r\n  \"customerId\": \"{{customerId}}\",\r\n  \"invoiceNumber\": \"BG-00002\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CREDIT\",\r\n  \"dueDate\": \"2025-10-02\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"30\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"20\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2558,7 +2622,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-02\",\r\n  \"customerId\": \"{{customerId}}\",\r\n  \"invoiceNumber\": \"BG-00003\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"MIXED\",\r\n  \"cashAmount\": \"1000000\",\r\n  \"dueDate\": \"2025-10-02\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"100\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-07\",\r\n  \"customerId\": \"{{customerId}}\",\r\n  \"invoiceNumber\": \"BG-00003\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"MIXED\",\r\n  \"cashAmount\": \"1000000\",\r\n  \"dueDate\": \"2025-10-02\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"100\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2576,6 +2640,320 @@
 								"api",
 								"v1",
 								"sales"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get all sale",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/v1/sales",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"sales"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get sale by id | 1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/v1/sales/{{saleId}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"sales",
+								"{{saleId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get sale by id | 2",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/v1/sales/{{saleId2}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"sales",
+								"{{saleId2}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get sale by id | 3",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/v1/sales/{{saleId3}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"sales",
+								"{{saleId3}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "delete sale by id | 1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/v1/sales/{{saleId}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"sales",
+								"{{saleId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "delete sale by id | 2",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/v1/sales/{{saleId2}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"sales",
+								"{{saleId2}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "delete sale by id | 3",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/v1/sales/{{saleId3}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"sales",
+								"{{saleId3}}"
 							]
 						}
 					},
@@ -2616,7 +2994,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"inventoryMethod\": \"FIFO\"\r\n}\r\n",
+							"raw": "{\r\n  \"inventoryMethod\": \"AVG\"\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2669,7 +3047,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"inventoryMethod\": \"LIFO\"\r\n}\r\n",
+							"raw": "{\r\n  \"inventoryMethod\": \"AVG\"\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"

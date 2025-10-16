@@ -318,7 +318,7 @@ export interface SaleRequest {
   invoiceNumber: string;
   vatRateId: string;
   items: SaleItem[];
-  paymentType: PaymentType; // CASH | CREDIT | MIXED
-  cashAmount?: Decimal; // opsional
-  dueDate?: string; // opsional, wajib jika CREDIT atau MIXED
+  paymentType: PaymentType;
+  cashAmount?: Decimal;
+  dueDate?: string;
 }

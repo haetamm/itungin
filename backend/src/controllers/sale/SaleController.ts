@@ -64,6 +64,21 @@ class SaleController implements IController {
       next(e);
     }
   }
+
+  async deleteSaleById(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+      const result = await saleService.deleteSale(id);
+      const response = new ResponseSuccess(204, result);
+      res.status(204).json(response);
+    } catch (e) {
+      next(e);
+    }
+  }
 }
 
 export default new SaleController();
