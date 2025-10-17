@@ -322,3 +322,28 @@ export interface SaleRequest {
   cashAmount?: Decimal;
   dueDate?: string;
 }
+
+export interface UpdateSaleRequest {
+  date: string;
+  customerId: string;
+  invoiceNumber: string;
+  paymentType: PaymentType; // CASH | CREDIT | MIXED
+  cashAmount?: Decimal; // opsional
+  dueDate?: string; // opsional, wajib jika CREDIT atau MIXED
+}
+
+export interface UpdateSaleForm {
+  saleId: string;
+  date: string | Date;
+  customerId: string;
+  invoiceNumber: string;
+  paymentType: PaymentType;
+}
+
+export interface UpdateReceivableForm {
+  receivableId: string;
+  customerId: string;
+  dueDate: Date;
+  amount: Decimal;
+  status: PaymentStatus;
+}

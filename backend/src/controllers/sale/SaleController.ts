@@ -79,6 +79,21 @@ class SaleController implements IController {
       next(e);
     }
   }
+
+  async updateSale(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+      const result = await saleService.updateSale(req, id);
+      const response = new ResponseSuccess(200, result);
+      res.status(200).json(response);
+    } catch (e) {
+      next(e);
+    }
+  }
 }
 
 export default new SaleController();

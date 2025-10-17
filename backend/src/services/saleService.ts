@@ -5,8 +5,12 @@ import { customerRepository } from '../repository/customerRepository';
 import { generalSettingRepository } from '../repository/generalSettingRepository';
 import { productRepository } from '../repository/productRepository';
 import { vatSettingRepository } from '../repository/vatSettingRepository';
-import { SaleDetailForm, SaleRequest } from '../utils/interface';
-import { saleSchema } from '../validation/saleValidation';
+import {
+  SaleDetailForm,
+  SaleRequest,
+  UpdateSaleRequest,
+} from '../utils/interface';
+import { saleSchema, updateSaleSchema } from '../validation/saleValidation';
 import { validate } from '../validation/validation';
 import { journalRepository } from '../repository/journalRepository';
 import { saleRepository } from '../repository/saleRepository';
@@ -16,9 +20,10 @@ import { journalEntryRepository } from '../repository/journalEntryRepository';
 import { receivableRepository } from '../repository/receivableRepository';
 import { accountRepository } from '../repository/accountRepository';
 import { Decimal } from '@prisma/client/runtime/library';
-import { PaymentStatus, PaymentType, Prisma } from '@prisma/client';
+import { PaymentStatus, PaymentType, Prisma, Sale } from '@prisma/client';
 import { recalculateCOGS } from '../utils/cogs';
 import { purchaseRepository } from '../repository/purchaseRepository';
+import { receivablePaymentRepository } from '../repository/receivablePaymentRepository';
 
 export class SaleService {
   private async ensureInvoiceNumberUnique(
@@ -411,7 +416,6 @@ export class SaleService {
         saleId,
         prismaTransaction
       );
-
       if (!sale) {
         throw new ResponseError(404, 'Sale not found');
       }
@@ -434,6 +438,7 @@ export class SaleService {
 
       // Ambil journal entries
       const journalEntries = sale.journal.journalEntries;
+      const { receivable } = sale;
 
       // Inisialisasi variabel untuk menyimpan nilai debit/kredit
       let salesCredit = new Decimal(0);
@@ -465,23 +470,25 @@ export class SaleService {
         sale.paymentType === PaymentType.CREDIT ||
         sale.paymentType === PaymentType.MIXED
       ) {
-        for (const receivable of sale.receivables) {
+        if (receivable) {
           // Periksa apakah ada Payment terkait Receivable
-          const payments = await prismaTransaction.payment.findMany({
-            where: { payableId: receivable.receivableId },
-          });
+          const payments =
+            await receivablePaymentRepository.getPaymentReceivableByReceivableId(
+              receivable.receivableId,
+              prismaTransaction
+            );
 
           if (payments.length > 0) {
             throw new ResponseError(
               400,
-              `Cannot delete sale with associated payments for receivable ${receivable.receivableId}`
+              `Cannot delete sale with associated payments for receivable ${receivable.receivableId}.  Please process a sales return instead`
             );
           }
 
           if (receivable.status === PaymentStatus.PAID) {
             throw new ResponseError(
               400,
-              `Cannot delete sale with paid receivable ${receivable.receivableId}`
+              `Cannot delete sale with paid receivable ${receivable.receivableId}.  Please process a sales return instead`
             );
           }
         }
@@ -499,7 +506,7 @@ export class SaleService {
         if (subsequentPurchases.length > 0) {
           throw new ResponseError(
             400,
-            `Cannot delete sale due to subsequent purchases of the same product`
+            `Cannot delete sale due to subsequent purchases of the same product.  Please process a sales return instead`
           );
         }
       }
@@ -622,14 +629,12 @@ export class SaleService {
         );
       }
 
-      // Hapus semua receivable terkait
-      if (sale.receivables.length > 0) {
-        for (const receivable of sale.receivables) {
-          await receivableRepository.deleteReceivable(
-            receivable.receivableId,
-            prismaTransaction
-          );
-        }
+      // Hapus receivable terkait
+      if (receivable) {
+        await receivableRepository.deleteReceivable(
+          receivable.receivableId,
+          prismaTransaction
+        );
       }
 
       // Hapus sale details
@@ -695,6 +700,354 @@ export class SaleService {
     const sale = await saleRepository.findSaleDetailById(id);
     if (!sale) throw new ResponseError(404, 'Sale not found');
     return sale;
+  }
+
+  async updateSale(
+    { body }: { body: UpdateSaleRequest },
+    saleId: string
+  ): Promise<Sale> {
+    const saleReq = validate(updateSaleSchema, body);
+    const {
+      date,
+      customerId,
+      invoiceNumber,
+      paymentType,
+      cashAmount,
+      dueDate,
+    } = saleReq;
+
+    return await prismaClient.$transaction(async (prismaTransaction) => {
+      // Validasi customer
+      const customer = await customerRepository.findCustomerTransaction(
+        customerId,
+        prismaTransaction
+      );
+      if (!customer) throw new ResponseError(404, 'Customer not found');
+
+      // Ambil akun default
+      const accountDefault =
+        await accountDefaultRepository.findOne(prismaTransaction);
+      if (!accountDefault)
+        throw new ResponseError(404, 'Account not configured');
+
+      let cashAccount = accountDefault.cashAccount;
+      let receivableAccount = accountDefault.receivableAccount;
+
+      // Ambil data penjualan existing beserta relasinya
+      const existingSale = await saleRepository.getSaleByIdTransaction(
+        saleId,
+        prismaTransaction
+      );
+      if (!existingSale) throw new ResponseError(404, 'Sale not found');
+
+      const { total, receivable, journal } = existingSale;
+      const oldPaymentType = existingSale.paymentType;
+
+      // Validasi nomor invoice unik
+      if (invoiceNumber !== existingSale.invoiceNumber) {
+        await this.ensureInvoiceNumberUnique(invoiceNumber, prismaTransaction);
+      }
+
+      // Validasi payment type dan receivable
+      if (
+        oldPaymentType === PaymentType.CREDIT ||
+        oldPaymentType === PaymentType.MIXED
+      ) {
+        if (receivable) {
+          // Periksa apakah ada pembayaran terkait Receivable
+          const payments =
+            await receivablePaymentRepository.getPaymentReceivableByReceivableId(
+              receivable.receivableId,
+              prismaTransaction
+            );
+          if (payments.length > 0) {
+            throw new ResponseError(
+              400,
+              `Cannot update sale with associated payments for receivable ${receivable.receivableId}. Please process a sales return instead`
+            );
+          }
+
+          if (receivable.status === PaymentStatus.PAID) {
+            throw new ResponseError(
+              400,
+              `Cannot update sale with paid receivable ${receivable.receivableId}. Please process a sales return instead`
+            );
+          }
+        }
+      }
+
+      // Update tabel sales
+      const sale = await saleRepository.updateSaleTransaction(
+        {
+          saleId,
+          date: new Date(date),
+          customerId,
+          invoiceNumber,
+          paymentType,
+        },
+        prismaTransaction
+      );
+
+      // Update header jurnal
+      await journalRepository.updateJournalTransaction(
+        {
+          journalId: existingSale.journalId,
+          date: new Date(date),
+          description: `Penjualan ${paymentType.toLowerCase()} ${invoiceNumber}`,
+          reference: invoiceNumber,
+        },
+        prismaTransaction
+      );
+
+      // Update Receivable
+      let receivableJournalEntryId: string | null = null;
+      if (
+        paymentType === PaymentType.CREDIT ||
+        paymentType === PaymentType.MIXED
+      ) {
+        const receivableAmount =
+          paymentType === PaymentType.CREDIT
+            ? new Decimal(total)
+            : new Decimal(total).minus(cashAmount!);
+
+        if (receivable) {
+          // Update receivable dan journal entry yang sudah ada
+          await journalEntryRepository.updateJournalEntryAmounts(
+            {
+              journalEntryId: receivable.journalEntryId,
+              debit: receivableAmount,
+              credit: new Decimal(0),
+            },
+            prismaTransaction
+          );
+          receivableJournalEntryId = receivable.journalEntryId;
+
+          // perbarui data receivable
+          await receivableRepository.updateByReceivableId(
+            {
+              receivableId: receivable.receivableId,
+              customerId,
+              amount: receivableAmount,
+              dueDate: new Date(dueDate!),
+              status: PaymentStatus.UNPAID,
+            },
+            prismaTransaction
+          );
+        } else {
+          // Buat receivable baru jika sebelumnya tidak ada
+          const journalEntry =
+            await journalEntryRepository.createJournalEntries(
+              {
+                journalId: existingSale.journalId,
+                accountId: receivableAccount.accountId,
+                debit: receivableAmount,
+                credit: new Decimal(0),
+              },
+              prismaTransaction
+            );
+          receivableJournalEntryId = journalEntry.journalEntryId;
+
+          // buat receivable baru
+          await receivableRepository.createReceivable(
+            {
+              journalEntryId: receivableJournalEntryId,
+              customerId,
+              saleId,
+              amount: receivableAmount,
+              dueDate: new Date(dueDate!),
+              status: PaymentStatus.UNPAID,
+            },
+            prismaTransaction
+          );
+        }
+      } else if (paymentType === PaymentType.CASH && receivable) {
+        // Hapus receivable jika beralih ke CASH
+        await receivableRepository.deleteReceivable(
+          receivable.receivableId,
+          prismaTransaction
+        );
+
+        await journalEntryRepository.deleteJournalEntriesByIds(
+          [receivable.journalEntryId],
+          prismaTransaction
+        );
+      }
+
+      // Update Journal Entries untuk pembayaran
+      if (oldPaymentType !== paymentType) {
+        // Hapus journal entries lama terkait pembayaran (kas atau receivable)
+        const paymentEntries = journal.journalEntries.filter(
+          (entry) =>
+            entry.accountId === cashAccount.accountId ||
+            (entry.accountId === receivableAccount.accountId &&
+              entry.journalEntryId !== receivableJournalEntryId)
+        );
+        const paymentEntryIds = paymentEntries.map((e) => e.journalEntryId);
+
+        await journalEntryRepository.deleteJournalEntriesByIds(
+          paymentEntryIds,
+          prismaTransaction
+        );
+
+        // Buat journal entries baru sesuai tipe pembayaran
+        if (paymentType === PaymentType.CASH) {
+          await journalEntryRepository.createJournalEntries(
+            {
+              journalId: journal.journalId,
+              accountId: cashAccount.accountId,
+              debit: new Decimal(total),
+              credit: new Decimal(0),
+            },
+            prismaTransaction
+          );
+        } else if (paymentType === PaymentType.MIXED) {
+          await journalEntryRepository.createJournalEntries(
+            {
+              journalId: journal.journalId,
+              accountId: cashAccount.accountId,
+              debit: cashAmount!,
+              credit: new Decimal(0),
+            },
+            prismaTransaction
+          );
+        }
+      }
+
+      // Update Saldo Akun (mengikuti logika updatePurchase)
+      if (oldPaymentType !== paymentType) {
+        let oldReceivableAmount = new Decimal(0);
+
+        // Batalkan saldo lama
+        if (oldPaymentType === PaymentType.CASH) {
+          const updatedCashAccount =
+            await accountRepository.updateAccountTransaction(
+              {
+                accountCode: cashAccount.accountCode,
+                balance: cashAccount.balance.minus(total),
+              },
+              prismaTransaction
+            );
+
+          cashAccount = { ...cashAccount, balance: updatedCashAccount.balance };
+        } else if (oldPaymentType === PaymentType.CREDIT) {
+          oldReceivableAmount = total;
+          const updatedReceivableAccount =
+            await accountRepository.updateAccountTransaction(
+              {
+                accountCode: receivableAccount.accountCode,
+                balance: receivableAccount.balance.minus(total),
+              },
+              prismaTransaction
+            );
+
+          receivableAccount = {
+            ...receivableAccount,
+            balance: updatedReceivableAccount.balance,
+          };
+        } else if (oldPaymentType === PaymentType.MIXED) {
+          const oldCashEntry = journal.journalEntries.find(
+            (e) => e.accountId === cashAccount.accountId
+          );
+          const oldCashAmount = oldCashEntry
+            ? new Decimal(oldCashEntry.debit)
+            : new Decimal(0);
+          oldReceivableAmount = new Decimal(total).minus(oldCashAmount);
+
+          const updatedCashAccount =
+            await accountRepository.updateAccountTransaction(
+              {
+                accountCode: cashAccount.accountCode,
+                balance: cashAccount.balance.minus(oldCashAmount),
+              },
+              prismaTransaction
+            );
+
+          cashAccount = { ...cashAccount, balance: updatedCashAccount.balance };
+
+          const updatedReceivableAccount =
+            await accountRepository.updateAccountTransaction(
+              {
+                accountCode: receivableAccount.accountCode,
+                balance: receivableAccount.balance.minus(oldReceivableAmount),
+              },
+              prismaTransaction
+            );
+
+          receivableAccount = {
+            ...receivableAccount,
+            balance: updatedReceivableAccount.balance,
+          };
+        }
+
+        // Terapkan saldo baru
+        if (paymentType === PaymentType.CASH) {
+          const updatedCashAccount =
+            await accountRepository.updateAccountTransaction(
+              {
+                accountCode: cashAccount.accountCode,
+                balance: cashAccount.balance.plus(total),
+              },
+              prismaTransaction
+            );
+
+          cashAccount = { ...cashAccount, balance: updatedCashAccount.balance };
+        } else if (paymentType === PaymentType.CREDIT) {
+          const updatedReceivableAccount =
+            await accountRepository.updateAccountTransaction(
+              {
+                accountCode: receivableAccount.accountCode,
+                balance: receivableAccount.balance.plus(total),
+              },
+              prismaTransaction
+            );
+
+          receivableAccount = {
+            ...receivableAccount,
+            balance: updatedReceivableAccount.balance,
+          };
+        } else if (paymentType === PaymentType.MIXED) {
+          const newReceivableAmount = new Decimal(total).minus(cashAmount!);
+
+          const updatedCashAccount =
+            await accountRepository.updateAccountTransaction(
+              {
+                accountCode: cashAccount.accountCode,
+                balance: cashAccount.balance.plus(cashAmount!),
+              },
+              prismaTransaction
+            );
+
+          const updatedReceivableAccount =
+            await accountRepository.updateAccountTransaction(
+              {
+                accountCode: receivableAccount.accountCode,
+                balance: receivableAccount.balance.plus(newReceivableAmount),
+              },
+              prismaTransaction
+            );
+
+          cashAccount = { ...cashAccount, balance: updatedCashAccount.balance };
+
+          receivableAccount = {
+            ...receivableAccount,
+            balance: updatedReceivableAccount.balance,
+          };
+        }
+
+        // Validasi saldo Receivable
+        const totalReceivables =
+          await receivableRepository.getTotalReceivables(prismaTransaction);
+        const expectedReceivableBalance = new Decimal(totalReceivables || 0);
+        if (!receivableAccount.balance.equals(expectedReceivableBalance)) {
+          throw new ResponseError(
+            400,
+            `Accounts Receivable balance mismatch: expected ${expectedReceivableBalance.toString()}, but got ${receivableAccount.balance.toString()}`
+          );
+        }
+      }
+
+      return sale;
+    });
   }
 }
 

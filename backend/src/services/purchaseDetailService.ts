@@ -2,7 +2,7 @@ import { updatePurchaseDetailSchema } from '../validation/purchaseDetailValidati
 import { UpdatePurchaseDetail } from '../utils/interface';
 import { validate } from '../validation/validation';
 import { ResponseError } from '../entities/responseError';
-import { PaymentType, Purchase } from '@prisma/client';
+import { PaymentStatus, PaymentType, Purchase } from '@prisma/client';
 import { purchaseRepository } from '../repository/purchaseRepository';
 import { purchaseDetailRepository } from '../repository/purchaseDetailRepository';
 import { inventoryBatchRepository } from '../repository/inventoryBatchRepository';
@@ -17,6 +17,7 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { payableRepository } from '../repository/paybleRepository';
 import { recalculateCOGS } from '../utils/cogs';
 import { generalSettingRepository } from '../repository/generalSettingRepository';
+import { paymentRepository } from '../repository/paymentRepository';
 
 export class PurchaseDetailService {
   async updatePurchaseDetailByPurchaseId({
@@ -44,17 +45,6 @@ export class PurchaseDetailService {
 
       let { inventoryAccount, vatInputAccount, cashAccount, payableAccount } =
         accountDefault;
-
-      // 2.1 Validasi saldo akun utang awal
-      const totalPayables =
-        await payableRepository.getTotalPayables(prismaTransaction);
-      const initialPayableBalance = new Decimal(totalPayables || 0);
-      if (!payableAccount.balance.equals(initialPayableBalance)) {
-        throw new ResponseError(
-          400,
-          `Payable account balance inconsistent before transaction: expected ${initialPayableBalance.toString()}, but got ${payableAccount.balance.toString()}`
-        );
-      }
 
       // 3 Ambil data pembelian existing
       const existingPurchase =
@@ -99,6 +89,33 @@ export class PurchaseDetailService {
             throw new ResponseError(
               400,
               `Cannot update purchase because inventory batch (ID: ${batch.batchId}) has been used in sales. Please process a purchase return.`
+            );
+          }
+        }
+      }
+
+      if (
+        paymentType === PaymentType.CREDIT ||
+        paymentType === PaymentType.MIXED
+      ) {
+        if (payable) {
+          // Periksa apakah ada Payment terkait payable
+          const payments = await paymentRepository.getPaymentByPayableId(
+            payable.payableId,
+            prismaTransaction
+          );
+
+          if (payments.length > 0) {
+            throw new ResponseError(
+              400,
+              `Cannot update purchase with associated payments for payable ${payable.payableId}.  Please process a purchase return instead`
+            );
+          }
+
+          if (payable.status === PaymentStatus.PAID) {
+            throw new ResponseError(
+              400,
+              `Cannot update purchase with paid payable ${payable.payableId}.  Please process a purchase return instead`
             );
           }
         }

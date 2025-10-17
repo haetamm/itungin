@@ -7,7 +7,7 @@ import {
   Sale,
   SaleDetail,
 } from '@prisma/client';
-import { SaleForm } from '../utils/interface';
+import { SaleForm, UpdateSaleForm } from '../utils/interface';
 import { paginate } from '../utils/pagination';
 import { prismaClient } from '../application/database';
 
@@ -133,7 +133,7 @@ export class SaleRepository {
   ): Promise<
     | (Sale & {
         journal: Journal & { journalEntries: JournalEntry[] };
-        receivables: Receivable[];
+        receivable: Receivable | null;
         saleDetails: SaleDetail[];
       })
     | null
@@ -146,7 +146,7 @@ export class SaleRepository {
             journalEntries: true,
           },
         },
-        receivables: true,
+        receivable: true,
         saleDetails: true,
       },
     });
@@ -158,6 +158,21 @@ export class SaleRepository {
   ): Promise<void> {
     await prismaTransaction.sale.delete({
       where: { saleId },
+    });
+  }
+
+  async updateSaleTransaction(
+    data: UpdateSaleForm,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<Sale> {
+    return prismaTransaction.sale.update({
+      where: { saleId: data.saleId },
+      data: {
+        date: data.date,
+        customerId: data.customerId,
+        invoiceNumber: data.invoiceNumber,
+        paymentType: data.paymentType,
+      },
     });
   }
 }

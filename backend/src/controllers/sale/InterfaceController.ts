@@ -4,6 +4,7 @@ export interface IController {
   getAllSale(req: Request, res: Response, next: NextFunction): Promise<void>;
   getSaleById(req: Request, res: Response, next: NextFunction): Promise<void>;
   createSale(req: Request, res: Response, next: NextFunction): Promise<void>;
+  updateSale(req: Request, res: Response, next: NextFunction): Promise<void>;
   deleteSaleById(
     req: Request,
     res: Response,

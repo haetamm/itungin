@@ -37,6 +37,7 @@ import { recalculateCOGS } from '../utils/cogs';
 import { accountDefaultRepository } from '../repository/accountDefaultRepository';
 import { saleDetailRepository } from '../repository/saleDetailRepository';
 import { saleRepository } from '../repository/saleRepository';
+import { paymentRepository } from '../repository/paymentRepository';
 
 export class PurchaseService {
   private async updatePurchaseDataRelation(
@@ -424,6 +425,8 @@ export class PurchaseService {
         throw new ResponseError(404, 'Purchase not found');
       }
 
+      const { payable } = purchase;
+
       // Ambil account default
       const accountDefault =
         await accountDefaultRepository.findOne(prismaTransaction);
@@ -520,20 +523,49 @@ export class PurchaseService {
           throw new ResponseError(400, 'Invalid payment type');
       }
 
-      if (purchase.payable) {
+      // Validasi payment type dan payable
+      if (
+        purchase.paymentType === PaymentType.CREDIT ||
+        purchase.paymentType === PaymentType.MIXED
+      ) {
+        if (payable) {
+          // Periksa apakah ada Payment terkait payable
+          const payments = await paymentRepository.getPaymentByPayableId(
+            payable.payableId,
+            prismaTransaction
+          );
+
+          if (payments.length > 0) {
+            throw new ResponseError(
+              400,
+              `Cannot delete purchase with associated payments for payable ${payable.payableId}.  Please process a purchase return instead`
+            );
+          }
+
+          if (payable.status === PaymentStatus.PAID) {
+            throw new ResponseError(
+              400,
+              `Cannot delete purchase with paid payable ${payable.payableId}.  Please process a purchase return instead`
+            );
+          }
+        }
+      }
+
+      if (payable) {
         await payableRepository.deletePayable(
-          purchase.payable.payableId,
+          payable.payableId,
           prismaTransaction
         );
       }
 
-      // Revert product stock and delete inventory batches
+      // Ambil setting inventory method
       const setting =
         await generalSettingRepository.getSettingTransaction(prismaTransaction);
       if (!setting) {
         throw new ResponseError(400, 'Inventory method not configured');
       }
 
+      // Revert product stock and delete inventory batches
       for (const detail of purchase.purchaseDetails) {
         const product = await productRepository.findProductTransaction(
           detail.productId,
