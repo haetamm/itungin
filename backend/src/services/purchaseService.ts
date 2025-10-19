@@ -40,6 +40,49 @@ import { saleRepository } from '../repository/saleRepository';
 import { paymentRepository } from '../repository/paymentRepository';
 
 export class PurchaseService {
+  private async getSettingInventory(
+    prismaTransaction: Prisma.TransactionClient
+  ) {
+    const settings =
+      await generalSettingRepository.getSettingTransaction(prismaTransaction);
+    if (!settings)
+      throw new ResponseError(404, 'Inventory method not configured');
+    return settings;
+  }
+
+  private async getProduct(
+    productId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ) {
+    const product = await productRepository.findProductTransaction(
+      productId,
+      prismaTransaction
+    );
+    if (!product) {
+      throw new ResponseError(404, `Product ${productId} not found`);
+    }
+    return product;
+  }
+
+  private async getAccountDefault(prismaTransaction: Prisma.TransactionClient) {
+    const accountDefault =
+      await accountDefaultRepository.findOne(prismaTransaction);
+    if (!accountDefault) throw new ResponseError(404, 'Account not configured');
+    return accountDefault;
+  }
+
+  private async getPurchase(
+    purchaseId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ) {
+    const purchase = await purchaseRepository.findPurchaseByIdTransaction(
+      purchaseId,
+      prismaTransaction
+    );
+    if (!purchase) throw new ResponseError(404, 'Purchase not found');
+    return purchase;
+  }
+
   private async updatePurchaseDataRelation(
     data: UpdatePurchaseDataRelation,
     prismaTransaction: Prisma.TransactionClient
@@ -47,11 +90,7 @@ export class PurchaseService {
     const { date, supplierId, invoiceNumber, items, vatRateId, paymentType } =
       data;
 
-    const setting =
-      await generalSettingRepository.getSettingTransaction(prismaTransaction);
-    if (!setting) {
-      throw new ResponseError(400, 'Inventory method not configured');
-    }
+    const setting = await this.getSettingInventory(prismaTransaction);
 
     const supplier = await supplierRepository.findSupplierTransaction(
       supplierId,
@@ -68,12 +107,7 @@ export class PurchaseService {
       throw new ResponseError(400, 'VAT rate not effective');
 
     for (const item of items) {
-      const product = await productRepository.findProductTransaction(
-        item.productId,
-        prismaTransaction
-      );
-      if (!product)
-        throw new ResponseError(404, `Product ${item.productId} not found`);
+      await this.getProduct(item.productId, prismaTransaction);
     }
 
     // Hitung subtotal = jumlah semua (qty × unitPrice) untuk setiap item
@@ -115,14 +149,7 @@ export class PurchaseService {
 
     // Buat detail pembelian, Inventory batch dan update stok dan harga produk
     for (const item of data.items) {
-      const product = await productRepository.findProductTransaction(
-        item.productId,
-        prismaTransaction
-      );
-
-      if (!product) {
-        throw new ResponseError(404, 'Product not found');
-      }
+      const product = await this.getProduct(item.productId, prismaTransaction);
 
       // buat detail pembelian
       const detail = await purchaseDetailRepository.createPurchaseDetail(
@@ -216,10 +243,7 @@ export class PurchaseService {
 
     return await prismaClient.$transaction(async (prismaTransaction) => {
       // Ambil account default
-      const accountDefault =
-        await accountDefaultRepository.findOne(prismaTransaction);
-      if (!accountDefault)
-        throw new ResponseError(400, 'Account not configured');
+      const accountDefault = await this.getAccountDefault(prismaTransaction);
 
       const { cashAccount, payableAccount, inventoryAccount, vatInputAccount } =
         accountDefault;
@@ -253,6 +277,7 @@ export class PurchaseService {
         if (cashAccount.balance.comparedTo(cash!) < 0) {
           throw new ResponseError(400, 'Insufficient cash balance');
         }
+
         if (cash!.comparedTo(total) >= 0) {
           throw new ResponseError(
             400,
@@ -416,23 +441,12 @@ export class PurchaseService {
 
     return await prismaClient.$transaction(async (prismaTransaction) => {
       // Cari purchase
-      const purchase = await purchaseRepository.findPurchaseByIdTransaction(
-        purchaseId,
-        prismaTransaction
-      );
-
-      if (!purchase) {
-        throw new ResponseError(404, 'Purchase not found');
-      }
+      const purchase = await this.getPurchase(purchaseId, prismaTransaction);
 
       const { payable } = purchase;
 
       // Ambil account default
-      const accountDefault =
-        await accountDefaultRepository.findOne(prismaTransaction);
-      if (!accountDefault) {
-        throw new ResponseError(400, 'Account default not configured');
-      }
+      const accountDefault = await this.getAccountDefault(prismaTransaction);
 
       const { cashAccount, payableAccount, inventoryAccount, vatInputAccount } =
         accountDefault;
@@ -559,21 +573,14 @@ export class PurchaseService {
       }
 
       // Ambil setting inventory method
-      const setting =
-        await generalSettingRepository.getSettingTransaction(prismaTransaction);
-      if (!setting) {
-        throw new ResponseError(400, 'Inventory method not configured');
-      }
+      const setting = await this.getSettingInventory(prismaTransaction);
 
       // Revert product stock and delete inventory batches
       for (const detail of purchase.purchaseDetails) {
-        const product = await productRepository.findProductTransaction(
+        const product = await this.getProduct(
           detail.productId,
           prismaTransaction
         );
-        if (!product) {
-          throw new ResponseError(404, `Product ${detail.productId} not found`);
-        }
 
         const newStock = product.stock - detail.quantity;
         if (newStock < 0) {
@@ -588,6 +595,7 @@ export class PurchaseService {
             detail.purchaseDetailId,
             prismaTransaction
           );
+
         if (!purchaseDetail) {
           throw new ResponseError(
             404,
@@ -681,51 +689,6 @@ export class PurchaseService {
     });
   }
 
-  async getAllPurchase(
-    page: number,
-    limit: number,
-    search: string,
-    paymentType?: PaymentType,
-    from?: Date,
-    to?: Date
-  ) {
-    if (page < 1 || limit < 1) {
-      throw new ResponseError(400, 'Halaman dan batas harus bilangan positif');
-    }
-
-    if (paymentType && !Object.values(PaymentType).includes(paymentType)) {
-      throw new ResponseError(
-        400,
-        `Invalid paymentType '${paymentType}' Allowed values are: ${Object.values(PaymentType).join(', ')}`
-      );
-    }
-
-    const { purchases, total } = await purchaseRepository.getAllPurchase(
-      page,
-      limit,
-      search,
-      paymentType,
-      from,
-      to
-    );
-
-    return {
-      purchases,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPage: Math.ceil(total / limit),
-      },
-    };
-  }
-
-  async getPurchaseById(id: string) {
-    const purchase = await purchaseRepository.findPurchaseDetailById(id);
-    if (!purchase) throw new ResponseError(404, 'Purchase not found');
-    return purchase;
-  }
-
   async updatePurchase(
     { body }: { body: UpdatePurchaseRequest },
     purchaseId: string
@@ -742,20 +705,15 @@ export class PurchaseService {
 
     return await prismaClient.$transaction(async (prismaTransaction) => {
       // 1. Ambil akun default (kas dan hutang)
-      const accountDefault =
-        await accountDefaultRepository.findOne(prismaTransaction);
-      if (!accountDefault)
-        throw new ResponseError(400, 'Account has not been configured');
+      const accountDefault = await this.getAccountDefault(prismaTransaction);
 
       let { cashAccount, payableAccount } = accountDefault;
 
       // 2. Ambil data pembelian existing beserta relasinya
-      const existingPurchase =
-        await purchaseRepository.findPurchaseByIdTransaction(
-          purchaseId,
-          prismaTransaction
-        );
-      if (!existingPurchase) throw new ResponseError(404, 'Purchase not found');
+      const existingPurchase = await this.getPurchase(
+        purchaseId,
+        prismaTransaction
+      );
 
       // Simpan data lama untuk keperluan perbandingan
       const oldPaymentType = existingPurchase.paymentType;
@@ -1111,6 +1069,51 @@ export class PurchaseService {
 
       return purchase;
     });
+  }
+
+  async getAllPurchase(
+    page: number,
+    limit: number,
+    search: string,
+    paymentType?: PaymentType,
+    from?: Date,
+    to?: Date
+  ) {
+    if (page < 1 || limit < 1) {
+      throw new ResponseError(400, 'Halaman dan batas harus bilangan positif');
+    }
+
+    if (paymentType && !Object.values(PaymentType).includes(paymentType)) {
+      throw new ResponseError(
+        400,
+        `Invalid paymentType '${paymentType}' Allowed values are: ${Object.values(PaymentType).join(', ')}`
+      );
+    }
+
+    const { purchases, total } = await purchaseRepository.getAllPurchase(
+      page,
+      limit,
+      search,
+      paymentType,
+      from,
+      to
+    );
+
+    return {
+      purchases,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPage: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async getPurchaseById(id: string) {
+    const purchase = await purchaseRepository.findPurchaseDetailById(id);
+    if (!purchase) throw new ResponseError(404, 'Purchase not found');
+    return purchase;
   }
 }
 

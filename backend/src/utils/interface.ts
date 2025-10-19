@@ -225,7 +225,7 @@ export interface SaleForm {
 
 export interface SaleDetailForm {
   saleId: string;
-  batchId?: string | null;
+  batchId: string;
   productId: string;
   quantity: number;
   unitPrice: Decimal;
@@ -346,4 +346,16 @@ export interface UpdateReceivableForm {
   dueDate: Date;
   amount: Decimal;
   status: PaymentStatus;
+}
+
+export interface UpdateSaleDetail {
+  saleId: string;
+  vatRateId: string;
+  items: SaleItem[];
+}
+
+export interface UpdateSaleTotal {
+  subtotal: Decimal;
+  vat: Decimal;
+  total: Decimal;
 }

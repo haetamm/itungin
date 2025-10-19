@@ -52,6 +52,19 @@ export class ReceivableRepository {
     });
     return new Decimal(result._sum.amount || 0);
   }
+
+  async deleteByJournalEntryId(
+    journalId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<void> {
+    await prismaTransaction.receivable.deleteMany({
+      where: {
+        journalEntry: {
+          journalId,
+        },
+      },
+    });
+  }
 }
 
 export const receivableRepository = new ReceivableRepository();

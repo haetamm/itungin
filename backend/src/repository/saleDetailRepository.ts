@@ -55,6 +55,15 @@ export class SaleDetailRepository {
       },
     });
   }
+
+  async deleteBySaleId(
+    saleId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<void> {
+    await prismaTransaction.saleDetail.deleteMany({
+      where: { saleId },
+    });
+  }
 }
 
 export const saleDetailRepository = new SaleDetailRepository();

@@ -242,7 +242,7 @@ model Customer {
 model Sale {
   saleId        String        @id @default(uuid()) @map("sale_id")
   date          DateTime      @db.Date
-  customerId    String?       @map("customer_id")
+  customerId    String        @map("customer_id")
   journalId     String        @map("journal_id") 
   invoiceNumber String        @unique @db.VarChar(50) @map("invoice_number")
   paymentType   PaymentType   @map("payment_type")
@@ -250,7 +250,7 @@ model Sale {
   vat           Decimal       @db.Decimal(15, 2)
   total         Decimal       @db.Decimal(15, 2)
 
-  customer      Customer?     @relation(fields: [customerId], references: [customerId], onDelete: SetNull)
+  customer      Customer     @relation(fields: [customerId], references: [customerId], onDelete: Restrict)
   journal       Journal       @relation(fields: [journalId], references: [journalId], onDelete: Cascade)
   saleDetails   SaleDetail[]
   receivable    Receivable?
@@ -265,14 +265,14 @@ model SaleDetail {
   saleDetailId String           @id @default(uuid()) @map("sale_detail_id")
   saleId       String           @map("sale_id")
   productId    String           @map("product_id")
-  batchId      String?          @map("batch_id")
+  batchId      String           @map("batch_id")
   quantity     Int
   unitPrice    Decimal          @db.Decimal(15, 2) @map("unit_price")
   subtotal     Decimal          @db.Decimal(15, 2)
   
   sale         Sale             @relation(fields: [saleId], references: [saleId], onDelete: Cascade)
   product      Product          @relation(fields: [productId], references: [productId], onDelete: Restrict)
-  batch        InventoryBatch?  @relation(fields: [batchId], references: [batchId], onDelete: Restrict)
+  batch        InventoryBatch  @relation(fields: [batchId], references: [batchId], onDelete: Restrict)
   
   createdAt    DateTime         @default(now()) @map("created_at")
   updatedAt    DateTime         @updatedAt @map("updated_at")

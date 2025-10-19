@@ -40,6 +40,110 @@ export class SaleService {
     }
   }
 
+  private async validateBatchDates(
+    batches: { purchaseDate: Date }[],
+    saleDate: Date,
+    productId: string
+  ) {
+    for (const batch of batches) {
+      if (batch.purchaseDate > saleDate) {
+        throw new ResponseError(
+          400,
+          `Invalid sale date for product ${productId}: sale date (${saleDate.toISOString().split('T')[0]}) must be after batch purchase date (${batch.purchaseDate.toISOString().split('T')[0]})`
+        );
+      }
+    }
+  }
+
+  private async getAccountDefault(prismaTransaction: Prisma.TransactionClient) {
+    const accountDefault =
+      await accountDefaultRepository.findOne(prismaTransaction);
+    if (!accountDefault) throw new ResponseError(404, 'Account not configured');
+    return accountDefault;
+  }
+
+  private async getSettingInventory(
+    prismaTransaction: Prisma.TransactionClient
+  ) {
+    const settings =
+      await generalSettingRepository.getSettingTransaction(prismaTransaction);
+    if (!settings)
+      throw new ResponseError(404, 'Inventory method not configured');
+    return settings;
+  }
+
+  private async getCustomer(
+    customerId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ) {
+    const customer = await customerRepository.findCustomerTransaction(
+      customerId,
+      prismaTransaction
+    );
+    if (!customer) throw new ResponseError(404, 'Customer not found');
+    return customer;
+  }
+
+  private async getProduct(
+    productId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ) {
+    const product = await productRepository.findProductTransaction(
+      productId,
+      prismaTransaction
+    );
+    if (!product) {
+      throw new ResponseError(404, `Product ${productId} not found`);
+    }
+    return product;
+  }
+
+  private async getSale(
+    saleId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ) {
+    const sale = await saleRepository.getSaleByIdTransaction(
+      saleId,
+      prismaTransaction
+    );
+    if (!sale) throw new ResponseError(404, 'Sale not found');
+    return sale;
+  }
+
+  private async validateReceivableForModification(
+    paymentType: PaymentType,
+    receivable: any | null,
+    prismaTransaction: Prisma.TransactionClient,
+    action: 'delete' | 'update'
+  ) {
+    if (
+      paymentType === PaymentType.CREDIT ||
+      paymentType === PaymentType.MIXED
+    ) {
+      if (receivable) {
+        const payments =
+          await receivablePaymentRepository.getPaymentReceivableByReceivableId(
+            receivable.receivableId,
+            prismaTransaction
+          );
+
+        if (payments.length > 0) {
+          throw new ResponseError(
+            400,
+            `Cannot ${action} sale with associated payments for receivable ${receivable.receivableId}. Please process a sales return instead`
+          );
+        }
+
+        if (receivable.status === PaymentStatus.PAID) {
+          throw new ResponseError(
+            400,
+            `Cannot ${action} sale with paid receivable ${receivable.receivableId}. Please process a sales return instead`
+          );
+        }
+      }
+    }
+  }
+
   async createSales({ body }: { body: SaleRequest }) {
     const saleReq = validate(saleSchema, body);
     const {
@@ -54,10 +158,7 @@ export class SaleService {
     } = saleReq;
 
     return await prismaClient.$transaction(async (prismaTransaction) => {
-      const accountDefault =
-        await accountDefaultRepository.findOne(prismaTransaction);
-      if (!accountDefault)
-        throw new ResponseError(404, 'Account not configured');
+      const accountDefault = await this.getAccountDefault(prismaTransaction);
 
       const {
         cashAccount,
@@ -71,17 +172,10 @@ export class SaleService {
       await this.ensureInvoiceNumberUnique(invoiceNumber, prismaTransaction);
 
       // Ambil setting inventory method (AVG / FIFO / LIFO)
-      const setting =
-        await generalSettingRepository.getSettingTransaction(prismaTransaction);
-      if (!setting)
-        throw new ResponseError(400, 'Inventory method not configured');
+      const setting = await this.getSettingInventory(prismaTransaction);
 
       // Validasi customer
-      const customer = await customerRepository.findCustomerTransaction(
-        customerId,
-        prismaTransaction
-      );
-      if (!customer) throw new ResponseError(404, 'Customer not found');
+      await this.getCustomer(customerId, prismaTransaction);
 
       // Validasi VAT (Pajak)
       const vatSetting = await vatSettingRepository.findVatTransaction(
@@ -98,13 +192,10 @@ export class SaleService {
       const saleDetailsData: SaleDetailForm[] = [];
 
       for (const item of items) {
-        const product = await productRepository.findProductTransaction(
+        const product = await this.getProduct(
           item.productId,
           prismaTransaction
         );
-
-        if (!product)
-          throw new ResponseError(404, `Product ${item.productId} not found`);
 
         // Validasi stok
         if (product.stock < item.quantity) {
@@ -130,15 +221,7 @@ export class SaleService {
         );
 
         // ✅ Validasi tanggal batch vs tanggal penjualan
-        const saleDate = new Date(date);
-        for (const batch of batches) {
-          if (batch.purchaseDate > saleDate) {
-            throw new ResponseError(
-              400,
-              `Invalid sale date for product ${item.productId}: sale date (${saleDate.toISOString().split('T')[0]}) must be after batch purchase date (${batch.purchaseDate.toISOString().split('T')[0]})`
-            );
-          }
-        }
+        await this.validateBatchDates(batches, new Date(date), item.productId);
 
         const totalAvailable = batches.reduce(
           (sum, b) => sum + b.remainingStock,
@@ -350,6 +433,7 @@ export class SaleService {
         },
         prismaTransaction
       );
+
       await accountRepository.updateAccountTransaction(
         {
           accountCode: costOfGoodsSoldAccount.accountCode,
@@ -357,6 +441,7 @@ export class SaleService {
         },
         prismaTransaction
       );
+
       await accountRepository.updateAccountTransaction(
         {
           accountCode: salesAccount.accountCode,
@@ -364,6 +449,7 @@ export class SaleService {
         },
         prismaTransaction
       );
+
       await accountRepository.updateAccountTransaction(
         {
           accountCode: vatOutputAccount.accountCode,
@@ -396,6 +482,7 @@ export class SaleService {
           },
           prismaTransaction
         );
+
         await accountRepository.updateAccountTransaction(
           {
             accountCode: receivableAccount.accountCode,
@@ -412,20 +499,13 @@ export class SaleService {
   async deleteSale(saleId: string): Promise<void> {
     return await prismaClient.$transaction(async (prismaTransaction) => {
       // Cari sale beserta data relasinya
-      const sale = await saleRepository.getSaleByIdTransaction(
-        saleId,
-        prismaTransaction
-      );
-      if (!sale) {
-        throw new ResponseError(404, 'Sale not found');
-      }
+      const sale = await this.getSale(saleId, prismaTransaction);
 
       // Ambil account default
-      const accountDefault =
-        await accountDefaultRepository.findOne(prismaTransaction);
-      if (!accountDefault) {
-        throw new ResponseError(400, 'Account default not configured');
-      }
+      const accountDefault = await this.getAccountDefault(prismaTransaction);
+
+      // Ambil setting inventory method
+      const setting = await this.getSettingInventory(prismaTransaction);
 
       const {
         cashAccount,
@@ -466,33 +546,12 @@ export class SaleService {
       }
 
       // Validasi payment type dan receivable
-      if (
-        sale.paymentType === PaymentType.CREDIT ||
-        sale.paymentType === PaymentType.MIXED
-      ) {
-        if (receivable) {
-          // Periksa apakah ada Payment terkait Receivable
-          const payments =
-            await receivablePaymentRepository.getPaymentReceivableByReceivableId(
-              receivable.receivableId,
-              prismaTransaction
-            );
-
-          if (payments.length > 0) {
-            throw new ResponseError(
-              400,
-              `Cannot delete sale with associated payments for receivable ${receivable.receivableId}.  Please process a sales return instead`
-            );
-          }
-
-          if (receivable.status === PaymentStatus.PAID) {
-            throw new ResponseError(
-              400,
-              `Cannot delete sale with paid receivable ${receivable.receivableId}.  Please process a sales return instead`
-            );
-          }
-        }
-      }
+      await this.validateReceivableForModification(
+        sale.paymentType,
+        receivable,
+        prismaTransaction,
+        'delete'
+      );
 
       // Validasi apakah ada pembelian baru untuk produk dalam sale (sale detail)
       for (const detail of sale.saleDetails) {
@@ -511,22 +570,12 @@ export class SaleService {
         }
       }
 
-      // Ambil setting inventory method
-      const setting =
-        await generalSettingRepository.getSettingTransaction(prismaTransaction);
-      if (!setting) {
-        throw new ResponseError(400, 'Inventory method not configured');
-      }
-
       // Revert stok produk dan batch
       for (const detail of sale.saleDetails) {
-        const product = await productRepository.findProductTransaction(
+        const product = await this.getProduct(
           detail.productId,
           prismaTransaction
         );
-        if (!product) {
-          throw new ResponseError(404, `Product ${detail.productId} not found`);
-        }
 
         // Tambah kembali stok produk
         const newStock = product.stock + detail.quantity;
@@ -657,51 +706,6 @@ export class SaleService {
     });
   }
 
-  async getAllSale(
-    page: number,
-    limit: number,
-    search: string,
-    paymentType?: PaymentType,
-    from?: Date,
-    to?: Date
-  ) {
-    if (page < 1 || limit < 1) {
-      throw new ResponseError(400, 'Halaman dan batas harus bilangan positif');
-    }
-
-    if (paymentType && !Object.values(PaymentType).includes(paymentType)) {
-      throw new ResponseError(
-        400,
-        `Invalid paymentType '${paymentType}' Allowed values are: ${Object.values(PaymentType).join(', ')}`
-      );
-    }
-
-    const { sales, total } = await saleRepository.getAllSale(
-      page,
-      limit,
-      search,
-      paymentType,
-      from,
-      to
-    );
-
-    return {
-      sales,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPage: Math.ceil(total / limit),
-      },
-    };
-  }
-
-  async getSaleById(id: string) {
-    const sale = await saleRepository.findSaleDetailById(id);
-    if (!sale) throw new ResponseError(404, 'Sale not found');
-    return sale;
-  }
-
   async updateSale(
     { body }: { body: UpdateSaleRequest },
     saleId: string
@@ -717,64 +721,71 @@ export class SaleService {
     } = saleReq;
 
     return await prismaClient.$transaction(async (prismaTransaction) => {
+      // Ambil setting inventory method
+      const setting = await this.getSettingInventory(prismaTransaction);
+
       // Validasi customer
-      const customer = await customerRepository.findCustomerTransaction(
-        customerId,
-        prismaTransaction
-      );
-      if (!customer) throw new ResponseError(404, 'Customer not found');
+      await this.getCustomer(customerId, prismaTransaction);
 
       // Ambil akun default
-      const accountDefault =
-        await accountDefaultRepository.findOne(prismaTransaction);
-      if (!accountDefault)
-        throw new ResponseError(404, 'Account not configured');
+      const accountDefault = await this.getAccountDefault(prismaTransaction);
 
       let cashAccount = accountDefault.cashAccount;
       let receivableAccount = accountDefault.receivableAccount;
 
       // Ambil data penjualan existing beserta relasinya
-      const existingSale = await saleRepository.getSaleByIdTransaction(
-        saleId,
-        prismaTransaction
-      );
-      if (!existingSale) throw new ResponseError(404, 'Sale not found');
+      const existingSale = await this.getSale(saleId, prismaTransaction);
 
-      const { total, receivable, journal } = existingSale;
-      const oldPaymentType = existingSale.paymentType;
+      const {
+        journalId,
+        paymentType: oldPaymentType,
+        invoiceNumber: oldInvoiceNumber,
+        total,
+        receivable,
+        journal,
+        saleDetails,
+      } = existingSale;
 
       // Validasi nomor invoice unik
-      if (invoiceNumber !== existingSale.invoiceNumber) {
+      if (invoiceNumber !== oldInvoiceNumber) {
         await this.ensureInvoiceNumberUnique(invoiceNumber, prismaTransaction);
       }
 
-      // Validasi payment type dan receivable
-      if (
-        oldPaymentType === PaymentType.CREDIT ||
-        oldPaymentType === PaymentType.MIXED
-      ) {
-        if (receivable) {
-          // Periksa apakah ada pembayaran terkait Receivable
-          const payments =
-            await receivablePaymentRepository.getPaymentReceivableByReceivableId(
-              receivable.receivableId,
-              prismaTransaction
-            );
-          if (payments.length > 0) {
-            throw new ResponseError(
-              400,
-              `Cannot update sale with associated payments for receivable ${receivable.receivableId}. Please process a sales return instead`
-            );
-          }
+      for (const detail of saleDetails) {
+        // Ambil batch sesuai metode (AVG, FIFO, LIFO)
+        const batches = await inventoryBatchRepository.findBatchesForProduct(
+          detail.productId,
+          setting.inventoryMethod,
+          prismaTransaction
+        );
 
-          if (receivable.status === PaymentStatus.PAID) {
-            throw new ResponseError(
-              400,
-              `Cannot update sale with paid receivable ${receivable.receivableId}. Please process a sales return instead`
-            );
-          }
+        // ✅ Validasi tanggal batch vs tanggal penjualan
+        await this.validateBatchDates(
+          batches,
+          new Date(date),
+          detail.productId
+        );
+      }
+
+      // Validasi cash amount untuk MIXED payment
+      let cash: Decimal | null = null;
+      if (paymentType === PaymentType.MIXED) {
+        cash = new Decimal(cashAmount!);
+        if (cash.gte(total)) {
+          throw new ResponseError(
+            400,
+            `Cash amount ${cash} must be less than total ${total} for MIXED payment`
+          );
         }
       }
+
+      // Validasi payment type dan receivable
+      await this.validateReceivableForModification(
+        oldPaymentType,
+        receivable,
+        prismaTransaction,
+        'update'
+      );
 
       // Update tabel sales
       const sale = await saleRepository.updateSaleTransaction(
@@ -791,7 +802,7 @@ export class SaleService {
       // Update header jurnal
       await journalRepository.updateJournalTransaction(
         {
-          journalId: existingSale.journalId,
+          journalId: journalId,
           date: new Date(date),
           description: `Penjualan ${paymentType.toLowerCase()} ${invoiceNumber}`,
           reference: invoiceNumber,
@@ -811,7 +822,7 @@ export class SaleService {
             : new Decimal(total).minus(cashAmount!);
 
         if (receivable) {
-          // Update receivable dan journal entry yang sudah ada
+          // journal entry yang sudah ada
           await journalEntryRepository.updateJournalEntryAmounts(
             {
               journalEntryId: receivable.journalEntryId,
@@ -838,7 +849,7 @@ export class SaleService {
           const journalEntry =
             await journalEntryRepository.createJournalEntries(
               {
-                journalId: existingSale.journalId,
+                journalId: journalId,
                 accountId: receivableAccount.accountId,
                 debit: receivableAmount,
                 credit: new Decimal(0),
@@ -913,7 +924,7 @@ export class SaleService {
         }
       }
 
-      // Update Saldo Akun (mengikuti logika updatePurchase)
+      // Update Saldo Akun
       if (oldPaymentType !== paymentType) {
         let oldReceivableAmount = new Decimal(0);
 
@@ -1048,6 +1059,51 @@ export class SaleService {
 
       return sale;
     });
+  }
+
+  async getAllSale(
+    page: number,
+    limit: number,
+    search: string,
+    paymentType?: PaymentType,
+    from?: Date,
+    to?: Date
+  ) {
+    if (page < 1 || limit < 1) {
+      throw new ResponseError(400, 'Halaman dan batas harus bilangan positif');
+    }
+
+    if (paymentType && !Object.values(PaymentType).includes(paymentType)) {
+      throw new ResponseError(
+        400,
+        `Invalid paymentType '${paymentType}' Allowed values are: ${Object.values(PaymentType).join(', ')}`
+      );
+    }
+
+    const { sales, total } = await saleRepository.getAllSale(
+      page,
+      limit,
+      search,
+      paymentType,
+      from,
+      to
+    );
+
+    return {
+      sales,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPage: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async getSaleById(id: string) {
+    const sale = await saleRepository.findSaleDetailById(id);
+    if (!sale) throw new ResponseError(404, 'Sale not found');
+    return sale;
   }
 }
 

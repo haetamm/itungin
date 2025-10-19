@@ -130,6 +130,17 @@ export class ProductRepository {
       data: { stock: { decrement: quantity } },
     });
   }
+
+  async incrementStock(
+    productId: string,
+    quantity: number,
+    prismaTransaction: Prisma.TransactionClient
+  ) {
+    return await prismaTransaction.product.update({
+      where: { productId },
+      data: { stock: { increment: quantity } },
+    });
+  }
 }
 
 export const productRepository = new ProductRepository();

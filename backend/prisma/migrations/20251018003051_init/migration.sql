@@ -174,7 +174,7 @@ CREATE TABLE "customers" (
 CREATE TABLE "sales" (
     "sale_id" TEXT NOT NULL,
     "date" DATE NOT NULL,
-    "customer_id" TEXT,
+    "customer_id" TEXT NOT NULL,
     "journal_id" TEXT NOT NULL,
     "invoice_number" VARCHAR(50) NOT NULL,
     "payment_type" "PaymentType" NOT NULL,
@@ -192,7 +192,7 @@ CREATE TABLE "sale_details" (
     "sale_detail_id" TEXT NOT NULL,
     "sale_id" TEXT NOT NULL,
     "product_id" TEXT NOT NULL,
-    "batch_id" TEXT,
+    "batch_id" TEXT NOT NULL,
     "quantity" INTEGER NOT NULL,
     "unit_price" DECIMAL(15,2) NOT NULL,
     "subtotal" DECIMAL(15,2) NOT NULL,
@@ -395,7 +395,7 @@ ALTER TABLE "inventory_batches" ADD CONSTRAINT "inventory_batches_product_id_fke
 ALTER TABLE "inventory_batches" ADD CONSTRAINT "inventory_batches_purchase_detail_id_fkey" FOREIGN KEY ("purchase_detail_id") REFERENCES "purchase_details"("purchase_detail_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "sales" ADD CONSTRAINT "sales_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("customer_id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "sales" ADD CONSTRAINT "sales_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("customer_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "sales" ADD CONSTRAINT "sales_journal_id_fkey" FOREIGN KEY ("journal_id") REFERENCES "journals"("journal_id") ON DELETE CASCADE ON UPDATE CASCADE;

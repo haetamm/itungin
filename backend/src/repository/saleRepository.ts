@@ -7,7 +7,7 @@ import {
   Sale,
   SaleDetail,
 } from '@prisma/client';
-import { SaleForm, UpdateSaleForm } from '../utils/interface';
+import { SaleForm, UpdateSaleForm, UpdateSaleTotal } from '../utils/interface';
 import { paginate } from '../utils/pagination';
 import { prismaClient } from '../application/database';
 
@@ -172,6 +172,21 @@ export class SaleRepository {
         customerId: data.customerId,
         invoiceNumber: data.invoiceNumber,
         paymentType: data.paymentType,
+      },
+    });
+  }
+
+  async updateSaleTotals(
+    saleId: string,
+    data: UpdateSaleTotal,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<Sale> {
+    return await prismaTransaction.sale.update({
+      where: { saleId },
+      data: {
+        vat: data.vat,
+        subtotal: data.subtotal,
+        total: data.total,
       },
     });
   }
