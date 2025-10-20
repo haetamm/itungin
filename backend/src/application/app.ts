@@ -15,6 +15,7 @@ import PurchaseRoutes from '../routers/PurchaseRoutes';
 import CustomerRoutes from '../routers/CustomerRoutes';
 import SaleRoutes from '../routers/SaleRoutes';
 import PurchaseDetailRoutes from '../routers/PurchaseDetailRoutes';
+import SaleDetailRoutes from '../routers/SaleDetailRoutes';
 
 class App {
   public app: Application;
@@ -59,6 +60,7 @@ class App {
     this.app.use('/api/v1', PurchaseDetailRoutes);
     this.app.use('/api/v1', CustomerRoutes);
     this.app.use('/api/v1', SaleRoutes);
+    this.app.use('/api/v1', SaleDetailRoutes);
     this.app.use(errorMiddleware);
   }
 }

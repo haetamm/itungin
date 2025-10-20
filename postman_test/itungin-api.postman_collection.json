@@ -3366,7 +3366,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"saleId\": \"{{saleId}}\",\r\n    \"vatRateId\": \"{{vatId}}\",\r\n    \"items\": [\r\n        {\r\n            \"productId\": \"{{productId}}\",\r\n            \"quantity\": \"100\"\r\n        }\r\n    ]\r\n}\r\n",
+							"raw": "{\r\n    \"saleId\": \"{{saleId}}\",\r\n    \"vatRateId\": \"{{vatId}}\",\r\n    \"items\": [\r\n        {\r\n            \"productId\": \"{{productId2}}\",\r\n            \"quantity\": \"70\"\r\n        }\r\n    ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
