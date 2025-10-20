@@ -88,7 +88,8 @@ class PurchaseController implements IController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const result = await purchaseService.deletePurchase(req);
+      const { id } = req.params;
+      const result = await purchaseService.deletePurchase(id);
       const response = new ResponseSuccess(201, result);
       res.status(204).json(response);
     } catch (e) {

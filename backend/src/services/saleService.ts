@@ -42,17 +42,35 @@ export class SaleService {
   }
 
   async validateBatchDates(
-    batches: { purchaseDate: Date }[],
+    batches: { purchaseDate: Date; remainingStock: number }[],
     saleDate: Date,
-    productId: string
+    productId: string,
+    neededQuantity: number
   ) {
+    let remainingQty = neededQuantity;
+
     for (const batch of batches) {
+      if (remainingQty <= 0) break;
+
+      // Hanya validasi batch yang akan digunakan
       if (batch.purchaseDate > saleDate) {
         throw new ResponseError(
           400,
           `Invalid sale date for product ${productId}: sale date (${saleDate.toISOString().split('T')[0]}) must be after batch purchase date (${batch.purchaseDate.toISOString().split('T')[0]})`
         );
       }
+
+      // Kurangi quantity yang sudah divalidasi
+      const useQty = Math.min(batch.remainingStock, remainingQty);
+      remainingQty -= useQty;
+    }
+
+    // Cek jika masih ada sisa yang butuh validasi
+    if (remainingQty > 0) {
+      throw new ResponseError(
+        400,
+        `Insufficient valid batches for product ${productId}. Need ${neededQuantity} units but only ${neededQuantity - remainingQty} available from batches with valid dates`
+      );
     }
   }
 
@@ -177,9 +195,6 @@ export class SaleService {
           prismaTransaction
         );
 
-        // ✅ Validasi tanggal batch vs tanggal penjualan
-        await this.validateBatchDates(batches, new Date(date), item.productId);
-
         const totalAvailable = batches.reduce(
           (sum, b) => sum + b.remainingStock,
           0
@@ -192,9 +207,23 @@ export class SaleService {
           );
         }
 
+        // ✅ Validasi HANYA batch yang akan digunakan
+        await this.validateBatchDates(
+          batches,
+          new Date(date),
+          item.productId,
+          item.quantity // Quantity yang dibutuhkan
+        );
+
         let remainingToDeduct = item.quantity;
         for (const batch of batches) {
           if (remainingToDeduct <= 0) break;
+
+          // ✅ Skip batch yang tidak valid
+          if (batch.purchaseDate > new Date(date)) {
+            continue;
+          }
+
           const deduct = Math.min(batch.remainingStock, remainingToDeduct);
 
           await inventoryBatchRepository.decrementBatchStock(
@@ -213,6 +242,14 @@ export class SaleService {
             new Decimal(deduct).times(batch.purchasePrice)
           );
           remainingToDeduct -= deduct;
+        }
+
+        // ✅ Double check: pastikan semua quantity terpenuhi
+        if (remainingToDeduct > 0) {
+          throw new ResponseError(
+            400,
+            `Unexpected error: Unable to fulfill quantity for product ${product.productName}`
+          );
         }
 
         cogs = cogs.plus(itemCogs);
@@ -724,7 +761,8 @@ export class SaleService {
         await this.validateBatchDates(
           batches,
           new Date(date),
-          detail.productId
+          detail.productId,
+          detail.quantity
         );
       }
 

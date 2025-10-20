@@ -2303,7 +2303,8 @@
 									""
 								],
 								"type": "text/javascript",
-								"packages": {}
+								"packages": {},
+								"requests": {}
 							}
 						}
 					],
@@ -2320,17 +2321,8 @@
 						},
 						"method": "DELETE",
 						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n  \"purchaseId\": \"{{purchaseId}}\"\r\n}\r\n",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
 						"url": {
-							"raw": "http://localhost:8000/api/v1/purchases",
+							"raw": "http://localhost:8000/api/v1/purchases/{{purchaseId}}",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -2339,7 +2331,8 @@
 							"path": [
 								"api",
 								"v1",
-								"purchases"
+								"purchases",
+								"{{purchaseId}}"
 							]
 						}
 					},
@@ -2355,7 +2348,8 @@
 									""
 								],
 								"type": "text/javascript",
-								"packages": {}
+								"packages": {},
+								"requests": {}
 							}
 						}
 					],
@@ -2372,17 +2366,8 @@
 						},
 						"method": "DELETE",
 						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n  \"purchaseId\": \"{{purchaseId2}}\"\r\n}\r\n",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
 						"url": {
-							"raw": "http://localhost:8000/api/v1/purchases",
+							"raw": "http://localhost:8000/api/v1/purchases/{{purchaseId2}}",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -2391,7 +2376,8 @@
 							"path": [
 								"api",
 								"v1",
-								"purchases"
+								"purchases",
+								"{{purchaseId2}}"
 							]
 						}
 					},
@@ -2407,7 +2393,8 @@
 									""
 								],
 								"type": "text/javascript",
-								"packages": {}
+								"packages": {},
+								"requests": {}
 							}
 						}
 					],
@@ -2424,17 +2411,8 @@
 						},
 						"method": "DELETE",
 						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n  \"purchaseId\": \"{{purchaseId3}}\"\r\n}\r\n",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
 						"url": {
-							"raw": "http://localhost:8000/api/v1/purchases",
+							"raw": "http://localhost:8000/api/v1/purchases/{{purchaseId3}}",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -2443,7 +2421,8 @@
 							"path": [
 								"api",
 								"v1",
-								"purchases"
+								"purchases",
+								"{{purchaseId3}}"
 							]
 						}
 					},
@@ -2717,7 +2696,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-08\",\r\n  \"customerId\": \"{{customerId}}\",\r\n  \"invoiceNumber\": \"BG-00002\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CREDIT\",\r\n  \"dueDate\": \"2025-10-02\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"10\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"15\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-06\",\r\n  \"customerId\": \"{{customerId}}\",\r\n  \"invoiceNumber\": \"BG-00002\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CREDIT\",\r\n  \"dueDate\": \"2025-10-02\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"10\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"15\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2778,7 +2757,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-17\",\r\n  \"customerId\": \"{{customerId}}\",\r\n  \"invoiceNumber\": \"BG-00003\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"MIXED\",\r\n  \"cashAmount\": \"200000\",\r\n  \"dueDate\": \"2025-10-02\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"25\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"5\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-17\",\r\n  \"customerId\": \"{{customerId}}\",\r\n  \"invoiceNumber\": \"BG-00003\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"MIXED\",\r\n  \"cashAmount\": \"200000\",\r\n  \"dueDate\": \"2025-10-02\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"101\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"46\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"

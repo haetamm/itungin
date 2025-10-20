@@ -11,38 +11,6 @@ enum UserRoleEnum {
   ADMIN
 }
 
-enum AccountType {
-  ASSET
-  LIABILITY
-  EQUITY
-  REVENUE
-  COGS 
-  EXPENSE
-  OTHER_EXPENSE
-} 
-
-enum EntryType {
-  DEBIT
-  CREDIT
-}
-
-enum PaymentType {
-  CASH
-  CREDIT
-  MIXED
-}
-
-enum PaymentStatus {
-  PAID
-  UNPAID
-}
-
-enum InventoryMethod {
-  AVG
-  FIFO
-  LIFO
-}
-
 model Role {
   id        String        @id @default(uuid())
   role      UserRoleEnum  @unique
@@ -79,6 +47,38 @@ model UserRole {
 
   @@unique([userId, roleId])
   @@map("user_roles")
+}
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  COGS 
+  EXPENSE
+  OTHER_EXPENSE
+} 
+
+enum EntryType {
+  DEBIT
+  CREDIT
+}
+
+enum PaymentType {
+  CASH
+  CREDIT
+  MIXED
+}
+
+enum PaymentStatus {
+  PAID
+  UNPAID
+}
+
+enum InventoryMethod {
+  AVG
+  FIFO
+  LIFO
 }
 
 model Account {
@@ -239,47 +239,6 @@ model Customer {
   @@map("customers")
 }
 
-model Sale {
-  saleId        String        @id @default(uuid()) @map("sale_id")
-  date          DateTime      @db.Date
-  customerId    String        @map("customer_id")
-  journalId     String        @map("journal_id") 
-  invoiceNumber String        @unique @db.VarChar(50) @map("invoice_number")
-  paymentType   PaymentType   @map("payment_type")
-  subtotal      Decimal       @db.Decimal(15, 2)
-  vat           Decimal       @db.Decimal(15, 2)
-  total         Decimal       @db.Decimal(15, 2)
-
-  customer      Customer     @relation(fields: [customerId], references: [customerId], onDelete: Restrict)
-  journal       Journal       @relation(fields: [journalId], references: [journalId], onDelete: Cascade)
-  saleDetails   SaleDetail[]
-  receivable    Receivable?
-
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
-
-  @@map("sales")
-}
-
-model SaleDetail {
-  saleDetailId String           @id @default(uuid()) @map("sale_detail_id")
-  saleId       String           @map("sale_id")
-  productId    String           @map("product_id")
-  batchId      String           @map("batch_id")
-  quantity     Int
-  unitPrice    Decimal          @db.Decimal(15, 2) @map("unit_price")
-  subtotal     Decimal          @db.Decimal(15, 2)
-  
-  sale         Sale             @relation(fields: [saleId], references: [saleId], onDelete: Cascade)
-  product      Product          @relation(fields: [productId], references: [productId], onDelete: Restrict)
-  batch        InventoryBatch  @relation(fields: [batchId], references: [batchId], onDelete: Restrict)
-  
-  createdAt    DateTime         @default(now()) @map("created_at")
-  updatedAt    DateTime         @updatedAt @map("updated_at")
-
-  @@map("sale_details")
-}
-
 model Purchase {
   purchaseId      String          @id @default(uuid()) @map("purchase_id")
   date            DateTime        @db.Date
@@ -340,6 +299,64 @@ model Payable {
   @@map("payables")
 }
 
+model Payment {
+  paymentId       String        @id @default(uuid()) @map("payment_id")
+  payableId       String        @map("payable_id")
+  journalEntryId  String        @unique @map("journal_entry_id")
+  amount          Decimal       @db.Decimal(15, 2)
+  paymentDate     DateTime      @db.Date @map("payment_date")
+  method          String        @db.VarChar(50)
+
+  payable         Payable       @relation(fields: [payableId], references: [payableId], onDelete: Cascade)
+  journalEntry    JournalEntry  @relation("PaymentJournalEntry", fields: [journalEntryId], references: [journalEntryId], onDelete: Restrict)
+
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  @@map("payments")
+}
+
+model Sale {
+  saleId        String        @id @default(uuid()) @map("sale_id")
+  date          DateTime      @db.Date
+  customerId    String        @map("customer_id")
+  journalId     String        @map("journal_id") 
+  invoiceNumber String        @unique @db.VarChar(50) @map("invoice_number")
+  paymentType   PaymentType   @map("payment_type")
+  subtotal      Decimal       @db.Decimal(15, 2)
+  vat           Decimal       @db.Decimal(15, 2)
+  total         Decimal       @db.Decimal(15, 2)
+
+  customer      Customer     @relation(fields: [customerId], references: [customerId], onDelete: Restrict)
+  journal       Journal       @relation(fields: [journalId], references: [journalId], onDelete: Cascade)
+  saleDetails   SaleDetail[]
+  receivable    Receivable?
+
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  @@map("sales")
+}
+
+model SaleDetail {
+  saleDetailId String           @id @default(uuid()) @map("sale_detail_id")
+  saleId       String           @map("sale_id")
+  productId    String           @map("product_id")
+  batchId      String           @map("batch_id")
+  quantity     Int
+  unitPrice    Decimal          @db.Decimal(15, 2) @map("unit_price")
+  subtotal     Decimal          @db.Decimal(15, 2)
+  
+  sale         Sale             @relation(fields: [saleId], references: [saleId], onDelete: Cascade)
+  product      Product          @relation(fields: [productId], references: [productId], onDelete: Restrict)
+  batch        InventoryBatch  @relation(fields: [batchId], references: [batchId], onDelete: Restrict)
+  
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
+  @@map("sale_details")
+}
+
 model Receivable {
   receivableId   String         @id @default(uuid()) @map("receivable_id")
   journalEntryId String         @unique @map("journal_entry_id")
@@ -358,23 +375,6 @@ model Receivable {
   updatedAt      DateTime       @updatedAt @map("updated_at")
 
   @@map("receivables")
-}
-
-model Payment {
-  paymentId       String        @id @default(uuid()) @map("payment_id")
-  payableId       String        @map("payable_id")
-  journalEntryId  String        @unique @map("journal_entry_id")
-  amount          Decimal       @db.Decimal(15, 2)
-  paymentDate     DateTime      @db.Date @map("payment_date")
-  method          String        @db.VarChar(50)
-
-  payable         Payable       @relation(fields: [payableId], references: [payableId], onDelete: Cascade)
-  journalEntry    JournalEntry  @relation("PaymentJournalEntry", fields: [journalEntryId], references: [journalEntryId], onDelete: Restrict)
-
-  createdAt       DateTime      @default(now()) @map("created_at")
-  updatedAt       DateTime      @updatedAt @map("updated_at")
-
-  @@map("payments")
 }
 
 model ReceivablePayment {

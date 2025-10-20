@@ -4,6 +4,12 @@ import PurchaseController from '../controllers/purchase/PurchaseController';
 
 class PurchaseRoutes extends BaseRoutes {
   public routes(): void {
+    this.router.post(
+      '/purchases',
+      authMiddleware,
+      PurchaseController.createPurchase
+    );
+
     this.router.get(
       '/purchases',
       authMiddleware,
@@ -16,12 +22,6 @@ class PurchaseRoutes extends BaseRoutes {
       PurchaseController.getPurchaseById
     );
 
-    this.router.post(
-      '/purchases',
-      authMiddleware,
-      PurchaseController.createPurchase
-    );
-
     this.router.put(
       '/purchases/:id',
       authMiddleware,
@@ -29,7 +29,7 @@ class PurchaseRoutes extends BaseRoutes {
     );
 
     this.router.delete(
-      '/purchases',
+      '/purchases/:id',
       authMiddleware,
       PurchaseController.deletePurchase
     );

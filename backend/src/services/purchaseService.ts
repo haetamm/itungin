@@ -1,5 +1,4 @@
 import {
-  DeletePurchaseRequest,
   JournalEntryForm,
   PurchaseRequest,
   PurchaseResult,
@@ -8,7 +7,6 @@ import {
 } from '../utils/interface';
 import { validate } from '../validation/validation';
 import {
-  deletePurchaseSchema,
   purchaseSchema,
   updatePurchaseSchema,
 } from '../validation/purchaseValidation';
@@ -406,13 +404,7 @@ export class PurchaseService {
     });
   }
 
-  async deletePurchase({
-    body,
-  }: {
-    body: DeletePurchaseRequest;
-  }): Promise<void> {
-    const { purchaseId } = validate(deletePurchaseSchema, body);
-
+  async deletePurchase(purchaseId: string): Promise<void> {
     return await prismaClient.$transaction(async (prismaTransaction) => {
       // ambil purchase
       const purchase = await this.getPurchase(purchaseId, prismaTransaction);

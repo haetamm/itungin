@@ -171,38 +171,6 @@ CREATE TABLE "customers" (
 );
 
 -- CreateTable
-CREATE TABLE "sales" (
-    "sale_id" TEXT NOT NULL,
-    "date" DATE NOT NULL,
-    "customer_id" TEXT NOT NULL,
-    "journal_id" TEXT NOT NULL,
-    "invoice_number" VARCHAR(50) NOT NULL,
-    "payment_type" "PaymentType" NOT NULL,
-    "subtotal" DECIMAL(15,2) NOT NULL,
-    "vat" DECIMAL(15,2) NOT NULL,
-    "total" DECIMAL(15,2) NOT NULL,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "sales_pkey" PRIMARY KEY ("sale_id")
-);
-
--- CreateTable
-CREATE TABLE "sale_details" (
-    "sale_detail_id" TEXT NOT NULL,
-    "sale_id" TEXT NOT NULL,
-    "product_id" TEXT NOT NULL,
-    "batch_id" TEXT NOT NULL,
-    "quantity" INTEGER NOT NULL,
-    "unit_price" DECIMAL(15,2) NOT NULL,
-    "subtotal" DECIMAL(15,2) NOT NULL,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "sale_details_pkey" PRIMARY KEY ("sale_detail_id")
-);
-
--- CreateTable
 CREATE TABLE "purchases" (
     "purchase_id" TEXT NOT NULL,
     "date" DATE NOT NULL,
@@ -249,6 +217,52 @@ CREATE TABLE "payables" (
 );
 
 -- CreateTable
+CREATE TABLE "payments" (
+    "payment_id" TEXT NOT NULL,
+    "payable_id" TEXT NOT NULL,
+    "journal_entry_id" TEXT NOT NULL,
+    "amount" DECIMAL(15,2) NOT NULL,
+    "payment_date" DATE NOT NULL,
+    "method" VARCHAR(50) NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "payments_pkey" PRIMARY KEY ("payment_id")
+);
+
+-- CreateTable
+CREATE TABLE "sales" (
+    "sale_id" TEXT NOT NULL,
+    "date" DATE NOT NULL,
+    "customer_id" TEXT NOT NULL,
+    "journal_id" TEXT NOT NULL,
+    "invoice_number" VARCHAR(50) NOT NULL,
+    "payment_type" "PaymentType" NOT NULL,
+    "subtotal" DECIMAL(15,2) NOT NULL,
+    "vat" DECIMAL(15,2) NOT NULL,
+    "total" DECIMAL(15,2) NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "sales_pkey" PRIMARY KEY ("sale_id")
+);
+
+-- CreateTable
+CREATE TABLE "sale_details" (
+    "sale_detail_id" TEXT NOT NULL,
+    "sale_id" TEXT NOT NULL,
+    "product_id" TEXT NOT NULL,
+    "batch_id" TEXT NOT NULL,
+    "quantity" INTEGER NOT NULL,
+    "unit_price" DECIMAL(15,2) NOT NULL,
+    "subtotal" DECIMAL(15,2) NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "sale_details_pkey" PRIMARY KEY ("sale_detail_id")
+);
+
+-- CreateTable
 CREATE TABLE "receivables" (
     "receivable_id" TEXT NOT NULL,
     "journal_entry_id" TEXT NOT NULL,
@@ -261,20 +275,6 @@ CREATE TABLE "receivables" (
     "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "receivables_pkey" PRIMARY KEY ("receivable_id")
-);
-
--- CreateTable
-CREATE TABLE "payments" (
-    "payment_id" TEXT NOT NULL,
-    "payable_id" TEXT NOT NULL,
-    "journal_entry_id" TEXT NOT NULL,
-    "amount" DECIMAL(15,2) NOT NULL,
-    "payment_date" DATE NOT NULL,
-    "method" VARCHAR(50) NOT NULL,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "payments_pkey" PRIMARY KEY ("payment_id")
 );
 
 -- CreateTable
@@ -329,22 +329,22 @@ CREATE UNIQUE INDEX "accounts_account_code_key" ON "accounts"("account_code");
 CREATE UNIQUE INDEX "products_product_code_key" ON "products"("product_code");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "sales_invoice_number_key" ON "sales"("invoice_number");
-
--- CreateIndex
 CREATE UNIQUE INDEX "payables_journal_entry_id_key" ON "payables"("journal_entry_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "payables_purchase_id_key" ON "payables"("purchase_id");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "payments_journal_entry_id_key" ON "payments"("journal_entry_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "sales_invoice_number_key" ON "sales"("invoice_number");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "receivables_journal_entry_id_key" ON "receivables"("journal_entry_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "receivables_sale_id_key" ON "receivables"("sale_id");
-
--- CreateIndex
-CREATE UNIQUE INDEX "payments_journal_entry_id_key" ON "payments"("journal_entry_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "receivable_payments_journal_entry_id_key" ON "receivable_payments"("journal_entry_id");
@@ -395,21 +395,6 @@ ALTER TABLE "inventory_batches" ADD CONSTRAINT "inventory_batches_product_id_fke
 ALTER TABLE "inventory_batches" ADD CONSTRAINT "inventory_batches_purchase_detail_id_fkey" FOREIGN KEY ("purchase_detail_id") REFERENCES "purchase_details"("purchase_detail_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "sales" ADD CONSTRAINT "sales_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("customer_id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "sales" ADD CONSTRAINT "sales_journal_id_fkey" FOREIGN KEY ("journal_id") REFERENCES "journals"("journal_id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "sale_details" ADD CONSTRAINT "sale_details_sale_id_fkey" FOREIGN KEY ("sale_id") REFERENCES "sales"("sale_id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "sale_details" ADD CONSTRAINT "sale_details_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "products"("product_id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "sale_details" ADD CONSTRAINT "sale_details_batch_id_fkey" FOREIGN KEY ("batch_id") REFERENCES "inventory_batches"("batch_id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "purchases" ADD CONSTRAINT "purchases_supplier_id_fkey" FOREIGN KEY ("supplier_id") REFERENCES "suppliers"("supplier_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -431,6 +416,27 @@ ALTER TABLE "payables" ADD CONSTRAINT "payables_supplier_id_fkey" FOREIGN KEY ("
 ALTER TABLE "payables" ADD CONSTRAINT "payables_purchase_id_fkey" FOREIGN KEY ("purchase_id") REFERENCES "purchases"("purchase_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "payments" ADD CONSTRAINT "payments_payable_id_fkey" FOREIGN KEY ("payable_id") REFERENCES "payables"("payable_id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "payments" ADD CONSTRAINT "payments_journal_entry_id_fkey" FOREIGN KEY ("journal_entry_id") REFERENCES "journal_entries"("journal_entry_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "sales" ADD CONSTRAINT "sales_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("customer_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "sales" ADD CONSTRAINT "sales_journal_id_fkey" FOREIGN KEY ("journal_id") REFERENCES "journals"("journal_id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "sale_details" ADD CONSTRAINT "sale_details_sale_id_fkey" FOREIGN KEY ("sale_id") REFERENCES "sales"("sale_id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "sale_details" ADD CONSTRAINT "sale_details_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "products"("product_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "sale_details" ADD CONSTRAINT "sale_details_batch_id_fkey" FOREIGN KEY ("batch_id") REFERENCES "inventory_batches"("batch_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "receivables" ADD CONSTRAINT "receivables_journal_entry_id_fkey" FOREIGN KEY ("journal_entry_id") REFERENCES "journal_entries"("journal_entry_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -438,12 +444,6 @@ ALTER TABLE "receivables" ADD CONSTRAINT "receivables_customer_id_fkey" FOREIGN 
 
 -- AddForeignKey
 ALTER TABLE "receivables" ADD CONSTRAINT "receivables_sale_id_fkey" FOREIGN KEY ("sale_id") REFERENCES "sales"("sale_id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "payments" ADD CONSTRAINT "payments_payable_id_fkey" FOREIGN KEY ("payable_id") REFERENCES "payables"("payable_id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "payments" ADD CONSTRAINT "payments_journal_entry_id_fkey" FOREIGN KEY ("journal_entry_id") REFERENCES "journal_entries"("journal_entry_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "receivable_payments" ADD CONSTRAINT "receivable_payments_receivable_id_fkey" FOREIGN KEY ("receivable_id") REFERENCES "receivables"("receivable_id") ON DELETE CASCADE ON UPDATE CASCADE;

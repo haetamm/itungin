@@ -303,10 +303,6 @@ export interface PurchaseResult {
   total: Decimal;
 }
 
-export interface DeletePurchaseRequest {
-  purchaseId: string;
-}
-
 export interface SaleItem {
   productId: string;
   quantity: number;

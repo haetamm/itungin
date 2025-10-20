@@ -43,16 +43,30 @@ export class InventoryBatchRepository {
     inventoryMethod: 'FIFO' | 'LIFO' | 'AVG',
     prismaTransaction: Prisma.TransactionClient
   ) {
-    return await prismaTransaction.inventoryBatch.findMany({
-      where: {
-        productId,
-        remainingStock: { gt: 0 },
-      },
-      orderBy:
-        inventoryMethod === 'FIFO'
-          ? { purchaseDate: 'asc' }
-          : { purchaseDate: 'desc' },
-    });
+    const baseWhere = {
+      productId,
+      remainingStock: { gt: 0 },
+    };
+
+    switch (inventoryMethod) {
+      case 'FIFO':
+        return await prismaTransaction.inventoryBatch.findMany({
+          where: baseWhere,
+          orderBy: { purchaseDate: 'asc' },
+        });
+
+      case 'LIFO':
+        return await prismaTransaction.inventoryBatch.findMany({
+          where: baseWhere,
+          orderBy: { purchaseDate: 'desc' },
+        });
+
+      case 'AVG':
+        return await prismaTransaction.inventoryBatch.findMany({
+          where: baseWhere,
+          orderBy: { purchaseDate: 'asc' },
+        });
+    }
   }
 
   async decrementBatchStock(

@@ -202,7 +202,8 @@ export class SaleDetailService {
         await saleService.validateBatchDates(
           batches,
           new Date(date),
-          item.productId
+          item.productId,
+          item.quantity
         );
 
         let remaining = item.quantity;

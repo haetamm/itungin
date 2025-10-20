@@ -1,15 +1,10 @@
 import { ObjectSchema } from 'joi';
-import {
-  DeletePurchaseRequest,
-  PurchaseRequest,
-  UpdatePurchaseRequest,
-} from '../utils/interface';
+import { PurchaseRequest, UpdatePurchaseRequest } from '../utils/interface';
 
 const Joi = require('joi');
 
 const date = Joi.date().iso().max('now').required();
 const supplierId = Joi.string().uuid().required();
-const purchaseId = Joi.string().uuid().required();
 const invoiceNumber = Joi.string().max(50).required();
 const vatRateId = Joi.string().uuid().required();
 
@@ -43,11 +38,6 @@ const items = Joi.array()
   .messages({
     'array.min': 'At least one item is required',
     'any.required': 'Items array is required',
-  });
-
-export const deletePurchaseSchema: ObjectSchema<DeletePurchaseRequest> =
-  Joi.object({
-    purchaseId,
   });
 
 export const purchaseSchema: ObjectSchema<PurchaseRequest> = Joi.object({
