@@ -2,69 +2,26 @@ import { updatePurchaseDetailSchema } from '../validation/purchaseDetailValidati
 import { UpdatePurchaseDetail } from '../utils/interface';
 import { validate } from '../validation/validation';
 import { ResponseError } from '../entities/responseError';
-import { PaymentStatus, PaymentType, Prisma, Purchase } from '@prisma/client';
+import { PaymentStatus, PaymentType, Purchase } from '@prisma/client';
 import { purchaseRepository } from '../repository/purchaseRepository';
 import { purchaseDetailRepository } from '../repository/purchaseDetailRepository';
 import { inventoryBatchRepository } from '../repository/inventoryBatchRepository';
 import { journalEntryRepository } from '../repository/journalEntryRepository';
-import { accountDefaultRepository } from '../repository/accountDefaultRepository';
 import { productRepository } from '../repository/productRepository';
 import { saleDetailRepository } from '../repository/saleDetailRepository';
-import { vatSettingRepository } from '../repository/vatSettingRepository';
 import { accountRepository } from '../repository/accountRepository';
 import { prismaClient } from '../application/database';
 import { Decimal } from '@prisma/client/runtime/library';
 import { payableRepository } from '../repository/paybleRepository';
 import { recalculateCOGS } from '../utils/cogs';
-import { generalSettingRepository } from '../repository/generalSettingRepository';
 import { paymentRepository } from '../repository/paymentRepository';
+import { generalsettingService } from './generalSettingService';
+import { accountService } from './accountService';
+import { purchaseService } from './purchaseService';
+import { vatService } from './vatService';
+import { productService } from './productService';
 
 export class PurchaseDetailService {
-  private async getSettingInventory(
-    prismaTransaction: Prisma.TransactionClient
-  ) {
-    const settings =
-      await generalSettingRepository.getSettingTransaction(prismaTransaction);
-    if (!settings)
-      throw new ResponseError(404, 'Inventory method not configured');
-    return settings;
-  }
-
-  private async getAccountDefault(prismaTransaction: Prisma.TransactionClient) {
-    const accountDefault =
-      await accountDefaultRepository.findOne(prismaTransaction);
-    if (!accountDefault)
-      throw new ResponseError(404, 'Default account not configured');
-    return accountDefault;
-  }
-
-  private async getPurchase(
-    purchaseId: string,
-    prismaTransaction: Prisma.TransactionClient
-  ) {
-    const purchase = await purchaseRepository.findPurchaseByIdTransaction(
-      purchaseId,
-      prismaTransaction
-    );
-    if (!purchase) throw new ResponseError(404, 'Purchase not found');
-    return purchase;
-  }
-
-  private async getVatSetting(
-    id: string,
-    prismaTransaction: Prisma.TransactionClient,
-    date: Date
-  ) {
-    const vatSetting = await vatSettingRepository.findVatTransaction(
-      id,
-      prismaTransaction
-    );
-    if (!vatSetting) throw new ResponseError(404, 'VAT rate not found');
-    if (vatSetting.effectiveDate > new Date(date))
-      throw new ResponseError(400, 'VAT rate is not yet effective');
-    return vatSetting;
-  }
-
   async updatePurchaseDetailByPurchaseId({
     body,
   }: {
@@ -74,17 +31,19 @@ export class PurchaseDetailService {
     const { purchaseId, vatRateId, items } = purchaseReq;
 
     return await prismaClient.$transaction(async (prismaTransaction) => {
-      // Validasi pengaturan inventory method
-      const setting = await this.getSettingInventory(prismaTransaction);
+      // ambil inventory method
+      const setting =
+        await generalsettingService.getSettingInventory(prismaTransaction);
 
-      // Validasi akun default
-      const accountDefault = await this.getAccountDefault(prismaTransaction);
+      // ambil akun default
+      const accountDefault =
+        await accountService.getAccountDefault(prismaTransaction);
 
       let { inventoryAccount, vatInputAccount, cashAccount, payableAccount } =
         accountDefault;
 
       // Ambil data pembelian existing
-      const existingPurchase = await this.getPurchase(
+      const existingPurchase = await purchaseService.getPurchase(
         purchaseId,
         prismaTransaction
       );
@@ -92,8 +51,8 @@ export class PurchaseDetailService {
       const { journal, payable, purchaseDetails } = existingPurchase;
       const paymentType = existingPurchase.paymentType;
 
-      // Validasi VAT rate
-      const vatSetting = await this.getVatSetting(
+      // ambil VAT rate
+      const vatSetting = await vatService.getVatSetting(
         vatRateId,
         prismaTransaction,
         new Date(existingPurchase.date)
@@ -328,13 +287,12 @@ export class PurchaseDetailService {
       // Tambah/update detail baru
       for (const item of items) {
         const existingDetail = existingDetailsMap.get(item.productId);
-        const product = await productRepository.findProductTransaction(
+
+        // ambil product
+        const product = await productService.getProduct(
           item.productId,
           prismaTransaction
         );
-        if (!product) {
-          throw new ResponseError(404, `Product ${item.productId} not found`);
-        }
 
         const subtotal = new Decimal(item.quantity).times(item.unitPrice);
         const profitMargin = new Decimal(item.profitMargin);

@@ -1,4 +1,4 @@
-import { GeneralSetting } from '@prisma/client';
+import { GeneralSetting, Prisma } from '@prisma/client';
 import { SettingForm } from '../utils/interface';
 import { validate } from '../validation/validation';
 import { ResponseError } from '../entities/responseError';
@@ -55,6 +55,14 @@ export class GeneralSettingService {
       currentSetting.id,
       settingReq
     );
+  }
+
+  async getSettingInventory(prismaTransaction: Prisma.TransactionClient) {
+    const settings =
+      await generalSettingRepository.getSettingTransaction(prismaTransaction);
+    if (!settings)
+      throw new ResponseError(404, 'Inventory method not configured');
+    return settings;
   }
 }
 

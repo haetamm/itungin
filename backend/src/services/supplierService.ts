@@ -1,6 +1,6 @@
 import { PaginationResponse, SupplierForm } from '../utils/interface';
 import { validate } from '../validation/validation';
-import { Supplier } from '@prisma/client';
+import { Prisma, Supplier } from '@prisma/client';
 import { ResponseError } from '../entities/responseError';
 import { formSupplier } from '../validation/suplierValidation';
 import { supplierRepository } from '../repository/supplierRepository';
@@ -59,6 +59,18 @@ export class SupplierService {
   async deleteProductById(id: string) {
     const { supplierId } = await this.getSupplierById(id);
     await supplierRepository.deleteSupplierById(supplierId);
+  }
+
+  async getSupplierTransaction(
+    id: string,
+    prismaTransaction: Prisma.TransactionClient
+  ) {
+    const supplier = await supplierRepository.findSupplierTransaction(
+      id,
+      prismaTransaction
+    );
+    if (!supplier) throw new ResponseError(404, 'Supplier not found');
+    return supplier;
   }
 }
 

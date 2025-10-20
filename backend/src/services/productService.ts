@@ -1,7 +1,7 @@
 import { ProductForm, ProductUpdate } from '../utils/interface';
 import { validate } from '../validation/validation';
 import { storeProduct, updateProduct } from '../validation/productValidation';
-import { Product } from '@prisma/client';
+import { Prisma, Product } from '@prisma/client';
 import { productRepository } from '../repository/productRepository';
 import { ResponseError } from '../entities/responseError';
 import { Decimal } from '@prisma/client/runtime/library';
@@ -121,6 +121,20 @@ export class ProductService {
   async deleteProductById(id: string) {
     const { productId } = await this.getProductById(id);
     await productRepository.deleteProductById(productId);
+  }
+
+  async getProduct(
+    productId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ) {
+    const product = await productRepository.findProductTransaction(
+      productId,
+      prismaTransaction
+    );
+    if (!product) {
+      throw new ResponseError(404, `Product ${productId} not found`);
+    }
+    return product;
   }
 }
 

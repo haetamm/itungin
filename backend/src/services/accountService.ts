@@ -1,9 +1,10 @@
-import { Account } from '@prisma/client';
+import { Account, Prisma } from '@prisma/client';
 import { AccountForm } from '../utils/interface';
 import { validate } from '../validation/validation';
 import { ResponseError } from '../entities/responseError';
 import { storeAccount } from '../validation/accountValidation';
 import { accountRepository } from '../repository/accountRepository';
+import { accountDefaultRepository } from '../repository/accountDefaultRepository';
 
 export class AccountService {
   private async ensureAccountCodeUnique(accountId: string) {
@@ -48,6 +49,13 @@ export class AccountService {
   async getAllAccount() {
     const accounts = await accountRepository.getAllAccount();
     return accounts;
+  }
+
+  async getAccountDefault(prismaTransaction: Prisma.TransactionClient) {
+    const accountDefault =
+      await accountDefaultRepository.findOne(prismaTransaction);
+    if (!accountDefault) throw new ResponseError(404, 'Account not configured');
+    return accountDefault;
   }
 }
 

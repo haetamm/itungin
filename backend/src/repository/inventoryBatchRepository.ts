@@ -134,6 +134,12 @@ export class InventoryBatchRepository {
       orderBy: { purchaseDate: 'asc' },
     });
   }
+
+  async findById(batchId: string, prismaTransaction: Prisma.TransactionClient) {
+    return await prismaTransaction.inventoryBatch.findUnique({
+      where: { batchId },
+    });
+  }
 }
 
 export const inventoryBatchRepository = new InventoryBatchRepository();

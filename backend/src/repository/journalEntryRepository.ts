@@ -80,6 +80,17 @@ export class JournalEntryRepository {
       },
     });
   }
+
+  async deleteByJournalId(
+    journalId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<void> {
+    await prismaTransaction.journalEntry.deleteMany({
+      where: {
+        journalId: journalId,
+      },
+    });
+  }
 }
 
 export const journalEntryRepository = new JournalEntryRepository();

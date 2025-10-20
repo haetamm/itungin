@@ -7,13 +7,11 @@ import {
   UpdatePurchaseRequest,
 } from '../utils/interface';
 import { validate } from '../validation/validation';
-import { vatSettingRepository } from '../repository/vatSettingRepository';
 import {
   deletePurchaseSchema,
   purchaseSchema,
   updatePurchaseSchema,
 } from '../validation/purchaseValidation';
-import { supplierRepository } from '../repository/supplierRepository';
 import { productRepository } from '../repository/productRepository';
 import { Decimal } from '@prisma/client/runtime/library';
 import { ResponseError } from '../entities/responseError';
@@ -32,46 +30,18 @@ import { inventoryBatchRepository } from '../repository/inventoryBatchRepository
 import { prismaClient } from '../application/database';
 import { journalEntryRepository } from '../repository/journalEntryRepository';
 import { payableRepository } from '../repository/paybleRepository';
-import { generalSettingRepository } from '../repository/generalSettingRepository';
 import { recalculateCOGS } from '../utils/cogs';
-import { accountDefaultRepository } from '../repository/accountDefaultRepository';
 import { saleDetailRepository } from '../repository/saleDetailRepository';
 import { saleRepository } from '../repository/saleRepository';
 import { paymentRepository } from '../repository/paymentRepository';
+import { generalsettingService } from './generalSettingService';
+import { supplierService } from './supplierService';
+import { vatService } from './vatService';
+import { productService } from './productService';
+import { accountService } from './accountService';
 
 export class PurchaseService {
-  private async getSettingInventory(
-    prismaTransaction: Prisma.TransactionClient
-  ) {
-    const settings =
-      await generalSettingRepository.getSettingTransaction(prismaTransaction);
-    if (!settings)
-      throw new ResponseError(404, 'Inventory method not configured');
-    return settings;
-  }
-
-  private async getProduct(
-    productId: string,
-    prismaTransaction: Prisma.TransactionClient
-  ) {
-    const product = await productRepository.findProductTransaction(
-      productId,
-      prismaTransaction
-    );
-    if (!product) {
-      throw new ResponseError(404, `Product ${productId} not found`);
-    }
-    return product;
-  }
-
-  private async getAccountDefault(prismaTransaction: Prisma.TransactionClient) {
-    const accountDefault =
-      await accountDefaultRepository.findOne(prismaTransaction);
-    if (!accountDefault) throw new ResponseError(404, 'Account not configured');
-    return accountDefault;
-  }
-
-  private async getPurchase(
+  async getPurchase(
     purchaseId: string,
     prismaTransaction: Prisma.TransactionClient
   ) {
@@ -90,24 +60,23 @@ export class PurchaseService {
     const { date, supplierId, invoiceNumber, items, vatRateId, paymentType } =
       data;
 
-    const setting = await this.getSettingInventory(prismaTransaction);
+    // ambil inventory method
+    const setting =
+      await generalsettingService.getSettingInventory(prismaTransaction);
 
-    const supplier = await supplierRepository.findSupplierTransaction(
-      supplierId,
-      prismaTransaction
-    );
-    if (!supplier) throw new ResponseError(404, 'Supplier not found');
+    // validasi supplier
+    await supplierService.getSupplierTransaction(supplierId, prismaTransaction);
 
-    const vatSetting = await vatSettingRepository.findVatTransaction(
+    // validasi VAT input
+    const vatSetting = await vatService.getVatSetting(
       vatRateId,
-      prismaTransaction
+      prismaTransaction,
+      new Date(date)
     );
-    if (!vatSetting) throw new ResponseError(404, 'VAT rate not found');
-    if (vatSetting.effectiveDate > new Date(date))
-      throw new ResponseError(400, 'VAT rate not effective');
 
     for (const item of items) {
-      await this.getProduct(item.productId, prismaTransaction);
+      // validasi produk
+      await productService.getProduct(item.productId, prismaTransaction);
     }
 
     // Hitung subtotal = jumlah semua (qty × unitPrice) untuk setiap item
@@ -149,7 +118,11 @@ export class PurchaseService {
 
     // Buat detail pembelian, Inventory batch dan update stok dan harga produk
     for (const item of data.items) {
-      const product = await this.getProduct(item.productId, prismaTransaction);
+      // ambil product
+      const product = await productService.getProduct(
+        item.productId,
+        prismaTransaction
+      );
 
       // buat detail pembelian
       const detail = await purchaseDetailRepository.createPurchaseDetail(
@@ -243,7 +216,8 @@ export class PurchaseService {
 
     return await prismaClient.$transaction(async (prismaTransaction) => {
       // Ambil account default
-      const accountDefault = await this.getAccountDefault(prismaTransaction);
+      const accountDefault =
+        await accountService.getAccountDefault(prismaTransaction);
 
       const { cashAccount, payableAccount, inventoryAccount, vatInputAccount } =
         accountDefault;
@@ -261,7 +235,7 @@ export class PurchaseService {
           prismaTransaction
         );
 
-      // ==== VALIDASI SALDO CASH ====
+      // validasi saldo cash
       if (paymentType === PaymentType.CASH) {
         if (cashAccount.balance.comparedTo(total) < 0) {
           throw new ResponseError(400, 'Insufficient cash balance');
@@ -286,7 +260,7 @@ export class PurchaseService {
         }
       }
 
-      // ==== JOURNAL ENTRIES ====
+      // journal entries
       const journalEntries: JournalEntryForm[] = [
         {
           journalId: journal.journalId,
@@ -342,7 +316,7 @@ export class PurchaseService {
         prismaTransaction
       );
 
-      // ==== PAYABLE ENTRY (CREDIT / MIXED) ====
+      // payable entries
       if (
         paymentType === PaymentType.CREDIT ||
         paymentType === PaymentType.MIXED
@@ -373,7 +347,7 @@ export class PurchaseService {
         );
       }
 
-      // ==== UPDATE ACCOUNT BALANCES ====
+      // update saldo account
       await accountRepository.updateAccountTransaction(
         {
           accountCode: inventoryAccount.accountCode,
@@ -440,13 +414,14 @@ export class PurchaseService {
     const { purchaseId } = validate(deletePurchaseSchema, body);
 
     return await prismaClient.$transaction(async (prismaTransaction) => {
-      // Cari purchase
+      // ambil purchase
       const purchase = await this.getPurchase(purchaseId, prismaTransaction);
 
       const { payable } = purchase;
 
       // Ambil account default
-      const accountDefault = await this.getAccountDefault(prismaTransaction);
+      const accountDefault =
+        await accountService.getAccountDefault(prismaTransaction);
 
       const { cashAccount, payableAccount, inventoryAccount, vatInputAccount } =
         accountDefault;
@@ -573,11 +548,12 @@ export class PurchaseService {
       }
 
       // Ambil setting inventory method
-      const setting = await this.getSettingInventory(prismaTransaction);
+      const setting =
+        await generalsettingService.getSettingInventory(prismaTransaction);
 
       // Revert product stock and delete inventory batches
       for (const detail of purchase.purchaseDetails) {
-        const product = await this.getProduct(
+        const product = await productService.getProduct(
           detail.productId,
           prismaTransaction
         );
@@ -586,7 +562,7 @@ export class PurchaseService {
         if (newStock < 0) {
           throw new ResponseError(
             400,
-            `Insufficient stock for product ${detail.productId}`
+            `Insufficient stock for product ${product.productId}`
           );
         }
 
@@ -704,12 +680,13 @@ export class PurchaseService {
     } = purchaseReq;
 
     return await prismaClient.$transaction(async (prismaTransaction) => {
-      // 1. Ambil akun default (kas dan hutang)
-      const accountDefault = await this.getAccountDefault(prismaTransaction);
+      // Ambil account default
+      const accountDefault =
+        await accountService.getAccountDefault(prismaTransaction);
 
       let { cashAccount, payableAccount } = accountDefault;
 
-      // 2. Ambil data pembelian existing beserta relasinya
+      // Ambil data pembelian existing beserta relasinya
       const existingPurchase = await this.getPurchase(
         purchaseId,
         prismaTransaction
@@ -719,7 +696,7 @@ export class PurchaseService {
       const oldPaymentType = existingPurchase.paymentType;
       const { total, purchaseDetails } = existingPurchase;
 
-      // 3. Validasi apakah tanggal pembelian baru tidak melanggar kronologi dengan sales
+      // Validasi apakah tanggal pembelian baru tidak melanggar kronologi dengan sales
       for (const detail of purchaseDetails) {
         const inventoryBatches =
           await inventoryBatchRepository.findBatchesByPurchaseDetail(
@@ -781,7 +758,7 @@ export class PurchaseService {
         prismaTransaction
       );
 
-      // 6. Update batch inventory untuk setiap detail pembelian
+      // Update batch inventory untuk setiap detail pembelian
       for (const detail of purchaseDetails) {
         await inventoryBatchRepository.updateBatchByPurchaseDetailId(
           {
@@ -796,7 +773,7 @@ export class PurchaseService {
         );
       }
 
-      // 7. Update hutang (Payable) - buat atau perbarui journal entry untuk payable
+      // Update hutang (Payable) - buat atau perbarui journal entry untuk payable
       let payableJournalEntryId: string | null = null; // Simpan ID journal entry untuk payable
       if (
         paymentType === PaymentType.CREDIT ||
@@ -828,7 +805,7 @@ export class PurchaseService {
               payableId: payable.payableId,
               supplierId,
               dueDate: new Date(dueDate!),
-              amount: creditAmount, // Update amount untuk mencerminkan MIXED
+              amount: creditAmount,
               status: PaymentStatus.UNPAID,
             },
             prismaTransaction
@@ -874,7 +851,7 @@ export class PurchaseService {
         );
       }
 
-      // 8. Update Journal Entries (hapus yang lama, buat yang baru hanya jika perlu)
+      // Update Journal Entries (hapus yang lama, buat yang baru hanya jika perlu)
       if (oldPaymentType !== paymentType) {
         // Cari journal entries lama terkait pembayaran, kecualikan journal entry untuk payable
         const paymentEntries = existingPurchase.journal.journalEntries.filter(
@@ -926,7 +903,7 @@ export class PurchaseService {
         }
       }
 
-      // 9. Update Saldo Akun (jika tipe pembayaran berubah)
+      // Update Saldo Akun (jika tipe pembayaran berubah)
       if (oldPaymentType !== paymentType) {
         // Batalkan saldo lama
         let oldPayableAmount = new Decimal(0);

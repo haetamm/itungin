@@ -1,10 +1,7 @@
+import { vatService } from './vatService';
 import { prismaClient } from '../application/database';
 import { ResponseError } from '../entities/responseError';
-import { accountDefaultRepository } from '../repository/accountDefaultRepository';
-import { customerRepository } from '../repository/customerRepository';
-import { generalSettingRepository } from '../repository/generalSettingRepository';
 import { productRepository } from '../repository/productRepository';
-import { vatSettingRepository } from '../repository/vatSettingRepository';
 import {
   SaleDetailForm,
   SaleRequest,
@@ -24,6 +21,10 @@ import { PaymentStatus, PaymentType, Prisma, Sale } from '@prisma/client';
 import { recalculateCOGS } from '../utils/cogs';
 import { purchaseRepository } from '../repository/purchaseRepository';
 import { receivablePaymentRepository } from '../repository/receivablePaymentRepository';
+import { accountService } from './accountService';
+import { generalsettingService } from './generalSettingService';
+import { customerService } from './customerService';
+import { productService } from './productService';
 
 export class SaleService {
   private async ensureInvoiceNumberUnique(
@@ -40,7 +41,7 @@ export class SaleService {
     }
   }
 
-  private async validateBatchDates(
+  async validateBatchDates(
     batches: { purchaseDate: Date }[],
     saleDate: Date,
     productId: string
@@ -55,62 +56,7 @@ export class SaleService {
     }
   }
 
-  private async getAccountDefault(prismaTransaction: Prisma.TransactionClient) {
-    const accountDefault =
-      await accountDefaultRepository.findOne(prismaTransaction);
-    if (!accountDefault) throw new ResponseError(404, 'Account not configured');
-    return accountDefault;
-  }
-
-  private async getSettingInventory(
-    prismaTransaction: Prisma.TransactionClient
-  ) {
-    const settings =
-      await generalSettingRepository.getSettingTransaction(prismaTransaction);
-    if (!settings)
-      throw new ResponseError(404, 'Inventory method not configured');
-    return settings;
-  }
-
-  private async getCustomer(
-    customerId: string,
-    prismaTransaction: Prisma.TransactionClient
-  ) {
-    const customer = await customerRepository.findCustomerTransaction(
-      customerId,
-      prismaTransaction
-    );
-    if (!customer) throw new ResponseError(404, 'Customer not found');
-    return customer;
-  }
-
-  private async getProduct(
-    productId: string,
-    prismaTransaction: Prisma.TransactionClient
-  ) {
-    const product = await productRepository.findProductTransaction(
-      productId,
-      prismaTransaction
-    );
-    if (!product) {
-      throw new ResponseError(404, `Product ${productId} not found`);
-    }
-    return product;
-  }
-
-  private async getSale(
-    saleId: string,
-    prismaTransaction: Prisma.TransactionClient
-  ) {
-    const sale = await saleRepository.getSaleByIdTransaction(
-      saleId,
-      prismaTransaction
-    );
-    if (!sale) throw new ResponseError(404, 'Sale not found');
-    return sale;
-  }
-
-  private async validateReceivableForModification(
+  async validateReceivableForModification(
     paymentType: PaymentType,
     receivable: any | null,
     prismaTransaction: Prisma.TransactionClient,
@@ -144,6 +90,15 @@ export class SaleService {
     }
   }
 
+  async getSale(saleId: string, prismaTransaction: Prisma.TransactionClient) {
+    const sale = await saleRepository.getSaleByIdTransaction(
+      saleId,
+      prismaTransaction
+    );
+    if (!sale) throw new ResponseError(404, 'Sale not found');
+    return sale;
+  }
+
   async createSales({ body }: { body: SaleRequest }) {
     const saleReq = validate(saleSchema, body);
     const {
@@ -158,7 +113,9 @@ export class SaleService {
     } = saleReq;
 
     return await prismaClient.$transaction(async (prismaTransaction) => {
-      const accountDefault = await this.getAccountDefault(prismaTransaction);
+      // ambil akun default
+      const accountDefault =
+        await accountService.getAccountDefault(prismaTransaction);
 
       const {
         cashAccount,
@@ -171,20 +128,19 @@ export class SaleService {
 
       await this.ensureInvoiceNumberUnique(invoiceNumber, prismaTransaction);
 
-      // Ambil setting inventory method (AVG / FIFO / LIFO)
-      const setting = await this.getSettingInventory(prismaTransaction);
+      // Ambil inventory method (AVG / FIFO / LIFO)
+      const setting =
+        await generalsettingService.getSettingInventory(prismaTransaction);
 
       // Validasi customer
-      await this.getCustomer(customerId, prismaTransaction);
+      await customerService.getCustomer(customerId, prismaTransaction);
 
       // Validasi VAT (Pajak)
-      const vatSetting = await vatSettingRepository.findVatTransaction(
+      const vatSetting = await vatService.getVatSetting(
         vatRateId,
-        prismaTransaction
+        prismaTransaction,
+        new Date(date)
       );
-      if (!vatSetting) throw new ResponseError(404, 'VAT rate not found');
-      if (vatSetting.effectiveDate > new Date(date))
-        throw new ResponseError(400, 'VAT rate not effective');
 
       // Hitung subtotal & COGS
       let subtotal = new Decimal(0);
@@ -192,7 +148,8 @@ export class SaleService {
       const saleDetailsData: SaleDetailForm[] = [];
 
       for (const item of items) {
-        const product = await this.getProduct(
+        // ambil product
+        const product = await productService.getProduct(
           item.productId,
           prismaTransaction
         );
@@ -201,7 +158,7 @@ export class SaleService {
         if (product.stock < item.quantity) {
           throw new ResponseError(
             400,
-            `Insufficient stock for product ${product.productName}`
+            `Insufficient stock for product ${product.productName}, only ${product.stock} available`
           );
         }
 
@@ -231,7 +188,7 @@ export class SaleService {
         if (totalAvailable < item.quantity) {
           throw new ResponseError(
             400,
-            `Insufficient stock for product ${item.productId}`
+            `Insufficient stock for product ${product.productName}, only ${product.stock} available`
           );
         }
 
@@ -303,7 +260,7 @@ export class SaleService {
           );
       }
 
-      // Journal header
+      // buat journal header
       const journal = await journalRepository.createJournal(
         {
           date,
@@ -313,7 +270,7 @@ export class SaleService {
         prismaTransaction
       );
 
-      // Sale header
+      // buat penjualan
       const sale = await saleRepository.createSale(
         {
           date,
@@ -333,7 +290,7 @@ export class SaleService {
         await saleDetailRepository.createSaleDetail(detail, prismaTransaction);
       }
 
-      // Journal entries
+      // Buat journal entries
       let receivableJournalEntryId: string | null = null;
       const journalEntries = [
         {
@@ -404,7 +361,7 @@ export class SaleService {
         }
       }
 
-      // Receivable
+      // Buat receivable
       if (paymentType === 'CREDIT' || paymentType === 'MIXED') {
         const receivableAmount =
           paymentType === 'CREDIT' ? total : total.minus(cash!);
@@ -498,14 +455,16 @@ export class SaleService {
 
   async deleteSale(saleId: string): Promise<void> {
     return await prismaClient.$transaction(async (prismaTransaction) => {
-      // Cari sale beserta data relasinya
+      // ambil sale beserta data relasinya
       const sale = await this.getSale(saleId, prismaTransaction);
 
       // Ambil account default
-      const accountDefault = await this.getAccountDefault(prismaTransaction);
+      const accountDefault =
+        await accountService.getAccountDefault(prismaTransaction);
 
       // Ambil setting inventory method
-      const setting = await this.getSettingInventory(prismaTransaction);
+      const setting =
+        await generalsettingService.getSettingInventory(prismaTransaction);
 
       const {
         cashAccount,
@@ -572,7 +531,8 @@ export class SaleService {
 
       // Revert stok produk dan batch
       for (const detail of sale.saleDetails) {
-        const product = await this.getProduct(
+        // ambil product
+        const product = await productService.getProduct(
           detail.productId,
           prismaTransaction
         );
@@ -722,16 +682,17 @@ export class SaleService {
 
     return await prismaClient.$transaction(async (prismaTransaction) => {
       // Ambil setting inventory method
-      const setting = await this.getSettingInventory(prismaTransaction);
+      const setting =
+        await generalsettingService.getSettingInventory(prismaTransaction);
 
       // Validasi customer
-      await this.getCustomer(customerId, prismaTransaction);
+      await customerService.getCustomer(customerId, prismaTransaction);
 
       // Ambil akun default
-      const accountDefault = await this.getAccountDefault(prismaTransaction);
+      const accountDefault =
+        await accountService.getAccountDefault(prismaTransaction);
 
-      let cashAccount = accountDefault.cashAccount;
-      let receivableAccount = accountDefault.receivableAccount;
+      let { cashAccount, receivableAccount } = accountDefault;
 
       // Ambil data penjualan existing beserta relasinya
       const existingSale = await this.getSale(saleId, prismaTransaction);

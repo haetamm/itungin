@@ -1,4 +1,4 @@
-import { Customer } from '@prisma/client';
+import { Customer, Prisma } from '@prisma/client';
 import { CustomerForm } from '../utils/interface';
 import { validate } from '../validation/validation';
 import { customerRepository } from '../repository/customerRepository';
@@ -60,6 +60,18 @@ export class CustomerService {
   async deleteCustomerById(id: string) {
     const { customerId } = await this.getCustomerById(id);
     await customerRepository.deleteCustomerById(customerId);
+  }
+
+  async getCustomer(
+    customerId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ) {
+    const customer = await customerRepository.findCustomerTransaction(
+      customerId,
+      prismaTransaction
+    );
+    if (!customer) throw new ResponseError(404, 'Customer not found');
+    return customer;
   }
 }
 

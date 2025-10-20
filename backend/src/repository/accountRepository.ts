@@ -53,6 +53,15 @@ export class AccountRepository {
       data: { balance: data.balance },
     });
   }
+
+  async findById(
+    accountId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<Account | null> {
+    return await prismaTransaction.account.findUnique({
+      where: { accountId },
+    });
+  }
 }
 
 export const accountRepository = new AccountRepository();

@@ -1,4 +1,4 @@
-import { VatSetting } from '@prisma/client';
+import { Prisma, VatSetting } from '@prisma/client';
 import { VatForm } from '../utils/interface';
 import { validate } from '../validation/validation';
 import { ResponseError } from '../entities/responseError';
@@ -36,6 +36,21 @@ export class VatService {
   async deleteVatById(id: string) {
     const { vatId } = await this.getVatById(id);
     await vatSettingRepository.deleteVatById(vatId);
+  }
+
+  async getVatSetting(
+    id: string,
+    prismaTransaction: Prisma.TransactionClient,
+    date: Date
+  ) {
+    const vatSetting = await vatSettingRepository.findVatTransaction(
+      id,
+      prismaTransaction
+    );
+    if (!vatSetting) throw new ResponseError(404, 'VAT rate not found');
+    if (vatSetting.effectiveDate > new Date(date))
+      throw new ResponseError(400, 'VAT rate is not yet effective');
+    return vatSetting;
   }
 }
 
