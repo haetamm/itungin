@@ -7,6 +7,7 @@ import {
   PaymentStatus,
   PaymentType,
   Purchase,
+  Receivable,
 } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 
@@ -388,5 +389,10 @@ export interface PayablePaymentForm {
 
 export interface PaginatedPayablesResult {
   items: Payable[];
+  total: number;
+}
+
+export interface PaginatedReceivablesResult {
+  items: Receivable[];
   total: number;
 }
