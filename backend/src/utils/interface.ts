@@ -194,6 +194,7 @@ export interface PayableForm {
   supplierId: string;
   purchaseId: string;
   amount: Decimal;
+  remainingAmount: Decimal;
   dueDate: Date;
   status: PaymentStatus;
 }
@@ -203,6 +204,13 @@ export interface UpdatePayableForm {
   supplierId: string;
   dueDate: Date;
   amount: Decimal;
+  status: PaymentStatus;
+}
+
+export interface RecordPayablePaymentForm {
+  payableId: string;
+  paidAmount: Decimal;
+  remainingAmount: Decimal;
   status: PaymentStatus;
 }
 
@@ -354,4 +362,25 @@ export interface UpdateSaleTotal {
   subtotal: Decimal;
   vat: Decimal;
   total: Decimal;
+}
+
+export interface PaymentPayableRequest {
+  payableId: string;
+  amount: Decimal;
+  paymentDate: string;
+  method: string;
+}
+
+export interface UpdatePaymentPayableRequest {
+  amount: Decimal;
+  paymentDate: string;
+  method: string;
+}
+
+export interface PayablePaymentForm {
+  payableId: string;
+  journalEntryId: string;
+  paymentAmount: Decimal;
+  paymentDate: Date;
+  method: string;
 }

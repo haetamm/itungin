@@ -20,6 +20,7 @@ import { accountService } from './accountService';
 import { purchaseService } from './purchaseService';
 import { vatService } from './vatService';
 import { productService } from './productService';
+import { journalRepository } from '../repository/journalRepository';
 
 export class PurchaseDetailService {
   async updatePurchaseDetailByPurchaseId({
@@ -48,8 +49,14 @@ export class PurchaseDetailService {
         prismaTransaction
       );
 
-      const { journal, payable, purchaseDetails } = existingPurchase;
-      const paymentType = existingPurchase.paymentType;
+      const {
+        journal,
+        payable,
+        purchaseDetails,
+        date,
+        invoiceNumber,
+        paymentType,
+      } = existingPurchase;
 
       // ambil VAT rate
       const vatSetting = await vatService.getVatSetting(
@@ -107,6 +114,16 @@ export class PurchaseDetailService {
           }
         }
       }
+
+      await journalRepository.updateJournalTransaction(
+        {
+          journalId: existingPurchase.journalId,
+          date: new Date(date),
+          description: `Pembelian ${paymentType.toLowerCase()} ${invoiceNumber} (diperbarui ${new Date().toISOString().split('T')[0]})`,
+          reference: invoiceNumber,
+        },
+        prismaTransaction
+      );
 
       // Hitung ulang subtotal, VAT, dan total
       const subtotal = items.reduce(

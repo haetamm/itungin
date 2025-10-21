@@ -332,14 +332,20 @@ export class PurchaseService {
           throw new ResponseError(400, 'Failed to find payable journal entry');
         }
 
+        const status =
+          paymentType === PaymentType.CREDIT
+            ? PaymentStatus.UNPAID
+            : PaymentStatus.PARTIAL;
+
         await payableRepository.createPayable(
           {
             journalEntryId: journalEntry.journalEntryId,
             supplierId,
             purchaseId: purchase.purchaseId,
             amount: creditAmount,
+            remainingAmount: creditAmount,
             dueDate: new Date(dueDate!),
-            status: PaymentStatus.UNPAID,
+            status,
           },
           prismaTransaction
         );
@@ -727,7 +733,7 @@ export class PurchaseService {
         }
       }
 
-      // 4. Update tabel Purchase
+      // Update tabel Purchase
       const purchase = await purchaseRepository.updatePurchaseTransaction(
         {
           purchaseId,
@@ -744,7 +750,7 @@ export class PurchaseService {
         {
           journalId: existingPurchase.journalId,
           date: new Date(date),
-          description: `Pembelian ${paymentType.toLowerCase()} ${invoiceNumber}`,
+          description: `Pembelian ${paymentType.toLowerCase()} ${invoiceNumber} (diperbarui ${new Date().toISOString().split('T')[0]})`,
           reference: invoiceNumber,
         },
         prismaTransaction
@@ -767,6 +773,10 @@ export class PurchaseService {
 
       // Update hutang (Payable) - buat atau perbarui journal entry untuk payable
       let payableJournalEntryId: string | null = null; // Simpan ID journal entry untuk payable
+      const status =
+        paymentType === PaymentType.CREDIT
+          ? PaymentStatus.UNPAID
+          : PaymentStatus.PARTIAL;
       if (
         paymentType === PaymentType.CREDIT ||
         paymentType === PaymentType.MIXED
@@ -798,7 +808,7 @@ export class PurchaseService {
               supplierId,
               dueDate: new Date(dueDate!),
               amount: creditAmount,
-              status: PaymentStatus.UNPAID,
+              status,
             },
             prismaTransaction
           );
@@ -829,8 +839,9 @@ export class PurchaseService {
               supplierId,
               purchaseId: existingPurchase.purchaseId,
               amount: creditAmount,
+              remainingAmount: creditAmount,
               dueDate: new Date(dueDate!),
-              status: PaymentStatus.UNPAID,
+              status,
             },
             prismaTransaction
           );

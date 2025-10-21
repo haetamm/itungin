@@ -301,7 +301,7 @@ export class SaleService {
       const journal = await journalRepository.createJournal(
         {
           date,
-          description: `Penjualan ${paymentType.toLowerCase()} ${invoiceNumber}`,
+          description: `Penjualan ${paymentType.toLowerCase()} ${invoiceNumber} (diperbarui ${new Date().toISOString().split('T')[0]})`,
           reference: invoiceNumber,
         },
         prismaTransaction
@@ -397,6 +397,10 @@ export class SaleService {
           receivableJournalEntryId = createdJE.journalEntryId;
         }
       }
+      const status =
+        paymentType === PaymentType.CREDIT
+          ? PaymentStatus.UNPAID
+          : PaymentStatus.PARTIAL;
 
       // Buat receivable
       if (paymentType === 'CREDIT' || paymentType === 'MIXED') {
@@ -409,7 +413,7 @@ export class SaleService {
         await receivableRepository.createReceivable(
           {
             journalEntryId: receivableJournalEntryId,
-            status: PaymentStatus.UNPAID,
+            status,
             customerId,
             saleId: sale.saleId,
             amount: receivableAmount,
@@ -452,7 +456,7 @@ export class SaleService {
         prismaTransaction
       );
 
-      if (paymentType === 'CASH') {
+      if (paymentType === PaymentType.CASH) {
         await accountRepository.updateAccountTransaction(
           {
             accountCode: cashAccount.accountCode,
@@ -460,7 +464,7 @@ export class SaleService {
           },
           prismaTransaction
         );
-      } else if (paymentType === 'CREDIT') {
+      } else if (paymentType === PaymentType.CREDIT) {
         await accountRepository.updateAccountTransaction(
           {
             accountCode: receivableAccount.accountCode,
@@ -468,7 +472,7 @@ export class SaleService {
           },
           prismaTransaction
         );
-      } else if (paymentType === 'MIXED') {
+      } else if (paymentType === PaymentType.MIXED) {
         await accountRepository.updateAccountTransaction(
           {
             accountCode: cashAccount.accountCode,
@@ -820,6 +824,11 @@ export class SaleService {
             ? new Decimal(total)
             : new Decimal(total).minus(cashAmount!);
 
+        const status =
+          paymentType === PaymentType.CREDIT
+            ? PaymentStatus.UNPAID
+            : PaymentStatus.PARTIAL;
+
         if (receivable) {
           // journal entry yang sudah ada
           await journalEntryRepository.updateJournalEntryAmounts(
@@ -839,7 +848,7 @@ export class SaleService {
               customerId,
               amount: receivableAmount,
               dueDate: new Date(dueDate!),
-              status: PaymentStatus.UNPAID,
+              status,
             },
             prismaTransaction
           );
@@ -865,7 +874,7 @@ export class SaleService {
               saleId,
               amount: receivableAmount,
               dueDate: new Date(dueDate!),
-              status: PaymentStatus.UNPAID,
+              status,
             },
             prismaTransaction
           );

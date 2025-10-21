@@ -91,6 +91,26 @@ export class JournalEntryRepository {
       },
     });
   }
+
+  async getById(
+    journalEntryId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ) {
+    const journalEntry = await prismaTransaction.journalEntry.findUnique({
+      where: { journalEntryId },
+      include: {
+        journal: true,
+      },
+    });
+
+    return journalEntry;
+  }
+
+  async getByJournalId(journalId: string, prisma: Prisma.TransactionClient) {
+    return prisma.journalEntry.findMany({
+      where: { journalId },
+    });
+  }
 }
 
 export const journalEntryRepository = new JournalEntryRepository();

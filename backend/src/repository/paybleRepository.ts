@@ -1,5 +1,9 @@
-import { Payable, Prisma, PaymentStatus } from '@prisma/client';
-import { PayableForm, UpdatePayableForm } from '../utils/interface';
+import { Payable, Prisma } from '@prisma/client';
+import {
+  PayableForm,
+  RecordPayablePaymentForm,
+  UpdatePayableForm,
+} from '../utils/interface';
 import { Decimal } from '@prisma/client/runtime/library';
 
 export class PayableRepository {
@@ -7,16 +11,43 @@ export class PayableRepository {
     data: PayableForm,
     prismaTransaction: Prisma.TransactionClient
   ): Promise<Payable> {
+    const {
+      journalEntryId,
+      supplierId,
+      purchaseId,
+      amount,
+      remainingAmount,
+      dueDate,
+      status,
+    } = data;
     return prismaTransaction.payable.create({
       data: {
-        journalEntryId: data.journalEntryId,
-        supplierId: data.supplierId,
-        purchaseId: data.purchaseId,
-        amount: data.amount,
-        dueDate: data.dueDate,
-        status: data.status,
+        journalEntryId,
+        supplierId,
+        purchaseId,
+        amount,
+        remainingAmount,
+        dueDate,
+        status,
       },
     });
+  }
+
+  async recordPayablePayment(
+    params: RecordPayablePaymentForm,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<Payable> {
+    const { payableId, paidAmount, remainingAmount, status } = params;
+
+    const updatedPayable = await prismaTransaction.payable.update({
+      where: { payableId },
+      data: {
+        paidAmount,
+        remainingAmount,
+        status,
+      },
+    });
+    return updatedPayable;
   }
 
   async deletePayable(
@@ -32,14 +63,15 @@ export class PayableRepository {
     data: UpdatePayableForm,
     prismaTransaction: Prisma.TransactionClient
   ): Promise<Payable> {
+    const { payableId, supplierId, dueDate, status, amount } = data;
     return prismaTransaction.payable.update({
-      where: { payableId: data.payableId },
+      where: { payableId },
       data: {
-        payableId: data.payableId,
-        supplierId: data.supplierId,
-        dueDate: data.dueDate,
-        status: data.status as PaymentStatus,
-        amount: data.amount,
+        payableId,
+        supplierId,
+        dueDate,
+        status,
+        amount,
       },
     });
   }
@@ -51,6 +83,18 @@ export class PayableRepository {
       _sum: { amount: true },
     });
     return new Decimal(result._sum.amount || 0);
+  }
+
+  async getPayableById(
+    payableId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<Prisma.PayableGetPayload<{
+    include: { journalEntry: true; purchase: true; supplier: true };
+  }> | null> {
+    return prismaTransaction.payable.findUnique({
+      where: { payableId },
+      include: { journalEntry: true, purchase: true, supplier: true },
+    });
   }
 }
 

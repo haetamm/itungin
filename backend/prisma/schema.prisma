@@ -73,6 +73,7 @@ enum PaymentType {
 enum PaymentStatus {
   PAID
   UNPAID
+  PARTIAL
 }
 
 enum InventoryMethod {
@@ -285,9 +286,11 @@ model Payable {
   purchaseId      String?       @unique @map("purchase_id")
   supplierId      String        @map("supplier_id")
   amount          Decimal       @db.Decimal(15, 2)
+  paidAmount      Decimal       @default(0.00) @db.Decimal(15, 2) @map("paid_amount")
+  remainingAmount Decimal       @default(0.00) @db.Decimal(15, 2) @map("remaining_amount")
   dueDate         DateTime      @db.Date @map("due_date")
   status          PaymentStatus
-  payments        Payment[]     
+  payments        Payment[]
 
   journalEntry    JournalEntry  @relation(fields: [journalEntryId], references: [journalEntryId], onDelete: Restrict)
   supplier        Supplier      @relation(fields: [supplierId], references: [supplierId], onDelete: Restrict)
@@ -363,6 +366,8 @@ model Receivable {
   saleId         String?        @unique @map("sale_id")
   customerId     String         @map("customer_id")
   amount         Decimal        @db.Decimal(15, 2)
+  paidAmount      Decimal       @default(0.00) @db.Decimal(15, 2) @map("paid_amount")
+  remainingAmount Decimal       @default(0.00) @db.Decimal(15, 2) @map("remaining_amount")
   dueDate        DateTime       @db.Date @map("due_date")
   status         PaymentStatus
   payments       ReceivablePayment[]
