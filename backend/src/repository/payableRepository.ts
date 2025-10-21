@@ -25,12 +25,9 @@ export class PayableRepository {
     // Buat filter untuk query
     const filters: any = {};
 
-    // Filter pencarian (berdasarkan journalEntryId atau purchaseId)
+    // Filter pencarian (berdasarkan purchaseId)
     if (search && search.trim() !== '') {
-      filters.OR = [
-        { journalEntryId: { contains: search, mode: 'insensitive' } },
-        { purchaseId: { contains: search, mode: 'insensitive' } },
-      ];
+      filters.OR = [{ purchaseId: { contains: search, mode: 'insensitive' } }];
     }
 
     // Filter supplier
@@ -77,24 +74,6 @@ export class PayableRepository {
           address: true,
         },
       },
-      purchase: {
-        select: {
-          purchaseId: true,
-          invoiceNumber: true,
-          date: true,
-        },
-      },
-      payments: {
-        select: {
-          paymentId: true,
-          payableId: true,
-          amount: true,
-          paymentDate: true,
-          method: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      },
     };
 
     const result = await paginate<Payable>(prismaClient.payable, {
@@ -106,6 +85,41 @@ export class PayableRepository {
     });
 
     return result;
+  }
+
+  async getPayableDetail(payableId: string) {
+    return await prismaClient.payable.findUnique({
+      where: { payableId },
+      include: {
+        supplier: {
+          select: {
+            supplierId: true,
+            supplierName: true,
+            phone: true,
+            email: true,
+            address: true,
+          },
+        },
+        purchase: {
+          select: {
+            purchaseId: true,
+            invoiceNumber: true,
+            date: true,
+          },
+        },
+        payments: {
+          select: {
+            paymentId: true,
+            payableId: true,
+            amount: true,
+            paymentDate: true,
+            method: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+      },
+    });
   }
 
   async createPayable(

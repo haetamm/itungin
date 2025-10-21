@@ -97,6 +97,12 @@ export class PayableService {
       },
     };
   }
+
+  async getPayableDetail(id: string) {
+    const payable = await payableRepository.getPayableDetail(id);
+    if (!payable) throw new ResponseError(404, 'Payable not found');
+    return payable;
+  }
 }
 
 export const payableService = new PayableService();

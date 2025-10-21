@@ -9,6 +9,12 @@ class PayableRoutes extends BaseRoutes {
       authMiddleware,
       PayableController.getAllPayable
     );
+
+    this.router.get(
+      '/payables/:id',
+      authMiddleware,
+      PayableController.getPayableDetail
+    );
   }
 }
 

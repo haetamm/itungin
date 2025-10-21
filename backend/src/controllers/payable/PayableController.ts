@@ -42,6 +42,21 @@ class PayableController implements IController {
       next(e);
     }
   }
+
+  async getPayableDetail(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+      const result = await payableService.getPayableDetail(id);
+      const response = new ResponseSuccess(200, result);
+      res.status(200).json(response);
+    } catch (e) {
+      next(e);
+    }
+  }
 }
 
 export default new PayableController();
