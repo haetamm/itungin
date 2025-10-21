@@ -12,7 +12,7 @@ import { saleDetailRepository } from '../repository/saleDetailRepository';
 import { accountRepository } from '../repository/accountRepository';
 import { prismaClient } from '../application/database';
 import { Decimal } from '@prisma/client/runtime/library';
-import { payableRepository } from '../repository/paybleRepository';
+import { payableRepository } from '../repository/payableRepository';
 import { recalculateCOGS } from '../utils/cogs';
 import { paymentRepository } from '../repository/paymentRepository';
 import { generalsettingService } from './generalSettingService';

@@ -27,7 +27,7 @@ import { purchaseDetailRepository } from '../repository/purchaseDetailRepository
 import { inventoryBatchRepository } from '../repository/inventoryBatchRepository';
 import { prismaClient } from '../application/database';
 import { journalEntryRepository } from '../repository/journalEntryRepository';
-import { payableRepository } from '../repository/paybleRepository';
+import { payableRepository } from '../repository/payableRepository';
 import { recalculateCOGS } from '../utils/cogs';
 import { saleDetailRepository } from '../repository/saleDetailRepository';
 import { saleRepository } from '../repository/saleRepository';

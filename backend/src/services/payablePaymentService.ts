@@ -17,7 +17,7 @@ import {
 import { payableService } from './payableService';
 import { journalRepository } from '../repository/journalRepository';
 import { paymentRepository } from '../repository/paymentRepository';
-import { payableRepository } from '../repository/paybleRepository';
+import { payableRepository } from '../repository/payableRepository';
 
 export class PayablePaymentService {
   private async validatePaymentDate(

@@ -3,6 +3,7 @@ import {
   EntryType,
   InventoryMethod,
   Journal,
+  Payable,
   PaymentStatus,
   PaymentType,
   Purchase,
@@ -383,4 +384,9 @@ export interface PayablePaymentForm {
   paymentAmount: Decimal;
   paymentDate: Date;
   method: string;
+}
+
+export interface PaginatedPayablesResult {
+  items: Payable[];
+  total: number;
 }
