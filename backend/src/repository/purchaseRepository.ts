@@ -142,13 +142,26 @@ export class PurchaseRepository {
     data: UpdatePurchaseForm,
     prismaTransaction: Prisma.TransactionClient
   ): Promise<Purchase> {
+    const {
+      purchaseId,
+      date,
+      supplierId,
+      paymentType,
+      invoiceNumber,
+      subtotal,
+      vat,
+      total,
+    } = data;
     return prismaTransaction.purchase.update({
-      where: { purchaseId: data.purchaseId },
+      where: { purchaseId },
       data: {
-        date: data.date,
-        supplierId: data.supplierId,
-        invoiceNumber: data.invoiceNumber,
-        paymentType: data.paymentType,
+        date,
+        supplierId,
+        paymentType,
+        invoiceNumber,
+        subtotal,
+        vat,
+        total,
       },
     });
   }

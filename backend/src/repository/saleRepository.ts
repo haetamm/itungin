@@ -104,16 +104,26 @@ export class SaleRepository {
     data: SaleForm,
     prismaTransaction: Prisma.TransactionClient
   ): Promise<Sale> {
+    const {
+      date,
+      customerId,
+      journalId,
+      invoiceNumber,
+      paymentType,
+      subtotal,
+      vat,
+      total,
+    } = data;
     return prismaTransaction.sale.create({
       data: {
-        date: data.date instanceof Date ? data.date : new Date(data.date),
-        customerId: data.customerId,
-        journalId: data.journalId,
-        invoiceNumber: data.invoiceNumber,
-        paymentType: data.paymentType,
-        subtotal: data.subtotal,
-        vat: data.vat,
-        total: data.total,
+        date,
+        customerId,
+        journalId,
+        invoiceNumber,
+        paymentType,
+        subtotal,
+        vat,
+        total,
       },
     });
   }
@@ -152,26 +162,30 @@ export class SaleRepository {
     });
   }
 
-  async deleteSaleByIdTransaction(
-    saleId: string,
-    prismaTransaction: Prisma.TransactionClient
-  ): Promise<void> {
-    await prismaTransaction.sale.delete({
-      where: { saleId },
-    });
-  }
-
   async updateSaleTransaction(
     data: UpdateSaleForm,
     prismaTransaction: Prisma.TransactionClient
   ): Promise<Sale> {
+    const {
+      saleId,
+      date,
+      customerId,
+      invoiceNumber,
+      paymentType,
+      subtotal,
+      vat,
+      total,
+    } = data;
     return prismaTransaction.sale.update({
-      where: { saleId: data.saleId },
+      where: { saleId },
       data: {
-        date: data.date,
-        customerId: data.customerId,
-        invoiceNumber: data.invoiceNumber,
-        paymentType: data.paymentType,
+        date,
+        customerId,
+        invoiceNumber,
+        paymentType,
+        subtotal,
+        vat,
+        total,
       },
     });
   }
@@ -181,12 +195,13 @@ export class SaleRepository {
     data: UpdateSaleTotal,
     prismaTransaction: Prisma.TransactionClient
   ): Promise<Sale> {
+    const { vat, subtotal, total } = data;
     return await prismaTransaction.sale.update({
       where: { saleId },
       data: {
-        vat: data.vat,
-        subtotal: data.subtotal,
-        total: data.total,
+        vat,
+        subtotal,
+        total,
       },
     });
   }

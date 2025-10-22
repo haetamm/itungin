@@ -1,6 +1,5 @@
 import { InventoryBatch, Prisma } from '@prisma/client';
 import { InventoryBatchForm } from '../utils/interface';
-import { Decimal } from '@prisma/client/runtime/library';
 
 export class InventoryBatchRepository {
   async getBatchesByProduct(
@@ -17,14 +16,22 @@ export class InventoryBatchRepository {
     data: InventoryBatchForm,
     prismaTransaction: Prisma.TransactionClient
   ): Promise<InventoryBatch> {
+    const {
+      productId,
+      purchaseDate,
+      quantity,
+      purchasePrice,
+      remainingStock,
+      purchaseDetailId,
+    } = data;
     return prismaTransaction.inventoryBatch.create({
       data: {
-        productId: data.productId,
-        purchaseDate: data.purchaseDate,
-        quantity: data.quantity,
-        purchasePrice: data.purchasePrice,
-        remainingStock: data.remainingStock,
-        purchaseDetailId: data.purchaseDetailId,
+        productId,
+        purchaseDate,
+        quantity,
+        purchasePrice,
+        remainingStock,
+        purchaseDetailId,
       },
     });
   }
@@ -91,45 +98,6 @@ export class InventoryBatchRepository {
     });
   }
 
-  async calculateAvgPurchasePrice(
-    productId: string,
-    prismaTransaction: Prisma.TransactionClient
-  ) {
-    const batches = await prismaTransaction.inventoryBatch.findMany({
-      where: {
-        productId,
-        remainingStock: { gt: 0 },
-      },
-    });
-    const totalQuantity = batches.reduce(
-      (sum, batch) => sum + batch.remainingStock,
-      0
-    );
-    const totalCost = batches.reduce(
-      (sum, batch) =>
-        sum.plus(new Decimal(batch.purchasePrice).times(batch.remainingStock)),
-      new Decimal(0)
-    );
-    return totalCost.div(totalQuantity || 1).toDecimalPlaces(2);
-  }
-
-  async updateBatchByPurchaseDetailId(
-    data: InventoryBatchForm,
-    prismaTransaction: Prisma.TransactionClient
-  ): Promise<void> {
-    await prismaTransaction.inventoryBatch.updateMany({
-      data: {
-        purchaseDetailId: data.purchaseDetailId,
-        productId: data.productId,
-        purchaseDate: data.purchaseDate,
-        quantity: data.quantity,
-        purchasePrice: data.purchasePrice,
-        remainingStock: data.remainingStock,
-      },
-      where: { purchaseDetailId: data.purchaseDetailId },
-    });
-  }
-
   async findBatchesByPurchaseDetail(
     purchaseDetailId: string,
     prismaTransaction: Prisma.TransactionClient
@@ -152,6 +120,17 @@ export class InventoryBatchRepository {
   async findById(batchId: string, prismaTransaction: Prisma.TransactionClient) {
     return await prismaTransaction.inventoryBatch.findUnique({
       where: { batchId },
+    });
+  }
+
+  async findByPurchaseDetailId(
+    purchaseDetailId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<InventoryBatch | null> {
+    return await prismaTransaction.inventoryBatch.findUnique({
+      where: {
+        purchaseDetailId,
+      },
     });
   }
 }

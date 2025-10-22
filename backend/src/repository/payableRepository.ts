@@ -3,9 +3,7 @@ import {
   PaginatedPayablesResult,
   PayableForm,
   RecordPayablePaymentForm,
-  UpdatePayableForm,
 } from '../utils/interface';
-import { Decimal } from '@prisma/client/runtime/library';
 import { paginate } from '../utils/pagination';
 import { prismaClient } from '../application/database';
 
@@ -171,32 +169,6 @@ export class PayableRepository {
     await prismaTransaction.payable.delete({
       where: { payableId },
     });
-  }
-
-  async updatePayableByPayableId(
-    data: UpdatePayableForm,
-    prismaTransaction: Prisma.TransactionClient
-  ): Promise<Payable> {
-    const { payableId, supplierId, dueDate, status, amount } = data;
-    return prismaTransaction.payable.update({
-      where: { payableId },
-      data: {
-        payableId,
-        supplierId,
-        dueDate,
-        status,
-        amount,
-      },
-    });
-  }
-
-  async getTotalPayables(
-    prismaTransaction: Prisma.TransactionClient
-  ): Promise<Decimal> {
-    const result = await prismaTransaction.payable.aggregate({
-      _sum: { amount: true },
-    });
-    return new Decimal(result._sum.amount || 0);
   }
 
   async getPayableById(

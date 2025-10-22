@@ -3,11 +3,11 @@ import { prismaClient } from '../application/database';
 import { ResponseError } from '../entities/responseError';
 import { productRepository } from '../repository/productRepository';
 import {
+  JournalEntryForm,
   SaleDetailForm,
   SaleRequest,
-  UpdateSaleRequest,
 } from '../utils/interface';
-import { saleSchema, updateSaleSchema } from '../validation/saleValidation';
+import { saleSchema } from '../validation/saleValidation';
 import { validate } from '../validation/validation';
 import { journalRepository } from '../repository/journalRepository';
 import { saleRepository } from '../repository/saleRepository';
@@ -17,7 +17,13 @@ import { journalEntryRepository } from '../repository/journalEntryRepository';
 import { receivableRepository } from '../repository/receivableRepository';
 import { accountRepository } from '../repository/accountRepository';
 import { Decimal } from '@prisma/client/runtime/library';
-import { PaymentStatus, PaymentType, Prisma, Sale } from '@prisma/client';
+import {
+  EntryType,
+  PaymentStatus,
+  PaymentType,
+  Prisma,
+  Sale,
+} from '@prisma/client';
 import { recalculateCOGS } from '../utils/cogs';
 import { purchaseRepository } from '../repository/purchaseRepository';
 import { receivablePaymentRepository } from '../repository/receivablePaymentRepository';
@@ -117,7 +123,7 @@ export class SaleService {
     return sale;
   }
 
-  async createSales({ body }: { body: SaleRequest }) {
+  async createSales(body: SaleRequest) {
     const saleReq = validate(saleSchema, body);
     const {
       date,
@@ -279,21 +285,16 @@ export class SaleService {
       const vat = subtotal.times(vatSetting.vatRate).div(100);
       const total = subtotal.plus(vat);
 
-      //= Validasi cash / credit / mixed=
+      // Validasi cash / credit / mixed=
       let cash: Decimal | null = null;
-      if (paymentType === 'CASH') {
+      if (paymentType === PaymentType.CASH) {
         cash = total;
-      } else if (paymentType === 'MIXED') {
-        if (cashAmount === undefined || cashAmount === null)
-          throw new ResponseError(
-            400,
-            'Cash amount is required for MIXED payment'
-          );
-        cash = new Decimal(cashAmount);
+      } else if (paymentType === PaymentType.MIXED) {
+        cash = new Decimal(cashAmount!);
         if (cash.comparedTo(total) >= 0)
           throw new ResponseError(
             400,
-            'Cash amount must be less than total for mixed payment'
+            `Cash amount ${cash} must be less than total ${total} for MIXED payment`
           );
       }
 
@@ -352,19 +353,19 @@ export class SaleService {
         },
       ];
 
-      if (paymentType === 'CASH') {
+      if (paymentType === PaymentType.CASH) {
         journalEntries.push({
           accountId: cashAccount.accountId,
           debit: total,
           credit: new Decimal(0),
         });
-      } else if (paymentType === 'CREDIT') {
+      } else if (paymentType === PaymentType.CREDIT) {
         journalEntries.push({
           accountId: receivableAccount.accountId,
           debit: total,
           credit: new Decimal(0),
         });
-      } else if (paymentType === 'MIXED') {
+      } else if (paymentType === PaymentType.MIXED) {
         journalEntries.push(
           {
             accountId: cashAccount.accountId,
@@ -391,7 +392,8 @@ export class SaleService {
         );
 
         if (
-          (paymentType === 'CREDIT' || paymentType === 'MIXED') &&
+          (paymentType === PaymentType.CREDIT ||
+            paymentType === PaymentType.MIXED) &&
           je.accountId === receivableAccount.accountId
         ) {
           receivableJournalEntryId = createdJE.journalEntryId;
@@ -403,9 +405,12 @@ export class SaleService {
           : PaymentStatus.PARTIAL;
 
       // Buat receivable
-      if (paymentType === 'CREDIT' || paymentType === 'MIXED') {
+      if (
+        paymentType === PaymentType.CREDIT ||
+        paymentType === PaymentType.MIXED
+      ) {
         const receivableAmount =
-          paymentType === 'CREDIT' ? total : total.minus(cash!);
+          paymentType === PaymentType.CREDIT ? total : total.minus(cash!);
 
         if (!receivableJournalEntryId)
           throw new ResponseError(400, 'Receivable journal entry id not found');
@@ -708,15 +713,14 @@ export class SaleService {
     });
   }
 
-  async updateSale(
-    { body }: { body: UpdateSaleRequest },
-    saleId: string
-  ): Promise<Sale> {
-    const saleReq = validate(updateSaleSchema, body);
+  async updateSale(body: SaleRequest, saleId: string): Promise<Sale> {
+    const saleReq = validate(saleSchema, body);
     const {
       date,
       customerId,
       invoiceNumber,
+      vatRateId,
+      items,
       paymentType,
       cashAmount,
       dueDate,
@@ -727,14 +731,27 @@ export class SaleService {
       const setting =
         await generalsettingService.getSettingInventory(prismaTransaction);
 
+      // Validasi tarif VAT
+      const vatSetting = await vatService.getVatSetting(
+        vatRateId,
+        prismaTransaction,
+        new Date(date)
+      );
+
       // Validasi customer
       await customerService.getCustomer(customerId, prismaTransaction);
 
       // Ambil akun default
       const accountDefault =
         await accountService.getAccountDefault(prismaTransaction);
-
-      let { cashAccount, receivableAccount } = accountDefault;
+      let {
+        cashAccount,
+        receivableAccount,
+        inventoryAccount,
+        salesAccount,
+        vatOutputAccount,
+        costOfGoodsSoldAccount,
+      } = accountDefault;
 
       // Ambil data penjualan existing beserta relasinya
       const existingSale = await this.getSale(saleId, prismaTransaction);
@@ -743,7 +760,6 @@ export class SaleService {
         journalId,
         paymentType: oldPaymentType,
         invoiceNumber: oldInvoiceNumber,
-        total,
         receivable,
         journal,
         saleDetails,
@@ -754,26 +770,197 @@ export class SaleService {
         await this.ensureInvoiceNumberUnique(invoiceNumber, prismaTransaction);
       }
 
+      // Reverse efek akun lama berdasarkan journal entries
+      for (const entry of journal.journalEntries) {
+        const account = await accountRepository.findById(
+          entry.accountId,
+          prismaTransaction
+        );
+        if (!account) {
+          throw new ResponseError(
+            404,
+            `Account with ID ${entry.accountId} not found`
+          );
+        }
+
+        let balanceAdjustment = new Decimal(0);
+        if (account.normalBalance === EntryType.DEBIT) {
+          balanceAdjustment = new Decimal(0)
+            .minus(entry.debit)
+            .plus(entry.credit);
+        } else if (account.normalBalance === EntryType.CREDIT) {
+          balanceAdjustment = new Decimal(0)
+            .plus(entry.debit)
+            .minus(entry.credit);
+        }
+        const currentBalance = account.balance ?? new Decimal(0);
+        const newBalance = currentBalance.plus(balanceAdjustment);
+
+        await accountRepository.updateAccountTransaction(
+          { accountCode: account.accountCode, balance: newBalance },
+          prismaTransaction
+        );
+      }
+
+      // Kembalikan stok lama dari saleDetails
       for (const detail of saleDetails) {
+        await productService.getProduct(detail.productId, prismaTransaction);
+
+        await productRepository.incrementStock(
+          detail.productId,
+          detail.quantity,
+          prismaTransaction
+        );
+
+        if (detail.batchId) {
+          await inventoryBatchRepository.incrementBatchStock(
+            detail.batchId,
+            detail.quantity,
+            prismaTransaction
+          );
+        }
+      }
+
+      // Hapus saleDetails lama
+      await saleDetailRepository.deleteBySaleId(saleId, prismaTransaction);
+
+      // Hapus receivable lama (jika ada) untuk menghindari foreign key constraint
+      if (existingSale.receivable) {
+        console.log(`Deleting existing receivable for saleId: ${saleId}`);
+        await receivableRepository.deleteReceivable(
+          existingSale.receivable.receivableId,
+          prismaTransaction
+        );
+      }
+
+      // Hapus journal entries lama
+      await journalEntryRepository.deleteByJournalId(
+        journalId,
+        prismaTransaction
+      );
+
+      // Hitung ulang subtotal, COGS, VAT, dan total berdasarkan items baru
+      let subtotal = new Decimal(0);
+      let cogs = new Decimal(0);
+      const saleDetailsData: SaleDetailForm[] = [];
+
+      for (const item of items) {
+        // ambil product
+        const product = await productService.getProduct(
+          item.productId,
+          prismaTransaction
+        );
+
+        // Validasi stok
+        if (product.stock < item.quantity) {
+          throw new ResponseError(
+            400,
+            `Insufficient stock for product ${product.productName}, only ${product.stock} available`
+          );
+        }
+
+        const unitPrice = product.sellingPrice;
+        let itemCogs = new Decimal(0);
+        const batchAssignments: {
+          batchId: string;
+          quantity: number;
+          purchasePrice: Decimal;
+        }[] = [];
+
         // Ambil batch sesuai metode (AVG, FIFO, LIFO)
         const batches = await inventoryBatchRepository.findBatchesForProduct(
-          detail.productId,
+          item.productId,
           setting.inventoryMethod,
           prismaTransaction
         );
 
-        // ✅ Validasi tanggal batch vs tanggal penjualan
+        const totalAvailable = batches.reduce(
+          (sum, b) => sum + b.remainingStock,
+          0
+        );
+
+        if (totalAvailable < item.quantity) {
+          throw new ResponseError(
+            400,
+            `Insufficient stock for product ${product.productName}, only ${totalAvailable} available`
+          );
+        }
+
+        // Validasi tanggal batch
         await this.validateBatchDates(
           batches,
           new Date(date),
-          detail.productId,
-          detail.quantity
+          item.productId,
+          item.quantity
         );
+
+        let remainingToDeduct = item.quantity;
+        for (const batch of batches) {
+          if (remainingToDeduct <= 0) break;
+
+          if (batch.purchaseDate > new Date(date)) {
+            continue;
+          }
+
+          const deduct = Math.min(batch.remainingStock, remainingToDeduct);
+
+          await inventoryBatchRepository.decrementBatchStock(
+            batch.batchId,
+            deduct,
+            prismaTransaction
+          );
+
+          batchAssignments.push({
+            batchId: batch.batchId,
+            quantity: deduct,
+            purchasePrice: new Decimal(batch.purchasePrice),
+          });
+
+          itemCogs = itemCogs.plus(
+            new Decimal(deduct).times(batch.purchasePrice)
+          );
+          remainingToDeduct -= deduct;
+        }
+
+        if (remainingToDeduct > 0) {
+          throw new ResponseError(
+            400,
+            `Unable to fulfill quantity for product ${product.productName}`
+          );
+        }
+
+        cogs = cogs.plus(itemCogs);
+
+        await productRepository.decrementStock(
+          item.productId,
+          item.quantity,
+          prismaTransaction
+        );
+
+        const itemSubtotal = new Decimal(item.quantity).times(unitPrice);
+        subtotal = subtotal.plus(itemSubtotal);
+
+        batchAssignments.forEach((a) => {
+          saleDetailsData.push({
+            saleId,
+            productId: item.productId,
+            batchId: a.batchId,
+            quantity: a.quantity,
+            unitPrice,
+            subtotal: new Decimal(a.quantity).times(unitPrice),
+          });
+        });
       }
 
-      // Validasi cash amount untuk MIXED payment
+      // Hitung pajak dan total
+      const vat = subtotal.times(vatSetting.vatRate).div(100);
+      const total = subtotal.plus(vat);
+
+      // Validasi cash amount
       let cash: Decimal | null = null;
-      if (paymentType === PaymentType.MIXED) {
+      if (paymentType === PaymentType.CASH) {
+        cash = total;
+      } else if (paymentType === PaymentType.MIXED) {
         cash = new Decimal(cashAmount!);
         if (cash.gte(total)) {
           throw new ResponseError(
@@ -783,7 +970,7 @@ export class SaleService {
         }
       }
 
-      // Validasi payment type dan receivable
+      // Validasi receivable untuk modifikasi
       await this.validateReceivableForModification(
         oldPaymentType,
         receivable,
@@ -799,272 +986,205 @@ export class SaleService {
           customerId,
           invoiceNumber,
           paymentType,
+          subtotal,
+          vat,
+          total,
         },
         prismaTransaction
       );
+
+      // Buat sale details baru
+      for (const detail of saleDetailsData) {
+        await saleDetailRepository.createSaleDetail(detail, prismaTransaction);
+      }
 
       // Update header jurnal
       await journalRepository.updateJournalTransaction(
         {
           journalId: journalId,
           date: new Date(date),
-          description: `Penjualan ${paymentType.toLowerCase()} ${invoiceNumber}`,
+          description: `Penjualan ${paymentType.toLowerCase()} ${invoiceNumber} (diperbarui ${new Date().toISOString().split('T')[0]})`,
           reference: invoiceNumber,
         },
         prismaTransaction
       );
 
-      // Update Receivable
+      // Buat journal entries baru
       let receivableJournalEntryId: string | null = null;
+      const journalEntries: JournalEntryForm[] = [
+        {
+          journalId: journalId,
+          accountId: salesAccount.accountId,
+          debit: new Decimal(0),
+          credit: subtotal,
+        },
+        {
+          journalId: journalId,
+          accountId: vatOutputAccount.accountId,
+          debit: new Decimal(0),
+          credit: vat,
+        },
+        {
+          journalId: journalId,
+          accountId: costOfGoodsSoldAccount.accountId,
+          debit: cogs,
+          credit: new Decimal(0),
+        },
+        {
+          journalId: journalId,
+          accountId: inventoryAccount.accountId,
+          debit: new Decimal(0),
+          credit: cogs,
+        },
+      ];
+
+      if (paymentType === PaymentType.CASH) {
+        journalEntries.push({
+          journalId: journalId,
+          accountId: cashAccount.accountId,
+          debit: total,
+          credit: new Decimal(0),
+        });
+      } else if (paymentType === PaymentType.CREDIT) {
+        journalEntries.push({
+          journalId: journalId,
+          accountId: receivableAccount.accountId,
+          debit: total,
+          credit: new Decimal(0),
+        });
+      } else if (paymentType === PaymentType.MIXED) {
+        const cashValue = new Decimal(cashAmount!);
+        journalEntries.push(
+          {
+            journalId: journalId,
+            accountId: cashAccount.accountId,
+            debit: cashValue,
+            credit: new Decimal(0),
+          },
+          {
+            journalId: journalId,
+            accountId: receivableAccount.accountId,
+            debit: total.minus(cashValue),
+            credit: new Decimal(0),
+          }
+        );
+      }
+
+      for (const je of journalEntries) {
+        const createdJE = await journalEntryRepository.createJournalEntries(
+          {
+            journalId: je.journalId,
+            accountId: je.accountId,
+            debit: je.debit,
+            credit: je.credit,
+          },
+          prismaTransaction
+        );
+
+        if (
+          (paymentType === PaymentType.CREDIT ||
+            paymentType === PaymentType.MIXED) &&
+          je.accountId === receivableAccount.accountId
+        ) {
+          receivableJournalEntryId = createdJE.journalEntryId;
+        }
+      }
+
+      // Buat receivable baru jika diperlukan
       if (
         paymentType === PaymentType.CREDIT ||
         paymentType === PaymentType.MIXED
       ) {
         const receivableAmount =
           paymentType === PaymentType.CREDIT
-            ? new Decimal(total)
-            : new Decimal(total).minus(cashAmount!);
-
+            ? total
+            : total.minus(new Decimal(cashAmount!));
         const status =
           paymentType === PaymentType.CREDIT
             ? PaymentStatus.UNPAID
             : PaymentStatus.PARTIAL;
 
-        if (receivable) {
-          // journal entry yang sudah ada
-          await journalEntryRepository.updateJournalEntryAmounts(
-            {
-              journalEntryId: receivable.journalEntryId,
-              debit: receivableAmount,
-              credit: new Decimal(0),
-            },
-            prismaTransaction
-          );
-          receivableJournalEntryId = receivable.journalEntryId;
-
-          // perbarui data receivable
-          await receivableRepository.updateByReceivableId(
-            {
-              receivableId: receivable.receivableId,
-              customerId,
-              amount: receivableAmount,
-              dueDate: new Date(dueDate!),
-              status,
-            },
-            prismaTransaction
-          );
-        } else {
-          // Buat receivable baru jika sebelumnya tidak ada
-          const journalEntry =
-            await journalEntryRepository.createJournalEntries(
-              {
-                journalId: journalId,
-                accountId: receivableAccount.accountId,
-                debit: receivableAmount,
-                credit: new Decimal(0),
-              },
-              prismaTransaction
-            );
-          receivableJournalEntryId = journalEntry.journalEntryId;
-
-          // buat receivable baru
-          await receivableRepository.createReceivable(
-            {
-              journalEntryId: receivableJournalEntryId,
-              customerId,
-              saleId,
-              amount: receivableAmount,
-              remainingAmount: receivableAmount,
-              dueDate: new Date(dueDate!),
-              status,
-            },
-            prismaTransaction
-          );
+        if (!receivableJournalEntryId) {
+          throw new ResponseError(400, 'Receivable journal entry ID not found');
         }
-      } else if (paymentType === PaymentType.CASH && receivable) {
-        // Hapus receivable jika beralih ke CASH
-        await receivableRepository.deleteReceivable(
-          receivable.receivableId,
-          prismaTransaction
-        );
 
-        await journalEntryRepository.deleteJournalEntriesByIds(
-          [receivable.journalEntryId],
+        await receivableRepository.createReceivable(
+          {
+            journalEntryId: receivableJournalEntryId,
+            customerId,
+            saleId,
+            amount: receivableAmount,
+            remainingAmount: receivableAmount,
+            dueDate: new Date(dueDate || date),
+            status,
+          },
           prismaTransaction
         );
       }
 
-      // Update Journal Entries untuk pembayaran
-      if (oldPaymentType !== paymentType) {
-        // Hapus journal entries lama terkait pembayaran (kas atau receivable)
-        const paymentEntries = journal.journalEntries.filter(
-          (entry) =>
-            entry.accountId === cashAccount.accountId ||
-            (entry.accountId === receivableAccount.accountId &&
-              entry.journalEntryId !== receivableJournalEntryId)
-        );
-        const paymentEntryIds = paymentEntries.map((e) => e.journalEntryId);
+      // Ambil akun default lagi untuk saldo terbaru
+      const updatedAccountDefault =
+        await accountService.getAccountDefault(prismaTransaction);
+      const {
+        cashAccount: updatedCashAccount,
+        receivableAccount: updatedReceivableAccount,
+        inventoryAccount: updatedInventoryAccount,
+        salesAccount: updatedSalesAccount,
+        vatOutputAccount: updatedVatOutputAccount,
+        costOfGoodsSoldAccount: updatedCostOfGoodsSoldAccount,
+      } = updatedAccountDefault;
 
-        await journalEntryRepository.deleteJournalEntriesByIds(
-          paymentEntryIds,
-          prismaTransaction
-        );
+      // Update saldo akun
+      const accountUpdates = [
+        {
+          accountCode: updatedInventoryAccount.accountCode,
+          balance: updatedInventoryAccount.balance.minus(cogs),
+        },
+        {
+          accountCode: updatedCostOfGoodsSoldAccount.accountCode,
+          balance: updatedCostOfGoodsSoldAccount.balance.plus(cogs),
+        },
+        {
+          accountCode: updatedSalesAccount.accountCode,
+          balance: updatedSalesAccount.balance.plus(subtotal),
+        },
+        {
+          accountCode: updatedVatOutputAccount.accountCode,
+          balance: updatedVatOutputAccount.balance.plus(vat),
+        },
+      ];
 
-        // Buat journal entries baru sesuai tipe pembayaran
-        if (paymentType === PaymentType.CASH) {
-          await journalEntryRepository.createJournalEntries(
-            {
-              journalId: journal.journalId,
-              accountId: cashAccount.accountId,
-              debit: new Decimal(total),
-              credit: new Decimal(0),
-            },
-            prismaTransaction
-          );
-        } else if (paymentType === PaymentType.MIXED) {
-          await journalEntryRepository.createJournalEntries(
-            {
-              journalId: journal.journalId,
-              accountId: cashAccount.accountId,
-              debit: cashAmount!,
-              credit: new Decimal(0),
-            },
-            prismaTransaction
-          );
-        }
+      if (paymentType === PaymentType.CASH) {
+        accountUpdates.push({
+          accountCode: updatedCashAccount.accountCode,
+          balance: updatedCashAccount.balance.plus(total),
+        });
+      } else if (paymentType === PaymentType.CREDIT) {
+        accountUpdates.push({
+          accountCode: updatedReceivableAccount.accountCode,
+          balance: updatedReceivableAccount.balance.plus(total),
+        });
+      } else if (paymentType === PaymentType.MIXED) {
+        const cashValue = new Decimal(cashAmount!);
+        accountUpdates.push(
+          {
+            accountCode: updatedCashAccount.accountCode,
+            balance: updatedCashAccount.balance.plus(cashValue),
+          },
+          {
+            accountCode: updatedReceivableAccount.accountCode,
+            balance: updatedReceivableAccount.balance.plus(
+              total.minus(cashValue)
+            ),
+          }
+        );
       }
 
-      // Update Saldo Akun
-      if (oldPaymentType !== paymentType) {
-        let oldReceivableAmount = new Decimal(0);
-
-        // Batalkan saldo lama
-        if (oldPaymentType === PaymentType.CASH) {
-          const updatedCashAccount =
-            await accountRepository.updateAccountTransaction(
-              {
-                accountCode: cashAccount.accountCode,
-                balance: cashAccount.balance.minus(total),
-              },
-              prismaTransaction
-            );
-
-          cashAccount = { ...cashAccount, balance: updatedCashAccount.balance };
-        } else if (oldPaymentType === PaymentType.CREDIT) {
-          oldReceivableAmount = total;
-          const updatedReceivableAccount =
-            await accountRepository.updateAccountTransaction(
-              {
-                accountCode: receivableAccount.accountCode,
-                balance: receivableAccount.balance.minus(total),
-              },
-              prismaTransaction
-            );
-
-          receivableAccount = {
-            ...receivableAccount,
-            balance: updatedReceivableAccount.balance,
-          };
-        } else if (oldPaymentType === PaymentType.MIXED) {
-          const oldCashEntry = journal.journalEntries.find(
-            (e) => e.accountId === cashAccount.accountId
-          );
-          const oldCashAmount = oldCashEntry
-            ? new Decimal(oldCashEntry.debit)
-            : new Decimal(0);
-          oldReceivableAmount = new Decimal(total).minus(oldCashAmount);
-
-          const updatedCashAccount =
-            await accountRepository.updateAccountTransaction(
-              {
-                accountCode: cashAccount.accountCode,
-                balance: cashAccount.balance.minus(oldCashAmount),
-              },
-              prismaTransaction
-            );
-
-          cashAccount = { ...cashAccount, balance: updatedCashAccount.balance };
-
-          const updatedReceivableAccount =
-            await accountRepository.updateAccountTransaction(
-              {
-                accountCode: receivableAccount.accountCode,
-                balance: receivableAccount.balance.minus(oldReceivableAmount),
-              },
-              prismaTransaction
-            );
-
-          receivableAccount = {
-            ...receivableAccount,
-            balance: updatedReceivableAccount.balance,
-          };
-        }
-
-        // Terapkan saldo baru
-        if (paymentType === PaymentType.CASH) {
-          const updatedCashAccount =
-            await accountRepository.updateAccountTransaction(
-              {
-                accountCode: cashAccount.accountCode,
-                balance: cashAccount.balance.plus(total),
-              },
-              prismaTransaction
-            );
-
-          cashAccount = { ...cashAccount, balance: updatedCashAccount.balance };
-        } else if (paymentType === PaymentType.CREDIT) {
-          const updatedReceivableAccount =
-            await accountRepository.updateAccountTransaction(
-              {
-                accountCode: receivableAccount.accountCode,
-                balance: receivableAccount.balance.plus(total),
-              },
-              prismaTransaction
-            );
-
-          receivableAccount = {
-            ...receivableAccount,
-            balance: updatedReceivableAccount.balance,
-          };
-        } else if (paymentType === PaymentType.MIXED) {
-          const newReceivableAmount = new Decimal(total).minus(cashAmount!);
-
-          const updatedCashAccount =
-            await accountRepository.updateAccountTransaction(
-              {
-                accountCode: cashAccount.accountCode,
-                balance: cashAccount.balance.plus(cashAmount!),
-              },
-              prismaTransaction
-            );
-
-          const updatedReceivableAccount =
-            await accountRepository.updateAccountTransaction(
-              {
-                accountCode: receivableAccount.accountCode,
-                balance: receivableAccount.balance.plus(newReceivableAmount),
-              },
-              prismaTransaction
-            );
-
-          cashAccount = { ...cashAccount, balance: updatedCashAccount.balance };
-
-          receivableAccount = {
-            ...receivableAccount,
-            balance: updatedReceivableAccount.balance,
-          };
-        }
-
-        // Validasi saldo Receivable
-        const totalReceivables =
-          await receivableRepository.getTotalReceivables(prismaTransaction);
-        const expectedReceivableBalance = new Decimal(totalReceivables || 0);
-        if (!receivableAccount.balance.equals(expectedReceivableBalance)) {
-          throw new ResponseError(
-            400,
-            `Accounts Receivable balance mismatch: expected ${expectedReceivableBalance.toString()}, but got ${receivableAccount.balance.toString()}`
-          );
-        }
+      for (const update of accountUpdates) {
+        await accountRepository.updateAccountTransaction(
+          update,
+          prismaTransaction
+        );
       }
 
       return sale;

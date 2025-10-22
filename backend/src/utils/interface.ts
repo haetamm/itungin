@@ -155,10 +155,13 @@ export interface PurchaseForm {
 
 export interface UpdatePurchaseForm {
   purchaseId: string;
-  date: string | Date;
+  date: Date;
   supplierId: string;
-  invoiceNumber: string;
   paymentType: PaymentType;
+  invoiceNumber: string;
+  subtotal: Decimal;
+  vat: Decimal;
+  total: Decimal;
 }
 
 export interface UpdatePurchaseTotal {
@@ -206,7 +209,9 @@ export interface UpdatePayableForm {
   supplierId: string;
   dueDate: Date;
   amount: Decimal;
+  remainingAmount: Decimal;
   status: PaymentStatus;
+  journalEntryId: string;
 }
 
 export interface RecordPayablePaymentForm {
@@ -291,15 +296,6 @@ export interface PurchaseRequest {
   dueDate?: string; // opsional, wajib jika CREDIT atau MIXED
 }
 
-export interface UpdatePurchaseRequest {
-  date: string;
-  supplierId: string;
-  invoiceNumber: string;
-  paymentType: PaymentType; // CASH | CREDIT | MIXED
-  cashAmount?: Decimal; // opsional
-  dueDate?: string; // opsional, wajib jika CREDIT atau MIXED
-}
-
 export interface UpdatePurchaseDetail {
   purchaseId: string;
   vatRateId: string;
@@ -330,29 +326,15 @@ export interface SaleRequest {
   dueDate?: string;
 }
 
-export interface UpdateSaleRequest {
-  date: string;
-  customerId: string;
-  invoiceNumber: string;
-  paymentType: PaymentType; // CASH | CREDIT | MIXED
-  cashAmount?: Decimal; // opsional
-  dueDate?: string; // opsional, wajib jika CREDIT atau MIXED
-}
-
 export interface UpdateSaleForm {
   saleId: string;
   date: string | Date;
   customerId: string;
   invoiceNumber: string;
   paymentType: PaymentType;
-}
-
-export interface UpdateReceivableForm {
-  receivableId: string;
-  customerId: string;
-  dueDate: Date;
-  amount: Decimal;
-  status: PaymentStatus;
+  subtotal: Decimal;
+  vat: Decimal;
+  total: Decimal;
 }
 
 export interface UpdateSaleDetail {

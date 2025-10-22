@@ -211,7 +211,7 @@ model Product {
 model InventoryBatch {
   batchId          String         @id @default(uuid()) @map("batch_id")
   productId        String         @map("product_id")
-  purchaseDetailId String         @map("purchase_detail_id")
+  purchaseDetailId String         @unique @map("purchase_detail_id")
   purchaseDate     DateTime       @db.Date @map("purchase_date")
   quantity         Int
   purchasePrice    Decimal        @db.Decimal(15, 2) @map("purchase_price")

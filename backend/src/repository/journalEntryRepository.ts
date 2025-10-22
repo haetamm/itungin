@@ -69,18 +69,6 @@ export class JournalEntryRepository {
     });
   }
 
-  async deleteJournalEntriesByIds(
-    journalEntryIds: string[],
-    prismaTransaction: Prisma.TransactionClient
-  ): Promise<void> {
-    if (journalEntryIds.length === 0) return; // amankan jika array kosong
-    await prismaTransaction.journalEntry.deleteMany({
-      where: {
-        journalEntryId: { in: journalEntryIds },
-      },
-    });
-  }
-
   async deleteByJournalId(
     journalId: string,
     prismaTransaction: Prisma.TransactionClient

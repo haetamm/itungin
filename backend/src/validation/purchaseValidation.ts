@@ -1,5 +1,5 @@
 import { ObjectSchema } from 'joi';
-import { PurchaseRequest, UpdatePurchaseRequest } from '../utils/interface';
+import { PurchaseRequest } from '../utils/interface';
 
 const Joi = require('joi');
 
@@ -77,39 +77,3 @@ export const purchaseSchema: ObjectSchema<PurchaseRequest> = Joi.object({
     otherwise: Joi.forbidden(),
   }),
 });
-
-export const updatePurchaseSchema: ObjectSchema<UpdatePurchaseRequest> =
-  Joi.object({
-    date,
-    supplierId,
-    invoiceNumber,
-    paymentType: Joi.string().valid('CASH', 'CREDIT', 'MIXED').required(),
-    // cashAmount hanya wajib kalau MIXED
-    cashAmount: Joi.when('paymentType', {
-      is: 'MIXED',
-      then: Joi.number().positive().required(),
-      otherwise: Joi.forbidden(),
-    }),
-
-    dueDate: Joi.when('paymentType', {
-      is: Joi.valid('CREDIT', 'MIXED'),
-      then: Joi.date()
-        .iso()
-        .required()
-        .custom((value: any, helpers: import('joi').CustomHelpers) => {
-          const { date } = helpers.state.ancestors[0];
-          if (!date) return value;
-          const purchaseDate = new Date(date);
-          const dueDate = new Date(value);
-          // Add 1 day to purchaseDate
-          purchaseDate.setDate(purchaseDate.getDate() + 1);
-          if (dueDate < purchaseDate) {
-            return helpers.error('date.min', {
-              limit: purchaseDate.toISOString(),
-            });
-          }
-          return value;
-        }, 'Due date must be at least one day after sale date'),
-      otherwise: Joi.forbidden(),
-    }),
-  });

@@ -3,9 +3,7 @@ import {
   PaginatedReceivablesResult,
   ReceivableForm,
   RecordReceivablePaymentForm,
-  UpdateReceivableForm,
 } from '../utils/interface';
-import { Decimal } from '@prisma/client/runtime/library';
 import { prismaClient } from '../application/database';
 import { paginate } from '../utils/pagination';
 
@@ -163,44 +161,6 @@ export class ReceivableRepository {
   ): Promise<void> {
     await prismaTransaction.receivable.delete({
       where: { receivableId },
-    });
-  }
-
-  async updateByReceivableId(
-    data: UpdateReceivableForm,
-    prismaTransaction: Prisma.TransactionClient
-  ): Promise<Receivable> {
-    return prismaTransaction.receivable.update({
-      where: { receivableId: data.receivableId },
-      data: {
-        receivableId: data.receivableId,
-        customerId: data.customerId,
-        dueDate: data.dueDate,
-        status: data.status as PaymentStatus,
-        amount: data.amount,
-      },
-    });
-  }
-
-  async getTotalReceivables(
-    prismaTransaction: Prisma.TransactionClient
-  ): Promise<Decimal> {
-    const result = await prismaTransaction.receivable.aggregate({
-      _sum: { amount: true },
-    });
-    return new Decimal(result._sum.amount || 0);
-  }
-
-  async deleteByJournalEntryId(
-    journalId: string,
-    prismaTransaction: Prisma.TransactionClient
-  ): Promise<void> {
-    await prismaTransaction.receivable.deleteMany({
-      where: {
-        journalEntry: {
-          journalId,
-        },
-      },
     });
   }
 

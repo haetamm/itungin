@@ -57,7 +57,8 @@ class SaleController implements IController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const result = await saleService.createSales(req);
+      const { body } = req;
+      const result = await saleService.createSales(body);
       const response = new ResponseSuccess(201, result);
       res.status(201).json(response);
     } catch (e) {
@@ -87,7 +88,8 @@ class SaleController implements IController {
   ): Promise<void> {
     try {
       const { id } = req.params;
-      const result = await saleService.updateSale(req, id);
+      const { body } = req;
+      const result = await saleService.updateSale(body, id);
       const response = new ResponseSuccess(200, result);
       res.status(200).json(response);
     } catch (e) {
