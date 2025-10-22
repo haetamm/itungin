@@ -1,4 +1,5 @@
-import { Payment, PaymentStatus, Prisma } from '@prisma/client';
+import { updateReceivablePaymentSchema } from './../validation/receivablePaymentValidation';
+import { PaymentStatus, Prisma, ReceivablePayment } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import { prismaClient } from '../application/database';
 import { ResponseError } from '../entities/responseError';
@@ -7,30 +8,27 @@ import { journalEntryRepository } from '../repository/journalEntryRepository';
 import { validate } from '../validation/validation';
 import { accountService } from './accountService';
 import {
-  PaymentPayableRequest,
+  ReceivablePaymentRequest,
   UpdatePaymentPayableRequest,
 } from '../utils/interface';
-import {
-  paymentPayableSchema,
-  updatePaymentPayableSchema,
-} from '../validation/paymentValidation';
-import { payableService } from './payableService';
 import { journalRepository } from '../repository/journalRepository';
-import { payableRepository } from '../repository/payableRepository';
-import { payablePaymentRepository } from '../repository/payablePaymentRepository';
+import { receivablePaymentRepository } from '../repository/receivablePaymentRepository';
+import { receivablePaymentSchema } from '../validation/receivablePaymentValidation';
+import { receivableService } from './receivableService';
+import { receivableRepository } from '../repository/receivableRepository';
 
-export class PayablePaymentService {
+export class ReceivablePaymentService {
   private async validatePaymentDate(
     paymentDate: Date | string,
-    purchaseDate: Date | string
+    saleDate: Date | string
   ) {
     const paymentDt = new Date(paymentDate);
-    const purchaseDt = new Date(purchaseDate);
+    const saleDt = new Date(saleDate);
 
-    if (paymentDt < purchaseDt) {
+    if (paymentDt < saleDt) {
       throw new ResponseError(
         400,
-        `Payment date (${paymentDt.toISOString().split('T')[0]}) cannot be earlier than purchase date (${purchaseDt.toISOString().split('T')[0]}).`
+        `Payment date (${paymentDt.toISOString().split('T')[0]}) cannot be earlier than sale date (${saleDt.toISOString().split('T')[0]}).`
       );
     }
 
@@ -41,7 +39,7 @@ export class PayablePaymentService {
     paymentId: string,
     prismaTransaction: Prisma.TransactionClient
   ) {
-    const payment = await payablePaymentRepository.getPaymentById(
+    const payment = await receivablePaymentRepository.getPaymentById(
       paymentId,
       prismaTransaction
     );
@@ -49,57 +47,55 @@ export class PayablePaymentService {
     return payment;
   }
 
-  async getPayablePaymentDetail(paymentId: string) {
-    const payment = await payablePaymentRepository.getPaymentDetail(paymentId);
+  async getReceivablePaymentDetail(paymentId: string) {
+    const payment =
+      await receivablePaymentRepository.getPaymentDetail(paymentId);
     if (!payment) throw new ResponseError(404, 'Payment not found');
     return payment;
   }
 
-  async createPayablePayment({
+  async createReceivablePayment({
     body,
   }: {
-    body: PaymentPayableRequest;
-  }): Promise<Payment> {
-    const paymentReq = validate(paymentPayableSchema, body);
-    const { payableId, amount, paymentDate, method } = paymentReq;
+    body: ReceivablePaymentRequest;
+  }): Promise<ReceivablePayment> {
+    const paymentReq = validate(receivablePaymentSchema, body);
+    const { receivableId, amount, paymentDate, method } = paymentReq;
 
     return await prismaClient.$transaction(async (prismaTransaction) => {
       // ambil hutang
-      const payable = await payableService.getPayable(
-        payableId,
+      const receivable = await receivableService.getReceivable(
+        receivableId,
         prismaTransaction
       );
 
-      const { purchase, supplier, dueDate } = payable;
-      if (!purchase) {
+      const { sale, customer, dueDate } = receivable;
+      if (!sale) {
         throw new ResponseError(
           400,
-          'Payable does not have an associated purchase'
+          'Receivable does not have an associated sale'
         );
       }
 
-      // Validasi: paymentDate tidak boleh lebih awal dari tanggal purchase
-      const paymentDt = await this.validatePaymentDate(
-        paymentDate,
-        purchase.date
-      );
+      // Validasi: paymentDate tidak boleh lebih awal dari tanggal sale
+      const paymentDt = await this.validatePaymentDate(paymentDate, sale.date);
 
       // Cek jika pembayaran dilakukan lewat jatuh tempo
       const isLatePayment = paymentDt > dueDate;
 
       // validasi payment amount
       const paymentAmount = new Decimal(amount);
-      if (paymentAmount.gt(payable.remainingAmount)) {
+      if (paymentAmount.gt(receivable.remainingAmount)) {
         throw new ResponseError(
           400,
-          'Payment amount exceeds remaining payable'
+          'Payment amount exceeds remaining receivable'
         );
       }
 
       // ambil akun default
       const accountDefault =
         await accountService.getAccountDefault(prismaTransaction);
-      const { cashAccount, payableAccount } = accountDefault;
+      const { cashAccount, receivableAccount } = accountDefault;
 
       // valid saldo cash
       if (
@@ -113,10 +109,10 @@ export class PayablePaymentService {
       const journal = await journalRepository.createJournal(
         {
           date: new Date(paymentDate),
-          description: `Pembayaran utang pembelian kepada ${supplier.supplierName} (No. Invoice: ${purchase.invoiceNumber})${
+          description: `Pembayaran piutang penjualan dari ${customer.customerName} (No. Invoice: ${sale.invoiceNumber})${
             isLatePayment ? ' [TERLAMBAT]' : ''
           }`,
-          reference: `PAY-${payableId}`,
+          reference: `REC-${receivable}`,
         },
         prismaTransaction
       );
@@ -125,15 +121,15 @@ export class PayablePaymentService {
       const journalEntries = [
         {
           journalId: journal.journalId,
-          accountId: payableAccount.accountId,
-          debit: paymentAmount,
-          credit: new Decimal(0),
+          accountId: receivableAccount.accountId,
+          debit: new Decimal(0),
+          credit: paymentAmount,
         },
         {
           journalId: journal.journalId,
           accountId: cashAccount.accountId,
-          debit: new Decimal(0),
           credit: paymentAmount,
+          debit: new Decimal(0),
         },
       ];
 
@@ -153,10 +149,10 @@ export class PayablePaymentService {
         throw new ResponseError(400, 'Failed to find cash journal entry');
       }
 
-      // Buat payment
-      const payment = await payablePaymentRepository.createPayment(
+      // Create payment record
+      const payment = await receivablePaymentRepository.createPayment(
         {
-          payableId,
+          receivableId,
           journalEntryId: cashJournalEntry.journalEntryId,
           paymentAmount,
           paymentDate: new Date(paymentDate),
@@ -165,16 +161,16 @@ export class PayablePaymentService {
         prismaTransaction
       );
 
-      // Update payable
-      const newPaidAmount = payable.paidAmount.plus(paymentAmount);
-      const newRemainingAmount = payable.amount.minus(newPaidAmount);
+      // Update receivable
+      const newPaidAmount = receivable.paidAmount.plus(paymentAmount);
+      const newRemainingAmount = receivable.amount.minus(newPaidAmount);
       const newStatus = newRemainingAmount.eq(0)
         ? PaymentStatus.PAID
         : PaymentStatus.PARTIAL;
 
-      await payableRepository.recordPayablePayment(
+      await receivableRepository.recordReceivablePayment(
         {
-          payableId,
+          receivableId,
           paidAmount: newPaidAmount,
           remainingAmount: newRemainingAmount,
           status: newStatus,
@@ -185,8 +181,8 @@ export class PayablePaymentService {
       // Update account balances
       await accountRepository.updateAccountTransaction(
         {
-          accountCode: payableAccount.accountCode,
-          balance: payableAccount.balance.minus(paymentAmount),
+          accountCode: receivableAccount.accountCode,
+          balance: receivableAccount.balance.minus(paymentAmount),
         },
         prismaTransaction
       );
@@ -194,7 +190,7 @@ export class PayablePaymentService {
       await accountRepository.updateAccountTransaction(
         {
           accountCode: cashAccount.accountCode,
-          balance: cashAccount.balance.minus(paymentAmount),
+          balance: cashAccount.balance.plus(paymentAmount),
         },
         prismaTransaction
       );
@@ -203,60 +199,58 @@ export class PayablePaymentService {
     });
   }
 
-  async updatePayablePayment(
+  async updateReceivablePayment(
     paymentId: string,
     body: UpdatePaymentPayableRequest
-  ): Promise<Payment> {
-    const paymentReq = validate(updatePaymentPayableSchema, body);
+  ): Promise<ReceivablePayment> {
+    const paymentReq = validate(updateReceivablePaymentSchema, body);
     const { amount, paymentDate, method } = paymentReq;
 
     return await prismaClient.$transaction(async (prismaTransaction) => {
-      // Ambil data payment lama
+      // Ambil payment lama
       const existingPayment = await this.getPayment(
         paymentId,
         prismaTransaction
       );
-      const { amount: oldPaymentAmount, payableId } = existingPayment;
 
-      // Ambil payable
-      const payable = await payableService.getPayable(
-        payableId,
+      const { amount: oldPaymentAmount, receivableId } = existingPayment;
+      const newPaymentAmount = new Decimal(amount);
+
+      // Ambil receivable
+      const receivable = await receivableService.getReceivable(
+        receivableId,
         prismaTransaction
       );
 
-      const { purchase, supplier, dueDate } = payable;
-      if (!purchase) {
+      const { sale, customer, dueDate } = receivable;
+      if (!sale) {
         throw new ResponseError(
           400,
-          'Payable does not have an associated purchase'
+          'Receivable does not have an associated sale'
         );
       }
 
       // Validasi tanggal
-      const paymentDt = await this.validatePaymentDate(
-        paymentDate,
-        purchase.date
-      );
+      const paymentDt = await this.validatePaymentDate(paymentDate, sale.date);
       const isLatePayment = paymentDt > dueDate;
 
-      // Hitung ulang payable
-      const newPaymentAmount = new Decimal(amount);
-      const adjustedPaidAmount = payable.paidAmount
+      // Hitung ulang receivable
+      const adjustedPaidAmount = receivable.paidAmount
         .minus(oldPaymentAmount)
         .plus(newPaymentAmount);
-      const newRemainingAmount = payable.amount.minus(adjustedPaidAmount);
+      const newRemainingAmount = receivable.amount.minus(adjustedPaidAmount);
 
       if (newRemainingAmount.lt(0)) {
         throw new ResponseError(
           400,
-          'Updated payment exceeds remaining payable amount'
+          'Updated payment exceeds remaining receivable amount'
         );
       }
 
       // Ambil akun default
       const accountDefault =
         await accountService.getAccountDefault(prismaTransaction);
-      const { cashAccount, payableAccount } = accountDefault;
+      const { cashAccount, receivableAccount } = accountDefault;
 
       // Validasi saldo kas
       if (
@@ -289,7 +283,7 @@ export class PayablePaymentService {
         {
           journalId: oldJournal.journalId,
           date: paymentDt,
-          description: `Update pembayaran utang pembelian kepada ${supplier.supplierName} (No. Invoice: ${purchase.invoiceNumber})${
+          description: `Update pembayaran piutang penjualan dari ${customer.customerName} (No. Invoice: ${sale.invoiceNumber})${
             isLatePayment ? ' [TERLAMBAT]' : ''
           }`,
         },
@@ -298,18 +292,8 @@ export class PayablePaymentService {
 
       // Update entries lama
       for (const entry of oldEntries) {
-        // akun utang: debit
-        if (entry.accountId === payableAccount.accountId) {
-          await journalEntryRepository.updateJournalEntryAmounts(
-            {
-              journalEntryId: entry.journalEntryId,
-              debit: newPaymentAmount,
-              credit: new Decimal(0),
-            },
-            prismaTransaction
-          );
-        } else if (entry.accountId === cashAccount.accountId) {
-          // akun kas: kredit
+        if (entry.accountId === receivableAccount.accountId) {
+          // akun piutang: credit
           await journalEntryRepository.updateJournalEntryAmounts(
             {
               journalEntryId: entry.journalEntryId,
@@ -318,11 +302,21 @@ export class PayablePaymentService {
             },
             prismaTransaction
           );
+        } else if (entry.accountId === cashAccount.accountId) {
+          // akun kas: debit
+          await journalEntryRepository.updateJournalEntryAmounts(
+            {
+              journalEntryId: entry.journalEntryId,
+              debit: newPaymentAmount,
+              credit: new Decimal(0),
+            },
+            prismaTransaction
+          );
         }
       }
 
       // Update Payment
-      const updatedPayment = await payablePaymentRepository.updatePayment(
+      const updatedPayment = await receivablePaymentRepository.updatePayment(
         {
           paymentId,
           paymentAmount: newPaymentAmount,
@@ -332,14 +326,14 @@ export class PayablePaymentService {
         prismaTransaction
       );
 
-      // Update Payable
+      // Update Receivable
       const newStatus = newRemainingAmount.eq(0)
         ? PaymentStatus.PAID
         : PaymentStatus.PARTIAL;
 
-      await payableRepository.recordPayablePayment(
+      await receivableRepository.recordReceivablePayment(
         {
-          payableId,
+          receivableId,
           paidAmount: adjustedPaidAmount,
           remainingAmount: newRemainingAmount,
           status: newStatus,
@@ -352,8 +346,8 @@ export class PayablePaymentService {
 
       await accountRepository.updateAccountTransaction(
         {
-          accountCode: payableAccount.accountCode,
-          balance: payableAccount.balance.minus(diff),
+          accountCode: receivableAccount.accountCode,
+          balance: receivableAccount.balance.minus(diff),
         },
         prismaTransaction
       );
@@ -361,7 +355,7 @@ export class PayablePaymentService {
       await accountRepository.updateAccountTransaction(
         {
           accountCode: cashAccount.accountCode,
-          balance: cashAccount.balance.minus(diff),
+          balance: cashAccount.balance.plus(diff),
         },
         prismaTransaction
       );
@@ -370,17 +364,17 @@ export class PayablePaymentService {
     });
   }
 
-  async deletePayablePayment(paymentId: string): Promise<void> {
+  async deleteReceivablePayment(paymentId: string): Promise<void> {
     return await prismaClient.$transaction(async (prismaTransaction) => {
       // ambil payment
       const payment = await this.getPayment(paymentId, prismaTransaction);
 
-      const { payableId, amount, journalEntryId, method } = payment;
+      const { receivableId, amount, journalEntryId, method } = payment;
       const paymentAmount = new Decimal(amount);
 
-      // ambil payable
-      const payable = await payableService.getPayable(
-        payableId,
+      // ambil receivable
+      const receivable = await receivableService.getReceivable(
+        receivableId,
         prismaTransaction
       );
 
@@ -398,8 +392,8 @@ export class PayablePaymentService {
       // ambil account default
       const accountDefault =
         await accountService.getAccountDefault(prismaTransaction);
-      const { cashAccount, payableAccount } = accountDefault;
-      if (!cashAccount || !payableAccount) {
+      const { cashAccount, receivableAccount } = accountDefault;
+      if (!cashAccount || !receivableAccount) {
         throw new ResponseError(404, 'Cash or payable account not found');
       }
 
@@ -417,8 +411,8 @@ export class PayablePaymentService {
       // Reverse account balances
       await accountRepository.updateAccountTransaction(
         {
-          accountCode: payableAccount.accountCode,
-          balance: payableAccount.balance.plus(paymentAmount),
+          accountCode: receivableAccount.accountCode,
+          balance: receivableAccount.balance.plus(paymentAmount),
         },
         prismaTransaction
       );
@@ -426,23 +420,23 @@ export class PayablePaymentService {
       await accountRepository.updateAccountTransaction(
         {
           accountCode: cashAccount.accountCode,
-          balance: cashAccount.balance.plus(paymentAmount),
+          balance: cashAccount.balance.minus(paymentAmount),
         },
         prismaTransaction
       );
 
-      // Update payable
-      const newPaidAmount = payable.paidAmount.minus(paymentAmount);
-      const newRemainingAmount = payable.amount.minus(newPaidAmount);
+      // Update receivable
+      const newPaidAmount = receivable.paidAmount.minus(paymentAmount);
+      const newRemainingAmount = receivable.amount.minus(newPaidAmount);
       const newStatus = newRemainingAmount.eq(0)
         ? PaymentStatus.PAID
         : newPaidAmount.eq(0)
           ? PaymentStatus.UNPAID
           : PaymentStatus.PARTIAL;
 
-      await payableRepository.recordPayablePayment(
+      await receivableRepository.recordReceivablePayment(
         {
-          payableId,
+          receivableId,
           paidAmount: newPaidAmount,
           remainingAmount: newRemainingAmount,
           status: newStatus,
@@ -451,7 +445,7 @@ export class PayablePaymentService {
       );
 
       // Delete payment
-      await payablePaymentRepository.deletePayment(
+      await receivablePaymentRepository.deletePayment(
         paymentId,
         prismaTransaction
       );
@@ -471,4 +465,4 @@ export class PayablePaymentService {
   }
 }
 
-export const payablePaymentService = new PayablePaymentService();
+export const receivablePaymentService = new ReceivablePaymentService();

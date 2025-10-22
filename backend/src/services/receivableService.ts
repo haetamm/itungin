@@ -1,8 +1,22 @@
-import { PaymentStatus } from '@prisma/client';
+import { PaymentStatus, Prisma } from '@prisma/client';
 import { ResponseError } from '../entities/responseError';
 import { receivableRepository } from '../repository/receivableRepository';
 
 export class ReceivableService {
+  async getReceivable(
+    receivableId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ) {
+    const receivable = await receivableRepository.getReceivableById(
+      receivableId,
+      prismaTransaction
+    );
+    if (!receivable) {
+      throw new ResponseError(404, `Receivable ${receivableId} not found`);
+    }
+    return receivable;
+  }
+
   async getAllReceivable(
     page: number = 1,
     limit: number = 10,
@@ -16,7 +30,7 @@ export class ReceivableService {
     isPaid?: boolean
   ) {
     if (page < 1 || limit < 1) {
-      throw new ResponseError(400, 'Halaman dan batas harus bilangan positif');
+      throw new ResponseError(400, 'Page and limit must be positive numbers');
     }
 
     if (
@@ -25,26 +39,29 @@ export class ReceivableService {
     ) {
       throw new ResponseError(
         400,
-        `Status pembayaran tidak valid: '${paymentStatus}'. Nilai yang diperbolehkan: ${Object.values(PaymentStatus).join(', ')}`
+        `Invalid payment status: '${paymentStatus}'. Allowed values: ${Object.values(PaymentStatus).join(', ')}`
       );
     }
 
     if (fromDueDate && isNaN(fromDueDate.getTime())) {
-      throw new ResponseError(400, 'Format tanggal fromDueDate tidak valid');
+      throw new ResponseError(400, 'Invalid date format for fromDueDate');
     }
 
     if (toDueDate && isNaN(toDueDate.getTime())) {
-      throw new ResponseError(400, 'Format tanggal toDueDate tidak valid');
+      throw new ResponseError(400, 'Invalid date format for toDueDate');
     }
 
     if (minAmount !== undefined && (isNaN(minAmount) || minAmount < 0)) {
-      throw new ResponseError(400, 'Jumlah minimum harus bilangan non-negatif');
+      throw new ResponseError(
+        400,
+        'Minimum amount must be a non-negative number'
+      );
     }
 
     if (maxAmount !== undefined && (isNaN(maxAmount) || maxAmount < 0)) {
       throw new ResponseError(
         400,
-        'Jumlah maksimum harus bilangan non-negatif'
+        'Maximum amount must be a non-negative number'
       );
     }
 
@@ -55,11 +72,10 @@ export class ReceivableService {
     ) {
       throw new ResponseError(
         400,
-        'Jumlah minimum tidak boleh lebih besar dari jumlah maksimum'
+        'Minimum amount cannot be greater than maximum amount'
       );
     }
 
-    // Call repository function
     const { items, total } = await receivableRepository.getAllReceivable(
       page,
       limit,

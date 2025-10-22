@@ -31,12 +31,12 @@ import { payableRepository } from '../repository/payableRepository';
 import { recalculateCOGS } from '../utils/cogs';
 import { saleDetailRepository } from '../repository/saleDetailRepository';
 import { saleRepository } from '../repository/saleRepository';
-import { paymentRepository } from '../repository/paymentRepository';
 import { generalsettingService } from './generalSettingService';
 import { supplierService } from './supplierService';
 import { vatService } from './vatService';
 import { productService } from './productService';
 import { accountService } from './accountService';
+import { payablePaymentRepository } from '../repository/payablePaymentRepository';
 
 export class PurchaseService {
   async getPurchase(
@@ -517,7 +517,7 @@ export class PurchaseService {
       ) {
         if (payable) {
           // Periksa apakah ada Payment terkait payable
-          const payments = await paymentRepository.getPaymentByPayableId(
+          const payments = await payablePaymentRepository.getPaymentByPayableId(
             payable.payableId,
             prismaTransaction
           );

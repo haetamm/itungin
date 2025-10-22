@@ -413,11 +413,12 @@ export class SaleService {
         await receivableRepository.createReceivable(
           {
             journalEntryId: receivableJournalEntryId,
-            status,
             customerId,
             saleId: sale.saleId,
             amount: receivableAmount,
+            remainingAmount: receivableAmount,
             dueDate: new Date(dueDate!),
+            status,
           },
           prismaTransaction
         );
@@ -873,6 +874,7 @@ export class SaleService {
               customerId,
               saleId,
               amount: receivableAmount,
+              remainingAmount: receivableAmount,
               dueDate: new Date(dueDate!),
               status,
             },

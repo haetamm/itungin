@@ -110,7 +110,6 @@ export class PayableRepository {
         payments: {
           select: {
             paymentId: true,
-            payableId: true,
             amount: true,
             paymentDate: true,
             method: true,

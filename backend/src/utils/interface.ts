@@ -244,11 +244,12 @@ export interface SaleDetailForm {
 
 export interface ReceivableForm {
   journalEntryId: string;
-  status: PaymentStatus;
   customerId: string;
   saleId: string;
   amount: Decimal;
+  remainingAmount: Decimal;
   dueDate: Date;
+  status: PaymentStatus;
 }
 
 // types/pagination.ts
@@ -390,6 +391,34 @@ export interface PayablePaymentForm {
 export interface PaginatedPayablesResult {
   items: Payable[];
   total: number;
+}
+
+export interface ReceivablePaymentRequest {
+  receivableId: string;
+  amount: Decimal;
+  paymentDate: string;
+  method: string;
+}
+
+export interface ReceivablePaymentForm {
+  receivableId: string;
+  journalEntryId: string;
+  paymentAmount: Decimal;
+  paymentDate: Date;
+  method: string;
+}
+
+export interface RecordReceivablePaymentForm {
+  receivableId: string;
+  paidAmount: Decimal;
+  remainingAmount: Decimal;
+  status: PaymentStatus;
+}
+
+export interface UpdatePaymentReceivableRequest {
+  amount: Decimal;
+  paymentDate: string;
+  method: string;
 }
 
 export interface PaginatedReceivablesResult {

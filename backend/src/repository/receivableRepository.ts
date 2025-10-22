@@ -2,6 +2,7 @@ import { PaymentStatus, Prisma, Receivable } from '@prisma/client';
 import {
   PaginatedReceivablesResult,
   ReceivableForm,
+  RecordReceivablePaymentForm,
   UpdateReceivableForm,
 } from '../utils/interface';
 import { Decimal } from '@prisma/client/runtime/library';
@@ -119,7 +120,6 @@ export class ReceivableRepository {
         payments: {
           select: {
             paymentId: true,
-            receivable: true,
             amount: true,
             paymentDate: true,
             method: true,
@@ -135,14 +135,24 @@ export class ReceivableRepository {
     data: ReceivableForm,
     prismaTransaction: Prisma.TransactionClient
   ) {
+    const {
+      journalEntryId,
+      saleId,
+      customerId,
+      amount,
+      remainingAmount,
+      dueDate,
+      status,
+    } = data;
     return await prismaTransaction.receivable.create({
       data: {
-        journalEntryId: data.journalEntryId,
-        saleId: data.saleId,
-        customerId: data.customerId,
-        amount: data.amount,
-        dueDate: data.dueDate,
-        status: data.status,
+        journalEntryId,
+        saleId,
+        customerId,
+        amount,
+        remainingAmount,
+        dueDate,
+        status,
       },
     });
   }
@@ -192,6 +202,35 @@ export class ReceivableRepository {
         },
       },
     });
+  }
+
+  async getReceivableById(
+    receivableId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<Prisma.ReceivableGetPayload<{
+    include: { journalEntry: true; sale: true; customer: true };
+  }> | null> {
+    return prismaTransaction.receivable.findUnique({
+      where: { receivableId },
+      include: { journalEntry: true, sale: true, customer: true },
+    });
+  }
+
+  async recordReceivablePayment(
+    params: RecordReceivablePaymentForm,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<Receivable> {
+    const { receivableId, paidAmount, remainingAmount, status } = params;
+
+    const updatedPayable = await prismaTransaction.receivable.update({
+      where: { receivableId },
+      data: {
+        paidAmount,
+        remainingAmount,
+        status,
+      },
+    });
+    return updatedPayable;
   }
 }
 

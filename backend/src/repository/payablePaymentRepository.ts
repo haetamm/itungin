@@ -3,7 +3,7 @@ import { PayablePaymentForm } from '../utils/interface';
 import { Decimal } from '@prisma/client/runtime/library';
 import { prismaClient } from '../application/database';
 
-export class PaymentRepository {
+export class PayablePaymentRepository {
   async getPaymentByPayableId(
     payableId: string,
     prismaTransaction: Prisma.TransactionClient
@@ -113,4 +113,4 @@ export class PaymentRepository {
   }
 }
 
-export const paymentRepository = new PaymentRepository();
+export const payablePaymentRepository = new PayablePaymentRepository();

@@ -14,13 +14,13 @@ import { prismaClient } from '../application/database';
 import { Decimal } from '@prisma/client/runtime/library';
 import { payableRepository } from '../repository/payableRepository';
 import { recalculateCOGS } from '../utils/cogs';
-import { paymentRepository } from '../repository/paymentRepository';
 import { generalsettingService } from './generalSettingService';
 import { accountService } from './accountService';
 import { purchaseService } from './purchaseService';
 import { vatService } from './vatService';
 import { productService } from './productService';
 import { journalRepository } from '../repository/journalRepository';
+import { payablePaymentRepository } from '../repository/payablePaymentRepository';
 
 export class PurchaseDetailService {
   async updatePurchaseDetailByPurchaseId({
@@ -94,7 +94,7 @@ export class PurchaseDetailService {
       ) {
         if (payable) {
           // Periksa apakah ada Payment terkait payable
-          const payments = await paymentRepository.getPaymentByPayableId(
+          const payments = await payablePaymentRepository.getPaymentByPayableId(
             payable.payableId,
             prismaTransaction
           );

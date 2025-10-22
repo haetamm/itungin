@@ -2364,7 +2364,7 @@
 								}
 							]
 						},
-						"method": "GET",
+						"method": "DELETE",
 						"header": [],
 						"url": {
 							"raw": "http://localhost:8000/api/v1/purchases/{{purchaseId2}}",
@@ -2922,7 +2922,7 @@
 								}
 							]
 						},
-						"method": "PUT",
+						"method": "DELETE",
 						"header": [],
 						"url": {
 							"raw": "http://localhost:8000/api/v1/payments/payable/{{paymentId}}",
@@ -3964,7 +3964,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "http://localhost:8000/api/v1/receivables?page=1&limit=10&search=&customerId=&paymentStatus=&fromDueDate=&toDueDate=&minAmount=&maxAmount=&isPaid=true",
+							"raw": "http://localhost:8000/api/v1/receivables?page=1&limit=10&search=&customerId=&paymentStatus=&fromDueDate=&toDueDate=&minAmount=&maxAmount=&isPaid=false",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -4014,7 +4014,7 @@
 								},
 								{
 									"key": "isPaid",
-									"value": "true"
+									"value": "false"
 								}
 							]
 						}
@@ -4061,6 +4061,220 @@
 								"v1",
 								"receivables",
 								"{{receivableId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "get payable payment by Id",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/v1/payments/payable/{{paymentId}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"payments",
+								"payable",
+								"{{paymentId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "RECEIVABLE PAYMENT",
+			"item": [
+				{
+					"name": "create payble payment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('should response 201 status code', () => {\r",
+									"    pm.response.to.have.status(201);\r",
+									"});\r",
+									"\r",
+									"pm.test('should respose with correct property and message', () => {\r",
+									"    const responseJson = pm.response.json();\r",
+									"\r",
+									"    pm.environment.set('paymentReceivableId', responseJson.data.paymentId);\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"receivableId\" : \"{{receivableId}}\",\r\n    \"amount\" : 200000,\r\n    \"paymentDate\" : \"2025-09-27\",\r\n    \"method\": \"CASH\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/v1/payments/receivable",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"payments",
+								"receivable"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update payble payment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"amount\" : 100000,\r\n    \"paymentDate\" : \"2025-09-30\",\r\n    \"method\": \"CASH\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/v1/payments/receivable/{{paymentReceivableId}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"payments",
+								"receivable",
+								"{{paymentReceivableId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "delete payble payment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/v1/payments/receivable/{{paymentReceivableId}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"payments",
+								"receivable",
+								"{{paymentReceivableId}}"
 							]
 						}
 					},
