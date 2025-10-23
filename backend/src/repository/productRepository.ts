@@ -3,7 +3,7 @@ import { prismaClient } from '../application/database';
 import {
   ProductCreate,
   ProductUpdate,
-  ProductUpdateByPurchaseTransaction,
+  ProductUpdateTransaction,
 } from '../utils/interface';
 import { paginate } from '../utils/pagination';
 import { Decimal } from '@prisma/client/runtime/library';
@@ -106,16 +106,18 @@ export class ProductRepository {
   }
 
   async updateProductTransaction(
-    data: ProductUpdateByPurchaseTransaction,
+    data: ProductUpdateTransaction,
     prismaTransaction: Prisma.TransactionClient
   ): Promise<Product> {
+    const { productId, stock, avgPurchasePrice, profitMargin, sellingPrice } =
+      data;
     return prismaTransaction.product.update({
-      where: { productId: data.productId },
+      where: { productId },
       data: {
-        stock: data.stock,
-        avgPurchasePrice: data.avgPurchasePrice,
-        profitMargin: data.profitMargin,
-        sellingPrice: data.sellingPrice,
+        stock,
+        avgPurchasePrice,
+        profitMargin,
+        sellingPrice,
       },
     });
   }

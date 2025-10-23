@@ -36,15 +36,6 @@ export class SaleDetailRepository {
     });
   }
 
-  async findSalesByBatchId(
-    batchId: string,
-    prismaTransaction: Prisma.TransactionClient
-  ): Promise<SaleDetail[]> {
-    return await prismaTransaction.saleDetail.findMany({
-      where: { batchId },
-    });
-  }
-
   async deleteManySaleDetails(
     saleDetailIds: string[],
     prismaTransaction: Prisma.TransactionClient

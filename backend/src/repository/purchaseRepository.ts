@@ -7,11 +7,7 @@ import {
   Purchase,
   PurchaseDetail,
 } from '@prisma/client';
-import {
-  PurchaseForm,
-  UpdatePurchaseForm,
-  UpdatePurchaseTotal,
-} from '../utils/interface';
+import { PurchaseForm, UpdatePurchaseForm } from '../utils/interface';
 import { paginate } from '../utils/pagination';
 import { prismaClient } from '../application/database';
 
@@ -59,16 +55,26 @@ export class PurchaseRepository {
     data: PurchaseForm,
     prismaTransaction: Prisma.TransactionClient
   ): Promise<Purchase> {
+    const {
+      date,
+      supplierId,
+      invoiceNumber,
+      paymentType,
+      subtotal,
+      vat,
+      total,
+      journalId,
+    } = data;
     return prismaTransaction.purchase.create({
       data: {
-        date: data.date,
-        supplierId: data.supplierId,
-        invoiceNumber: data.invoiceNumber,
-        paymentType: data.paymentType,
-        subtotal: data.subtotal,
-        vat: data.vat,
-        total: data.total,
-        journalId: data.journalId,
+        date,
+        supplierId,
+        invoiceNumber,
+        paymentType,
+        subtotal,
+        vat,
+        total,
+        journalId,
       },
     });
   }
@@ -168,21 +174,6 @@ export class PurchaseRepository {
 
   async getPurchaseCount(): Promise<number> {
     return await prismaClient.purchase.count();
-  }
-
-  async updatePurchaseTotals(
-    purchaseId: string,
-    data: UpdatePurchaseTotal,
-    prismaTransaction: Prisma.TransactionClient
-  ): Promise<Purchase> {
-    return await prismaTransaction.purchase.update({
-      where: { purchaseId },
-      data: {
-        vat: data.vat,
-        subtotal: data.subtotal,
-        total: data.total,
-      },
-    });
   }
 
   async findSubsequentPurchases(

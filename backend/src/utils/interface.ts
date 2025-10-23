@@ -92,7 +92,7 @@ export interface ProductUpdate {
   profitMargin: number; // nominal langsung
 }
 
-export interface ProductUpdateByPurchaseTransaction {
+export interface ProductUpdateTransaction {
   productId: string;
   stock: number;
   avgPurchasePrice: Decimal;
@@ -159,12 +159,6 @@ export interface UpdatePurchaseForm {
   supplierId: string;
   paymentType: PaymentType;
   invoiceNumber: string;
-  subtotal: Decimal;
-  vat: Decimal;
-  total: Decimal;
-}
-
-export interface UpdatePurchaseTotal {
   subtotal: Decimal;
   vat: Decimal;
   total: Decimal;
@@ -343,12 +337,6 @@ export interface UpdateSaleDetail {
   items: SaleItem[];
 }
 
-export interface UpdateSaleTotal {
-  subtotal: Decimal;
-  vat: Decimal;
-  total: Decimal;
-}
-
 export interface PaymentPayableRequest {
   payableId: string;
   amount: Decimal;
@@ -400,6 +388,13 @@ export interface RecordReceivablePaymentForm {
 export interface UpdatePaymentReceivableRequest {
   amount: Decimal;
   paymentDate: string;
+  method: string;
+}
+
+export interface UpdateReceivablePaymentForm {
+  paymentId: string;
+  paymentAmount: Decimal;
+  paymentDate: Date;
   method: string;
 }
 

@@ -1,7 +1,9 @@
 import { Prisma, ReceivablePayment } from '@prisma/client';
 import { prismaClient } from '../application/database';
-import { ReceivablePaymentForm } from '../utils/interface';
-import { Decimal } from '@prisma/client/runtime/library';
+import {
+  ReceivablePaymentForm,
+  UpdateReceivablePaymentForm,
+} from '../utils/interface';
 
 export class ReceivablePaymentRepository {
   async getPaymentReceivableByReceivableId(
@@ -92,12 +94,7 @@ export class ReceivablePaymentRepository {
   }
 
   async updatePayment(
-    data: {
-      paymentId: string;
-      paymentAmount: Decimal;
-      paymentDate: Date;
-      method: string;
-    },
+    data: UpdateReceivablePaymentForm,
     prismaTransaction: Prisma.TransactionClient
   ): Promise<ReceivablePayment> {
     const { paymentId, paymentAmount, paymentDate, method } = data;

@@ -7,7 +7,7 @@ import {
   Sale,
   SaleDetail,
 } from '@prisma/client';
-import { SaleForm, UpdateSaleForm, UpdateSaleTotal } from '../utils/interface';
+import { SaleForm, UpdateSaleForm } from '../utils/interface';
 import { paginate } from '../utils/pagination';
 import { prismaClient } from '../application/database';
 
@@ -128,15 +128,6 @@ export class SaleRepository {
     });
   }
 
-  async findSaleByIdTransaction(
-    saleId: string,
-    prismaTransaction: Prisma.TransactionClient
-  ): Promise<Sale | null> {
-    return await prismaTransaction.sale.findUnique({
-      where: { saleId },
-    });
-  }
-
   async getSaleByIdTransaction(
     saleId: string,
     prismaTransaction: Prisma.TransactionClient
@@ -185,22 +176,6 @@ export class SaleRepository {
         paymentType,
         subtotal,
         vat,
-        total,
-      },
-    });
-  }
-
-  async updateSaleTotals(
-    saleId: string,
-    data: UpdateSaleTotal,
-    prismaTransaction: Prisma.TransactionClient
-  ): Promise<Sale> {
-    const { vat, subtotal, total } = data;
-    return await prismaTransaction.sale.update({
-      where: { saleId },
-      data: {
-        vat,
-        subtotal,
         total,
       },
     });

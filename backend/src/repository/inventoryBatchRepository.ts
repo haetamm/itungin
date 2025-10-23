@@ -117,12 +117,6 @@ export class InventoryBatchRepository {
     });
   }
 
-  async findById(batchId: string, prismaTransaction: Prisma.TransactionClient) {
-    return await prismaTransaction.inventoryBatch.findUnique({
-      where: { batchId },
-    });
-  }
-
   async findByPurchaseDetailId(
     purchaseDetailId: string,
     prismaTransaction: Prisma.TransactionClient

@@ -6,40 +6,15 @@ export class PurchaseDetailRepository {
     data: PurchaseDetailForm,
     prismaTransaction: Prisma.TransactionClient
   ): Promise<PurchaseDetail> {
+    const { purchaseId, productId, quantity, unitPrice, subtotal } = data;
     return prismaTransaction.purchaseDetail.create({
       data: {
-        purchaseId: data.purchaseId,
-        productId: data.productId,
-        quantity: data.quantity,
-        unitPrice: data.unitPrice,
-        subtotal: data.subtotal,
+        purchaseId,
+        productId,
+        quantity,
+        unitPrice,
+        subtotal,
       },
-    });
-  }
-
-  async deleteManyPurchaseDetails(
-    purchaseDetailIds: string[],
-    prismaTransaction: Prisma.TransactionClient
-  ): Promise<void> {
-    await prismaTransaction.purchaseDetail.deleteMany({
-      where: {
-        purchaseDetailId: { in: purchaseDetailIds },
-      },
-    });
-  }
-
-  async findPurchaseDetailById(
-    purchaseDetailId: string,
-    prismaTransaction: Prisma.TransactionClient
-  ): Promise<
-    | (PurchaseDetail & {
-        purchase: { date: Date };
-      })
-    | null
-  > {
-    return await prismaTransaction.purchaseDetail.findUnique({
-      where: { purchaseDetailId },
-      include: { purchase: { select: { date: true } } },
     });
   }
 

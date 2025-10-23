@@ -11,11 +11,14 @@ import { productRepository } from '../repository/productRepository';
 import { Decimal } from '@prisma/client/runtime/library';
 import { ResponseError } from '../entities/responseError';
 import {
-  JournalEntry,
+  EntryType,
+  GeneralSetting,
+  Payable,
   PaymentStatus,
   PaymentType,
   Prisma,
   Purchase,
+  PurchaseDetail,
 } from '@prisma/client';
 import { accountRepository } from '../repository/accountRepository';
 import { journalRepository } from '../repository/journalRepository';
@@ -27,25 +30,46 @@ import { journalEntryRepository } from '../repository/journalEntryRepository';
 import { payableRepository } from '../repository/payableRepository';
 import { recalculateCOGS } from '../utils/cogs';
 import { saleDetailRepository } from '../repository/saleDetailRepository';
-import { saleRepository } from '../repository/saleRepository';
 import { generalsettingService } from './generalSettingService';
 import { supplierService } from './supplierService';
 import { vatService } from './vatService';
 import { productService } from './productService';
 import { accountService } from './accountService';
 import { payablePaymentRepository } from '../repository/payablePaymentRepository';
+import { stringToDate } from '../utils/helper';
 
 export class PurchaseService {
-  async getPurchase(
-    purchaseId: string,
-    prismaTransaction: Prisma.TransactionClient
+  private async validatePurchasePayableStatus(
+    paymentType: PaymentType,
+    payable: Payable | null,
+    prismaTransaction: Prisma.TransactionClient,
+    status = 'modify'
   ) {
-    const purchase = await purchaseRepository.findPurchaseByIdTransaction(
-      purchaseId,
-      prismaTransaction
-    );
-    if (!purchase) throw new ResponseError(404, 'Purchase not found');
-    return purchase;
+    if (
+      paymentType === PaymentType.CREDIT ||
+      paymentType === PaymentType.MIXED
+    ) {
+      if (payable) {
+        const payments = await payablePaymentRepository.getPaymentByPayableId(
+          payable.payableId,
+          prismaTransaction
+        );
+
+        if (payments.length > 0) {
+          throw new ResponseError(
+            400,
+            `Cannot ${status} purchase with associated payments for payable ${payable.payableId}. Please process a purchase return instead`
+          );
+        }
+
+        if (payable.status === PaymentStatus.PAID) {
+          throw new ResponseError(
+            400,
+            `Cannot ${status} purchase with paid payable ${payable.payableId}. Please process a purchase return instead`
+          );
+        }
+      }
+    }
   }
 
   private async updatePurchaseDataRelation(
@@ -193,6 +217,110 @@ export class PurchaseService {
       vat,
       total,
     };
+  }
+
+  private async validateInventoryBatchUsage(
+    purchaseDetails: PurchaseDetail[],
+    prismaTransaction: Prisma.TransactionClient,
+    status = 'modify'
+  ): Promise<void> {
+    for (const detail of purchaseDetails) {
+      const inventoryBatches =
+        await inventoryBatchRepository.findBatchesByPurchaseDetail(
+          detail.purchaseDetailId,
+          prismaTransaction
+        );
+
+      for (const batch of inventoryBatches) {
+        const saleDetailCount = await saleDetailRepository.countByBatchId(
+          batch.batchId,
+          prismaTransaction
+        );
+
+        if (saleDetailCount > 0) {
+          throw new ResponseError(
+            400,
+            `Cannot ${status} purchase because its inventory batch (ID: ${batch.batchId}) has been used in sales. Please process a purchase return instead.`
+          );
+        }
+      }
+    }
+  }
+
+  private async reversePurchaseEffects(
+    purchaseDetails: PurchaseDetail[],
+    setting: GeneralSetting,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<void> {
+    for (const detail of purchaseDetails) {
+      const product = await productService.getProduct(
+        detail.productId,
+        prismaTransaction
+      );
+
+      const currentStock = product.stock;
+      const currentAvgPrice = product.avgPurchasePrice;
+      const profitMargin = product.profitMargin;
+
+      // Ambil batch terkait detail
+      const batch = await inventoryBatchRepository.findByPurchaseDetailId(
+        detail.purchaseDetailId,
+        prismaTransaction
+      );
+
+      if (batch) {
+        // Hitung ulang avg purchase price setelah menghapus batch (reverse weighted average)
+        const oldValue = currentAvgPrice.times(currentStock);
+        const removedValue = new Decimal(batch.purchasePrice).times(
+          detail.quantity
+        );
+        const newTotalValue = oldValue.minus(removedValue);
+        const newStock = currentStock - detail.quantity;
+        let newAvgPrice: Decimal = new Decimal(0);
+
+        if (newStock > 0) {
+          newAvgPrice = newTotalValue.div(newStock);
+        }
+
+        // Hapus batch
+        await inventoryBatchRepository.deleteBatchByPurchaseDetail(
+          detail.purchaseDetailId,
+          prismaTransaction
+        );
+
+        // Kurangi stok
+        await productRepository.decrementStock(
+          detail.productId,
+          detail.quantity,
+          prismaTransaction
+        );
+
+        // Hitung ulang COGS setelah perubahan
+        const cogs = await recalculateCOGS(
+          detail.productId,
+          setting.inventoryMethod,
+          prismaTransaction
+        );
+
+        // Hitung ulang selling price
+        let sellingPrice: Decimal = new Decimal(0);
+        if (newStock > 0 && !cogs.equals(0)) {
+          sellingPrice = cogs.add(profitMargin);
+        }
+
+        // Update product
+        await productRepository.updateProductTransaction(
+          {
+            productId: detail.productId,
+            stock: newStock,
+            avgPurchasePrice: newAvgPrice,
+            profitMargin,
+            sellingPrice,
+          },
+          prismaTransaction
+        );
+      }
+    }
   }
 
   async createPurchase({ body }: { body: PurchaseRequest }): Promise<Purchase> {
@@ -407,259 +535,6 @@ export class PurchaseService {
     });
   }
 
-  async deletePurchase(purchaseId: string): Promise<void> {
-    return await prismaClient.$transaction(async (prismaTransaction) => {
-      // ambil purchase
-      const purchase = await this.getPurchase(purchaseId, prismaTransaction);
-
-      const { payable } = purchase;
-
-      // Ambil account default
-      const accountDefault =
-        await accountService.getAccountDefault(prismaTransaction);
-
-      const { cashAccount, payableAccount, inventoryAccount, vatInputAccount } =
-        accountDefault;
-
-      // Validasi apakah ada SaleDetail yang menggunakan batchId dari pembelian ini
-      for (const detail of purchase.purchaseDetails) {
-        const inventoryBatches =
-          await inventoryBatchRepository.findBatchesByPurchaseDetail(
-            detail.purchaseDetailId,
-            prismaTransaction
-          );
-
-        for (const batch of inventoryBatches) {
-          const saleDetailCount = await saleDetailRepository.countByBatchId(
-            batch.batchId,
-            prismaTransaction
-          );
-
-          if (saleDetailCount > 0) {
-            throw new ResponseError(
-              400,
-              `Cannot delete purchase because its inventory batch (ID: ${batch.batchId}) has been used in sales. Please process a purchase return instead.`
-            );
-          }
-        }
-      }
-
-      // Ambil journal entries
-      const journalEntries: JournalEntry[] = purchase.journal.journalEntries;
-
-      let inventoryDebit = new Decimal(0);
-      let vatDebit = new Decimal(0);
-      let cashCredit = new Decimal(0);
-      let payableCredit = new Decimal(0);
-
-      switch (purchase.paymentType) {
-        case PaymentType.CASH:
-          for (const entry of journalEntries) {
-            if (entry.accountId === inventoryAccount.accountId) {
-              inventoryDebit = entry.debit;
-            } else if (entry.accountId === vatInputAccount.accountId) {
-              vatDebit = entry.debit;
-            } else if (
-              cashAccount &&
-              entry.accountId === cashAccount.accountId
-            ) {
-              cashCredit = entry.credit;
-            }
-          }
-          break;
-
-        case PaymentType.CREDIT:
-          for (const entry of journalEntries) {
-            if (entry.accountId === inventoryAccount.accountId) {
-              inventoryDebit = entry.debit;
-            } else if (entry.accountId === vatInputAccount.accountId) {
-              vatDebit = entry.debit;
-            } else if (
-              payableAccount &&
-              entry.accountId === payableAccount.accountId
-            ) {
-              payableCredit = entry.credit;
-            }
-          }
-          break;
-
-        case PaymentType.MIXED:
-          for (const entry of journalEntries) {
-            if (entry.accountId === inventoryAccount.accountId) {
-              inventoryDebit = entry.debit;
-            } else if (entry.accountId === vatInputAccount.accountId) {
-              vatDebit = entry.debit;
-            } else if (
-              cashAccount &&
-              entry.accountId === cashAccount.accountId
-            ) {
-              cashCredit = entry.credit;
-            } else if (
-              payableAccount &&
-              entry.accountId === payableAccount.accountId
-            ) {
-              payableCredit = entry.credit;
-            }
-          }
-          break;
-
-        default:
-          throw new ResponseError(400, 'Invalid payment type');
-      }
-
-      // Validasi payment type dan payable
-      if (
-        purchase.paymentType === PaymentType.CREDIT ||
-        purchase.paymentType === PaymentType.MIXED
-      ) {
-        if (payable) {
-          // Periksa apakah ada Payment terkait payable
-          const payments = await payablePaymentRepository.getPaymentByPayableId(
-            payable.payableId,
-            prismaTransaction
-          );
-
-          if (payments.length > 0) {
-            throw new ResponseError(
-              400,
-              `Cannot delete purchase with associated payments for payable ${payable.payableId}.  Please process a purchase return instead`
-            );
-          }
-
-          if (payable.status === PaymentStatus.PAID) {
-            throw new ResponseError(
-              400,
-              `Cannot delete purchase with paid payable ${payable.payableId}.  Please process a purchase return instead`
-            );
-          }
-        }
-      }
-
-      if (payable) {
-        await payableRepository.deletePayable(
-          payable.payableId,
-          prismaTransaction
-        );
-      }
-
-      // Ambil setting inventory method
-      const setting =
-        await generalsettingService.getSettingInventory(prismaTransaction);
-
-      // Revert product stock and delete inventory batches
-      for (const detail of purchase.purchaseDetails) {
-        const product = await productService.getProduct(
-          detail.productId,
-          prismaTransaction
-        );
-
-        const newStock = product.stock - detail.quantity;
-        if (newStock < 0) {
-          throw new ResponseError(
-            400,
-            `Insufficient stock for product ${product.productId}`
-          );
-        }
-
-        const purchaseDetail =
-          await purchaseDetailRepository.findPurchaseDetailById(
-            detail.purchaseDetailId,
-            prismaTransaction
-          );
-
-        if (!purchaseDetail) {
-          throw new ResponseError(
-            404,
-            `Purchase detail ${detail.purchaseDetailId} not found`
-          );
-        }
-
-        await inventoryBatchRepository.deleteBatchByPurchaseDetail(
-          purchaseDetail.purchaseDetailId,
-          prismaTransaction
-        );
-
-        // Hitung ulang harga pokok
-        const cogs = await recalculateCOGS(
-          product.productId,
-          setting.inventoryMethod,
-          prismaTransaction
-        );
-
-        const sellingPrice = cogs.equals(0)
-          ? product.profitMargin
-          : cogs.plus(product.profitMargin);
-
-        // Update kembali produk
-        await productRepository.updateProductTransaction(
-          {
-            productId: detail.productId,
-            stock: newStock,
-            avgPurchasePrice: cogs,
-            profitMargin: product.profitMargin,
-            sellingPrice,
-          },
-          prismaTransaction
-        );
-      }
-
-      // Delete purchase details
-      await purchaseDetailRepository.deleteManyPurchaseDetails(
-        purchase.purchaseDetails.map((detail) => detail.purchaseDetailId),
-        prismaTransaction
-      );
-
-      // Delete journal entries
-      await journalEntryRepository.deleteManyJournalEntries(
-        journalEntries.map((entry) => entry.journalEntryId),
-        prismaTransaction
-      );
-
-      // Delete journal
-      await journalRepository.deleteJournal(
-        purchase.journal.journalId,
-        prismaTransaction
-      );
-
-      // Update akun-akun
-      await accountRepository.updateAccountTransaction(
-        {
-          accountCode: inventoryAccount.accountCode,
-          balance: inventoryAccount.balance.minus(inventoryDebit),
-        },
-        prismaTransaction
-      );
-
-      await accountRepository.updateAccountTransaction(
-        {
-          accountCode: vatInputAccount.accountCode,
-          balance: vatInputAccount.balance.minus(vatDebit),
-        },
-        prismaTransaction
-      );
-
-      if (cashAccount && cashCredit.greaterThan(0)) {
-        await accountRepository.updateAccountTransaction(
-          {
-            accountCode: cashAccount.accountCode,
-            balance: cashAccount.balance.plus(cashCredit),
-          },
-          prismaTransaction
-        );
-      }
-
-      if (payableAccount && payableCredit.greaterThan(0)) {
-        await accountRepository.updateAccountTransaction(
-          {
-            accountCode: payableAccount.accountCode,
-            balance: payableAccount.balance.minus(payableCredit),
-          },
-          prismaTransaction
-        );
-      }
-    });
-  }
-
   async updatePurchase(
     { body }: { body: PurchaseRequest },
     purchaseId: string
@@ -680,8 +555,13 @@ export class PurchaseService {
       // Ambil account default
       const accountDefault =
         await accountService.getAccountDefault(prismaTransaction);
+
       let { cashAccount, payableAccount, inventoryAccount, vatInputAccount } =
         accountDefault;
+
+      // ambil method inventory
+      const setting =
+        await generalsettingService.getSettingInventory(prismaTransaction);
 
       // Ambil data pembelian existing beserta relasinya
       const existingPurchase = await this.getPurchase(
@@ -689,45 +569,27 @@ export class PurchaseService {
         prismaTransaction
       );
 
-      const { purchaseDetails, journal } = existingPurchase;
+      const {
+        purchaseDetails,
+        journal,
+        paymentType: oldPaymentType,
+        payable,
+      } = existingPurchase;
 
-      // Validasi apakah tanggal pembelian baru tidak melanggar kronologi dengan sales
-      for (const detail of purchaseDetails) {
-        const inventoryBatches =
-          await inventoryBatchRepository.findBatchesByPurchaseDetail(
-            detail.purchaseDetailId,
-            prismaTransaction
-          );
+      // Validasi payment type dan payable
+      await this.validatePurchasePayableStatus(
+        oldPaymentType,
+        payable,
+        prismaTransaction
+      );
 
-        for (const batch of inventoryBatches) {
-          const saleDetails = await saleDetailRepository.findSalesByBatchId(
-            batch.batchId,
-            prismaTransaction
-          );
+      // validasi dgn inventory batches (batchId)
+      await this.validateInventoryBatchUsage(
+        purchaseDetails,
+        prismaTransaction
+      );
 
-          for (const saleDetail of saleDetails) {
-            const sale = await saleRepository.findSaleByIdTransaction(
-              saleDetail.saleId,
-              prismaTransaction
-            );
-
-            if (sale && new Date(date) > new Date(sale.date)) {
-              const formattedPurchaseDate = new Date(date)
-                .toISOString()
-                .slice(0, 10);
-              const formattedSaleDate = new Date(sale.date)
-                .toISOString()
-                .slice(0, 10);
-              throw new ResponseError(
-                400,
-                `Invalid purchase date: new purchase date (${formattedPurchaseDate}) cannot be after sale date (${formattedSaleDate}) for product ${detail.productId}`
-              );
-            }
-          }
-        }
-      }
-
-      // Reverse efek akun lama berdasarkan journal entries
+      // Reverse efek account lama berdasarkan journal entries
       for (const entry of journal.journalEntries) {
         const account = await accountRepository.findById(
           entry.accountId,
@@ -741,12 +603,11 @@ export class PurchaseService {
         }
 
         let balanceAdjustment = new Decimal(0);
-        if (account.normalBalance === 'DEBIT') {
+        if (account.normalBalance === EntryType.DEBIT) {
           balanceAdjustment = new Decimal(0)
             .minus(entry.debit)
             .plus(entry.credit);
-        } else if (account.normalBalance === 'CREDIT') {
-          // Perbaikan: Ganti PaymentType.CREDIT dengan string 'CREDIT'
+        } else if (account.normalBalance === EntryType.CREDIT) {
           balanceAdjustment = new Decimal(0)
             .plus(entry.debit)
             .minus(entry.credit);
@@ -760,30 +621,12 @@ export class PurchaseService {
         );
       }
 
-      // Kembalikan stok lama dari purchaseDetails
-      for (const detail of purchaseDetails) {
-        // validasi product
-        await productService.getProduct(detail.productId, prismaTransaction);
-
-        await productRepository.decrementStock(
-          detail.productId,
-          detail.quantity,
-          prismaTransaction
-        );
-
-        const batch = await inventoryBatchRepository.findByPurchaseDetailId(
-          detail.purchaseDetailId,
-          prismaTransaction
-        );
-
-        if (batch) {
-          await inventoryBatchRepository.decrementBatchStock(
-            batch.batchId,
-            detail.quantity,
-            prismaTransaction
-          );
-        }
-      }
+      // Reverse efek inventory lama (stok, batch, COGS, product updates)
+      await this.reversePurchaseEffects(
+        purchaseDetails,
+        setting,
+        prismaTransaction
+      );
 
       // Hapus purchase details lama
       await purchaseDetailRepository.deleteByPurchaseId(
@@ -791,9 +634,8 @@ export class PurchaseService {
         prismaTransaction
       );
 
-      // **Perbaikan**: Hapus payable lama jika ada, sebelum menghapus journal entries
+      // Hapus payable lama jika ada, sebelum menghapus journal entries
       if (existingPurchase.payable) {
-        console.log(`Deleting existing payable for purchaseId: ${purchaseId}`);
         await payableRepository.deletePayable(
           existingPurchase.payable.payableId,
           prismaTransaction
@@ -833,10 +675,12 @@ export class PurchaseService {
         prismaTransaction,
         new Date(date)
       );
+
       const vat = subtotal
         .times(vatSetting.vatRate)
         .div(100)
         .toDecimalPlaces(2);
+
       const total = subtotal.plus(vat);
 
       // Validasi saldo cash
@@ -874,30 +718,90 @@ export class PurchaseService {
         prismaTransaction
       );
 
-      // Buat purchase details baru
-      for (const detail of purchaseDetailsData) {
-        const createdDetail =
-          await purchaseDetailRepository.createPurchaseDetail(
-            detail,
-            prismaTransaction
-          );
+      // Buat purchase details baru dan update inventory/product
+      for (const item of items) {
+        // Ambil product sebelum update
+        const product = await productService.getProduct(
+          item.productId,
+          prismaTransaction
+        );
 
-        // Update batch inventory untuk setiap detail pembelian
-        await inventoryBatchRepository.createInventoryBatch(
+        const currentStock = product.stock;
+        const currentAvgPrice = product.avgPurchasePrice;
+
+        let newAvgPrice: Decimal;
+        if (currentStock === 0) {
+          newAvgPrice = new Decimal(item.unitPrice);
+        } else {
+          const oldValue = currentAvgPrice.times(currentStock);
+          const newValue = new Decimal(item.unitPrice).times(item.quantity);
+          newAvgPrice = oldValue
+            .plus(newValue)
+            .div(currentStock + item.quantity);
+        }
+
+        const newStock = currentStock + item.quantity;
+
+        // Buat detail pembelian
+        const detail = await purchaseDetailRepository.createPurchaseDetail(
           {
-            productId: detail.productId,
-            purchaseDate: new Date(date),
-            quantity: detail.quantity,
-            purchasePrice: detail.unitPrice,
-            remainingStock: detail.quantity,
-            purchaseDetailId: createdDetail.purchaseDetailId,
+            purchaseId: purchase.purchaseId,
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            subtotal: new Decimal(item.quantity).times(item.unitPrice),
           },
           prismaTransaction
         );
 
+        // Buat batch baru
+        await inventoryBatchRepository.createInventoryBatch(
+          {
+            productId: item.productId,
+            purchaseDate: new Date(date),
+            quantity: item.quantity,
+            purchasePrice: item.unitPrice,
+            remainingStock: item.quantity,
+            purchaseDetailId: detail.purchaseDetailId,
+          },
+          prismaTransaction
+        );
+
+        // Tambah stok
         await productRepository.incrementStock(
-          detail.productId,
-          detail.quantity,
+          item.productId,
+          item.quantity,
+          prismaTransaction
+        );
+
+        // Hitung COGS (harga pokok) setelah batch disimpan
+        const cogs = await recalculateCOGS(
+          item.productId,
+          setting.inventoryMethod,
+          prismaTransaction
+        );
+
+        const profitMargin = new Decimal(
+          item.profitMargin || product.profitMargin
+        );
+        const price = new Decimal(item.unitPrice);
+
+        let sellingPrice: Decimal;
+        if (cogs.equals(0)) {
+          sellingPrice = price.add(profitMargin);
+        } else {
+          sellingPrice = cogs.add(profitMargin);
+        }
+
+        // Update product
+        await productRepository.updateProductTransaction(
+          {
+            productId: item.productId,
+            stock: newStock,
+            avgPurchasePrice: newAvgPrice,
+            profitMargin,
+            sellingPrice,
+          },
           prismaTransaction
         );
       }
@@ -907,7 +811,7 @@ export class PurchaseService {
         {
           journalId: journal.journalId,
           date: new Date(date),
-          description: `Pembelian ${paymentType.toLowerCase()} ${invoiceNumber} (diperbarui ${new Date().toISOString().split('T')[0]})`,
+          description: `Pembelian ${paymentType.toLowerCase()} ${invoiceNumber} (diperbarui ${stringToDate(new Date())})`,
           reference: invoiceNumber,
         },
         prismaTransaction
@@ -962,24 +866,33 @@ export class PurchaseService {
         );
       }
 
-      for (const je of journalEntries) {
-        const createdJE = await journalEntryRepository.createJournalEntries(
-          {
-            journalId: je.journalId,
-            accountId: je.accountId,
-            debit: je.debit,
-            credit: je.credit,
-          },
+      // Create all journal entries at once
+      await journalEntryRepository.createManyJournalEntries(
+        journalEntries,
+        prismaTransaction
+      );
+
+      // Find the payable journal entry ID
+      if (
+        paymentType === PaymentType.CREDIT ||
+        paymentType === PaymentType.MIXED
+      ) {
+        const creditAmount =
+          paymentType === PaymentType.CREDIT
+            ? total
+            : total.minus(new Decimal(cashAmount!));
+
+        const journalEntry = await journalEntryRepository.findLatestCreditEntry(
+          journal.journalId,
+          creditAmount,
           prismaTransaction
         );
 
-        if (
-          (paymentType === PaymentType.CREDIT ||
-            paymentType === PaymentType.MIXED) &&
-          je.accountId === payableAccount.accountId
-        ) {
-          payableJournalEntryId = createdJE.journalEntryId;
+        if (!journalEntry) {
+          throw new ResponseError(400, 'Failed to find payable journal entry');
         }
+
+        payableJournalEntryId = journalEntry.journalEntryId;
       }
 
       // Update atau buat payable
@@ -992,19 +905,6 @@ export class PurchaseService {
         paymentType === PaymentType.CREDIT ||
         paymentType === PaymentType.MIXED
       ) {
-        if (!supplierId) {
-          throw new ResponseError(
-            400,
-            'Supplier ID is required for CREDIT or MIXED payment'
-          );
-        }
-        if (!dueDate && paymentType === PaymentType.CREDIT) {
-          throw new ResponseError(
-            400,
-            'Due date is required for CREDIT payment'
-          );
-        }
-
         const payableAmount =
           paymentType === PaymentType.CREDIT
             ? total
@@ -1030,6 +930,7 @@ export class PurchaseService {
       // Ambil akun default lagi untuk mendapatkan saldo terbaru
       const updatedAccountDefault =
         await accountService.getAccountDefault(prismaTransaction);
+
       const {
         cashAccount: updatedCashAccount,
         payableAccount: updatedPayableAccount,
@@ -1084,6 +985,105 @@ export class PurchaseService {
     });
   }
 
+  async deletePurchase(purchaseId: string): Promise<void> {
+    return await prismaClient.$transaction(async (prismaTransaction) => {
+      // ambil inventory method
+      const setting =
+        await generalsettingService.getSettingInventory(prismaTransaction);
+
+      // Ambil purchase
+      const purchase = await this.getPurchase(purchaseId, prismaTransaction);
+      const { payable, purchaseDetails, journal, paymentType } = purchase;
+
+      // Validasi payment type dan payable
+      await this.validatePurchasePayableStatus(
+        paymentType,
+        payable,
+        prismaTransaction,
+        'delete'
+      );
+
+      // validasi dgn inventory batches (batchId)
+      await this.validateInventoryBatchUsage(
+        purchaseDetails,
+        prismaTransaction,
+        'delete'
+      );
+
+      // Reverse efek akun lama berdasarkan journal entries
+      for (const entry of journal.journalEntries) {
+        const account = await accountRepository.findById(
+          entry.accountId,
+          prismaTransaction
+        );
+
+        if (!account) {
+          throw new ResponseError(
+            404,
+            `Account with ID ${entry.accountId} not found`
+          );
+        }
+
+        // Hitung penyesuaian saldo berdasarkan tipe saldo normal
+        let balanceAdjustment = new Decimal(0);
+
+        if (account.normalBalance === EntryType.DEBIT) {
+          // Jika akun normalnya DEBIT, pembalikan berarti minus debit + credit
+          balanceAdjustment = new Decimal(0)
+            .minus(entry.debit)
+            .plus(entry.credit);
+        } else if (account.normalBalance === EntryType.CREDIT) {
+          // Jika akun normalnya CREDIT, pembalikan berarti plus debit - credit
+          balanceAdjustment = new Decimal(0)
+            .plus(entry.debit)
+            .minus(entry.credit);
+        }
+
+        const currentBalance = account.balance ?? new Decimal(0);
+        const newBalance = currentBalance.plus(balanceAdjustment);
+
+        await accountRepository.updateAccountTransaction(
+          {
+            accountCode: account.accountCode,
+            balance: newBalance,
+          },
+          prismaTransaction
+        );
+      }
+
+      // Hapus payable jika ada
+      if (payable) {
+        await payableRepository.deletePayable(
+          payable.payableId,
+          prismaTransaction
+        );
+      }
+
+      // Reverse efek inventory lama (stok, batch, cogs, product update)
+      await this.reversePurchaseEffects(
+        purchaseDetails,
+        setting,
+        prismaTransaction
+      );
+
+      // Hapus purchase details, journal entries, journal, dan purchase
+      await purchaseDetailRepository.deleteByPurchaseId(
+        purchaseId,
+        prismaTransaction
+      );
+
+      await journalEntryRepository.deleteByJournalId(
+        journal.journalId,
+        prismaTransaction
+      );
+
+      await journalRepository.deleteJournal(
+        journal.journalId,
+        prismaTransaction
+      );
+    });
+  }
+
   async getAllPurchase(
     page: number,
     limit: number,
@@ -1125,6 +1125,18 @@ export class PurchaseService {
 
   async getPurchaseById(id: string) {
     const purchase = await purchaseRepository.findPurchaseDetailById(id);
+    if (!purchase) throw new ResponseError(404, 'Purchase not found');
+    return purchase;
+  }
+
+  async getPurchase(
+    purchaseId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ) {
+    const purchase = await purchaseRepository.findPurchaseByIdTransaction(
+      purchaseId,
+      prismaTransaction
+    );
     if (!purchase) throw new ResponseError(404, 'Purchase not found');
     return purchase;
   }
