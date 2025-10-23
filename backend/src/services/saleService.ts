@@ -23,6 +23,7 @@ import {
   PaymentType,
   Prisma,
   Sale,
+  SaleDetail,
 } from '@prisma/client';
 import { recalculateCOGS } from '../utils/cogs';
 import { purchaseRepository } from '../repository/purchaseRepository';
@@ -47,7 +48,7 @@ export class SaleService {
     }
   }
 
-  async validateBatchDates(
+  private async validateBatchDates(
     batches: { purchaseDate: Date; remainingStock: number }[],
     saleDate: Date,
     productId: string,
@@ -80,7 +81,7 @@ export class SaleService {
     }
   }
 
-  async validateReceivableForModification(
+  private async validateSalesReceivableStatus(
     paymentType: PaymentType,
     receivable: any | null,
     prismaTransaction: Prisma.TransactionClient,
@@ -110,6 +111,28 @@ export class SaleService {
             `Cannot ${action} sale with paid receivable ${receivable.receivableId}. Please process a sales return instead`
           );
         }
+      }
+    }
+  }
+
+  private async validateSaleProductChronology(
+    saleDetails: SaleDetail[],
+    saleDate: Date,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<void> {
+    for (const detail of saleDetails) {
+      const subsequentPurchases =
+        await purchaseRepository.findSubsequentPurchases(
+          detail.productId,
+          saleDate,
+          prismaTransaction
+        );
+
+      if (subsequentPurchases.length > 0) {
+        throw new ResponseError(
+          400,
+          `Cannot modify sale because there are subsequent purchases of product ${detail.productId}. Please process a sales return instead.`
+        );
       }
     }
   }
@@ -213,7 +236,7 @@ export class SaleService {
           );
         }
 
-        // ✅ Validasi HANYA batch yang akan digunakan
+        // Validasi HANYA batch yang akan digunakan
         await this.validateBatchDates(
           batches,
           new Date(date),
@@ -225,7 +248,7 @@ export class SaleService {
         for (const batch of batches) {
           if (remainingToDeduct <= 0) break;
 
-          // ✅ Skip batch yang tidak valid
+          // Skip batch yang tidak valid
           if (batch.purchaseDate > new Date(date)) {
             continue;
           }
@@ -250,7 +273,7 @@ export class SaleService {
           remainingToDeduct -= deduct;
         }
 
-        // ✅ Double check: pastikan semua quantity terpenuhi
+        // Double check: pastikan semua quantity terpenuhi
         if (remainingToDeduct > 0) {
           throw new ResponseError(
             400,
@@ -500,219 +523,6 @@ export class SaleService {
     });
   }
 
-  async deleteSale(saleId: string): Promise<void> {
-    return await prismaClient.$transaction(async (prismaTransaction) => {
-      // ambil sale beserta data relasinya
-      const sale = await this.getSale(saleId, prismaTransaction);
-
-      // Ambil account default
-      const accountDefault =
-        await accountService.getAccountDefault(prismaTransaction);
-
-      // Ambil setting inventory method
-      const setting =
-        await generalsettingService.getSettingInventory(prismaTransaction);
-
-      const {
-        cashAccount,
-        receivableAccount,
-        inventoryAccount,
-        salesAccount,
-        vatOutputAccount,
-        costOfGoodsSoldAccount,
-      } = accountDefault;
-
-      // Ambil journal entries
-      const journalEntries = sale.journal.journalEntries;
-      const { receivable } = sale;
-
-      // Inisialisasi variabel untuk menyimpan nilai debit/kredit
-      let salesCredit = new Decimal(0);
-      let vatCredit = new Decimal(0);
-      let cogsDebit = new Decimal(0);
-      let inventoryCredit = new Decimal(0);
-      let cashDebit = new Decimal(0);
-      let receivableDebit = new Decimal(0);
-
-      // Ambil nilai dari journal entries
-      for (const entry of journalEntries) {
-        if (entry.accountId === salesAccount.accountId) {
-          salesCredit = entry.credit;
-        } else if (entry.accountId === vatOutputAccount.accountId) {
-          vatCredit = entry.credit;
-        } else if (entry.accountId === costOfGoodsSoldAccount.accountId) {
-          cogsDebit = entry.debit;
-        } else if (entry.accountId === inventoryAccount.accountId) {
-          inventoryCredit = entry.credit;
-        } else if (entry.accountId === cashAccount.accountId) {
-          cashDebit = entry.debit;
-        } else if (entry.accountId === receivableAccount.accountId) {
-          receivableDebit = entry.debit;
-        }
-      }
-
-      // Validasi payment type dan receivable
-      await this.validateReceivableForModification(
-        sale.paymentType,
-        receivable,
-        prismaTransaction,
-        'delete'
-      );
-
-      // Validasi apakah ada pembelian baru untuk produk dalam sale (sale detail)
-      for (const detail of sale.saleDetails) {
-        const subsequentPurchases =
-          await purchaseRepository.findSubsequentPurchases(
-            detail.productId,
-            sale.date,
-            prismaTransaction
-          );
-
-        if (subsequentPurchases.length > 0) {
-          throw new ResponseError(
-            400,
-            `Cannot delete sale due to subsequent purchases of the same product.  Please process a sales return instead`
-          );
-        }
-      }
-
-      // Revert stok produk dan batch
-      for (const detail of sale.saleDetails) {
-        // ambil product
-        const product = await productService.getProduct(
-          detail.productId,
-          prismaTransaction
-        );
-
-        // Tambah kembali stok produk
-        const newStock = product.stock + detail.quantity;
-
-        // Update stok batch jika ada
-        if (detail.batchId) {
-          const batch = await inventoryBatchRepository.findBatchById(
-            detail.batchId,
-            prismaTransaction
-          );
-          if (!batch) {
-            throw new ResponseError(404, `Batch ${detail.batchId} not found`);
-          }
-
-          await inventoryBatchRepository.incrementBatchStock(
-            detail.batchId,
-            detail.quantity,
-            prismaTransaction
-          );
-        }
-
-        // Hitung ulang harga pokok (COGS)
-        const cogs = await recalculateCOGS(
-          product.productId,
-          setting.inventoryMethod,
-          prismaTransaction
-        );
-
-        const sellingPrice = cogs.equals(0)
-          ? product.profitMargin
-          : cogs.plus(product.profitMargin);
-
-        // Update stok dan harga produk
-        await productRepository.updateProductTransaction(
-          {
-            productId: detail.productId,
-            stock: newStock,
-            avgPurchasePrice: cogs,
-            profitMargin: product.profitMargin,
-            sellingPrice,
-          },
-          prismaTransaction
-        );
-      }
-
-      // Update saldo akun (membalikkan efek createSale)
-      await accountRepository.updateAccountTransaction(
-        {
-          accountCode: inventoryAccount.accountCode,
-          balance: inventoryAccount.balance.plus(inventoryCredit),
-        },
-        prismaTransaction
-      );
-
-      await accountRepository.updateAccountTransaction(
-        {
-          accountCode: costOfGoodsSoldAccount.accountCode,
-          balance: costOfGoodsSoldAccount.balance.minus(cogsDebit),
-        },
-        prismaTransaction
-      );
-
-      await accountRepository.updateAccountTransaction(
-        {
-          accountCode: salesAccount.accountCode,
-          balance: salesAccount.balance.minus(salesCredit),
-        },
-        prismaTransaction
-      );
-
-      await accountRepository.updateAccountTransaction(
-        {
-          accountCode: vatOutputAccount.accountCode,
-          balance: vatOutputAccount.balance.minus(vatCredit),
-        },
-        prismaTransaction
-      );
-
-      if (sale.paymentType === PaymentType.CASH && cashDebit.greaterThan(0)) {
-        await accountRepository.updateAccountTransaction(
-          {
-            accountCode: cashAccount.accountCode,
-            balance: cashAccount.balance.minus(cashDebit),
-          },
-          prismaTransaction
-        );
-      }
-
-      if (
-        (sale.paymentType === PaymentType.CREDIT ||
-          sale.paymentType === PaymentType.MIXED) &&
-        receivableDebit.greaterThan(0)
-      ) {
-        await accountRepository.updateAccountTransaction(
-          {
-            accountCode: receivableAccount.accountCode,
-            balance: receivableAccount.balance.minus(receivableDebit),
-          },
-          prismaTransaction
-        );
-      }
-
-      // Hapus receivable terkait
-      if (receivable) {
-        await receivableRepository.deleteReceivable(
-          receivable.receivableId,
-          prismaTransaction
-        );
-      }
-
-      // Hapus sale details
-      await saleDetailRepository.deleteManySaleDetails(
-        sale.saleDetails.map((detail) => detail.saleDetailId),
-        prismaTransaction
-      );
-
-      // Hapus journal entries
-      await journalEntryRepository.deleteManyJournalEntries(
-        journalEntries.map((entry) => entry.journalEntryId),
-        prismaTransaction
-      );
-
-      // Hapus journal
-      await journalRepository.deleteJournal(
-        sale.journal.journalId,
-        prismaTransaction
-      );
-    });
-  }
-
   async updateSale(body: SaleRequest, saleId: string): Promise<Sale> {
     const saleReq = validate(saleSchema, body);
     const {
@@ -770,12 +580,28 @@ export class SaleService {
         await this.ensureInvoiceNumberUnique(invoiceNumber, prismaTransaction);
       }
 
+      // Validasi payment type dan receivable
+      await this.validateSalesReceivableStatus(
+        oldPaymentType,
+        receivable,
+        prismaTransaction,
+        'update'
+      );
+
+      // Validasi apakah ada pembelian baru untuk produk dalam sale (sale detail)
+      await this.validateSaleProductChronology(
+        saleDetails,
+        existingSale.date,
+        prismaTransaction
+      );
+
       // Reverse efek akun lama berdasarkan journal entries
       for (const entry of journal.journalEntries) {
         const account = await accountRepository.findById(
           entry.accountId,
           prismaTransaction
         );
+
         if (!account) {
           throw new ResponseError(
             404,
@@ -784,11 +610,15 @@ export class SaleService {
         }
 
         let balanceAdjustment = new Decimal(0);
+
+        // Jika akun normalnya DEBIT, pembalikan = -debit + credit
         if (account.normalBalance === EntryType.DEBIT) {
           balanceAdjustment = new Decimal(0)
             .minus(entry.debit)
             .plus(entry.credit);
-        } else if (account.normalBalance === EntryType.CREDIT) {
+        }
+        // Jika akun normalnya CREDIT, pembalikan = +debit - credit
+        else if (account.normalBalance === EntryType.CREDIT) {
           balanceAdjustment = new Decimal(0)
             .plus(entry.debit)
             .minus(entry.credit);
@@ -804,6 +634,7 @@ export class SaleService {
 
       // Kembalikan stok lama dari saleDetails
       for (const detail of saleDetails) {
+        // ambil product
         await productService.getProduct(detail.productId, prismaTransaction);
 
         await productRepository.incrementStock(
@@ -826,7 +657,6 @@ export class SaleService {
 
       // Hapus receivable lama (jika ada) untuk menghindari foreign key constraint
       if (existingSale.receivable) {
-        console.log(`Deleting existing receivable for saleId: ${saleId}`);
         await receivableRepository.deleteReceivable(
           existingSale.receivable.receivableId,
           prismaTransaction
@@ -969,14 +799,6 @@ export class SaleService {
           );
         }
       }
-
-      // Validasi receivable untuk modifikasi
-      await this.validateReceivableForModification(
-        oldPaymentType,
-        receivable,
-        prismaTransaction,
-        'update'
-      );
 
       // Update tabel sales
       const sale = await saleRepository.updateSaleTransaction(
@@ -1188,6 +1010,155 @@ export class SaleService {
       }
 
       return sale;
+    });
+  }
+
+  async deleteSale(saleId: string): Promise<void> {
+    return await prismaClient.$transaction(async (prismaTransaction) => {
+      // Ambil setting inventory method
+      const setting =
+        await generalsettingService.getSettingInventory(prismaTransaction);
+
+      // ambil sale beserta data relasinya
+      const sale = await this.getSale(saleId, prismaTransaction);
+
+      // Ambil journal entries
+      const { journal, receivable, saleDetails } = sale;
+      const { journalEntries } = journal;
+
+      // Validasi payment type dan receivable
+      await this.validateSalesReceivableStatus(
+        sale.paymentType,
+        receivable,
+        prismaTransaction,
+        'delete'
+      );
+
+      // Validasi apakah ada pembelian baru untuk produk dalam sale (sale detail)
+      await this.validateSaleProductChronology(
+        saleDetails,
+        sale.date,
+        prismaTransaction
+      );
+
+      // Reverse efek akun lama berdasarkan journal entries
+      for (const entry of journalEntries) {
+        const account = await accountRepository.findById(
+          entry.accountId,
+          prismaTransaction
+        );
+
+        if (!account) {
+          throw new ResponseError(
+            404,
+            `Account with ID ${entry.accountId} not found`
+          );
+        }
+
+        let balanceAdjustment = new Decimal(0);
+
+        // Jika akun normalnya DEBIT, pembalikan = -debit + credit
+        if (account.normalBalance === EntryType.DEBIT) {
+          balanceAdjustment = new Decimal(0)
+            .minus(entry.debit)
+            .plus(entry.credit);
+        }
+        // Jika akun normalnya CREDIT, pembalikan = +debit - credit
+        else if (account.normalBalance === EntryType.CREDIT) {
+          balanceAdjustment = new Decimal(0)
+            .plus(entry.debit)
+            .minus(entry.credit);
+        }
+
+        const currentBalance = account.balance ?? new Decimal(0);
+        const newBalance = currentBalance.plus(balanceAdjustment);
+
+        await accountRepository.updateAccountTransaction(
+          {
+            accountCode: account.accountCode,
+            balance: newBalance,
+          },
+          prismaTransaction
+        );
+      }
+
+      // Revert stok produk dan batch
+      for (const detail of sale.saleDetails) {
+        // ambil product
+        const product = await productService.getProduct(
+          detail.productId,
+          prismaTransaction
+        );
+
+        // Tambah kembali stok produk
+        const newStock = product.stock + detail.quantity;
+
+        // Update stok batch jika ada
+        if (detail.batchId) {
+          const batch = await inventoryBatchRepository.findBatchById(
+            detail.batchId,
+            prismaTransaction
+          );
+          if (!batch) {
+            throw new ResponseError(404, `Batch ${detail.batchId} not found`);
+          }
+
+          await inventoryBatchRepository.incrementBatchStock(
+            detail.batchId,
+            detail.quantity,
+            prismaTransaction
+          );
+        }
+
+        // Hitung ulang harga pokok (COGS)
+        const cogs = await recalculateCOGS(
+          product.productId,
+          setting.inventoryMethod,
+          prismaTransaction
+        );
+
+        const sellingPrice = cogs.equals(0)
+          ? product.profitMargin
+          : cogs.plus(product.profitMargin);
+
+        // Update stok dan harga produk
+        await productRepository.updateProductTransaction(
+          {
+            productId: detail.productId,
+            stock: newStock,
+            avgPurchasePrice: cogs,
+            profitMargin: product.profitMargin,
+            sellingPrice,
+          },
+          prismaTransaction
+        );
+      }
+
+      // Hapus receivable terkait
+      if (receivable) {
+        await receivableRepository.deleteReceivable(
+          receivable.receivableId,
+          prismaTransaction
+        );
+      }
+
+      // Hapus sale details
+      await saleDetailRepository.deleteManySaleDetails(
+        sale.saleDetails.map((detail) => detail.saleDetailId),
+        prismaTransaction
+      );
+
+      // Hapus journal entries
+      await journalEntryRepository.deleteManyJournalEntries(
+        journalEntries.map((entry) => entry.journalEntryId),
+        prismaTransaction
+      );
+
+      // Hapus journal
+      await journalRepository.deleteJournal(
+        sale.journal.journalId,
+        prismaTransaction
+      );
     });
   }
 

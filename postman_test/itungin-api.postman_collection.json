@@ -2488,7 +2488,8 @@
 								},
 								{
 									"key": "search",
-									"value": ""
+									"value": "",
+									"description": "cari berdasarkan purchase id"
 								},
 								{
 									"key": "supplierId",
@@ -2496,23 +2497,28 @@
 								},
 								{
 									"key": "paymentStatus",
-									"value": ""
+									"value": "",
+									"description": "CASH | CREDIT | MIXED"
 								},
 								{
 									"key": "fromDueDate",
-									"value": ""
+									"value": "",
+									"description": "tanggal jatuh tempo (dari)"
 								},
 								{
 									"key": "toDueDate",
-									"value": ""
+									"value": "",
+									"description": "tanggal jatuh tempo (sampai)\n"
 								},
 								{
 									"key": "minAmount",
-									"value": ""
+									"value": "",
+									"description": "batas bawah nominal tagihan (minimum amount payable)."
 								},
 								{
 									"key": "maxAmount",
-									"value": ""
+									"value": "",
+									"description": "batas atas nominal tagihan (maximum amount payable)."
 								},
 								{
 									"key": "isPaid",
@@ -3061,7 +3067,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-17\",\r\n  \"customerId\": \"{{customerId}}\",\r\n  \"invoiceNumber\": \"BG-00003\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CREDIT\",\r\n  \"dueDate\": \"2025-10-02\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"101\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"46\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-17\",\r\n  \"customerId\": \"{{customerId}}\",\r\n  \"invoiceNumber\": \"BG-00003\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CREDIT\",\r\n  \"dueDate\": \"2025-10-02\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"200\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"70\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -3608,7 +3614,8 @@
 								},
 								{
 									"key": "search",
-									"value": ""
+									"value": "",
+									"description": "cari berdasarkan sale id"
 								},
 								{
 									"key": "customerId",
@@ -3616,23 +3623,28 @@
 								},
 								{
 									"key": "paymentStatus",
-									"value": ""
+									"value": "",
+									"description": "CASH | CREDIT | MIXED"
 								},
 								{
 									"key": "fromDueDate",
-									"value": ""
+									"value": "",
+									"description": "tanggal jatuh tempo (dari)"
 								},
 								{
 									"key": "toDueDate",
-									"value": ""
+									"value": "",
+									"description": "tanggal jatuh tempo (sampai)"
 								},
 								{
 									"key": "minAmount",
-									"value": ""
+									"value": "",
+									"description": "batas bawah nominal tagihan (minimum amount receivable)."
 								},
 								{
 									"key": "maxAmount",
-									"value": ""
+									"value": "",
+									"description": "batas atas nominal tagihan (maximum amount payable)."
 								},
 								{
 									"key": "isPaid",
