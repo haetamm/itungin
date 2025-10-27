@@ -71,11 +71,18 @@ export class ReceivablePaymentRepository {
     data: ReceivablePaymentForm,
     prismaTransaction: Prisma.TransactionClient
   ): Promise<ReceivablePayment> {
-    const { receivableId, journalEntryId, paymentAmount, paymentDate, method } =
-      data;
+    const {
+      receivableId,
+      receiveVoucher,
+      journalEntryId,
+      paymentAmount,
+      paymentDate,
+      method,
+    } = data;
     return await prismaTransaction.receivablePayment.create({
       data: {
         receivableId,
+        receiveVoucher,
         journalEntryId: journalEntryId,
         amount: paymentAmount,
         paymentDate: new Date(paymentDate),
@@ -97,9 +104,11 @@ export class ReceivablePaymentRepository {
     data: UpdateReceivablePaymentForm,
     prismaTransaction: Prisma.TransactionClient
   ): Promise<ReceivablePayment> {
-    const { paymentId, paymentAmount, paymentDate, method } = data;
+    const { paymentId, receiveVoucher, paymentAmount, paymentDate, method } =
+      data;
     return await prismaTransaction.receivablePayment.update({
       data: {
+        receiveVoucher,
         amount: paymentAmount,
         paymentDate: new Date(paymentDate),
         method,

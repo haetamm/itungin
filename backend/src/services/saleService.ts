@@ -152,6 +152,7 @@ export class SaleService {
       date,
       customerId,
       invoiceNumber,
+      receiveVoucher,
       vatRateId,
       items,
       paymentType,
@@ -327,6 +328,7 @@ export class SaleService {
           date,
           description: `Penjualan ${paymentType.toLowerCase()} ${invoiceNumber} (diperbarui ${new Date().toISOString().split('T')[0]})`,
           reference: invoiceNumber,
+          paymentReference: receiveVoucher,
         },
         prismaTransaction
       );
@@ -529,6 +531,7 @@ export class SaleService {
       date,
       customerId,
       invoiceNumber,
+      receiveVoucher,
       vatRateId,
       items,
       paymentType,
@@ -827,6 +830,7 @@ export class SaleService {
           date: new Date(date),
           description: `Penjualan ${paymentType.toLowerCase()} ${invoiceNumber} (diperbarui ${new Date().toISOString().split('T')[0]})`,
           reference: invoiceNumber,
+          paymentReference: receiveVoucher ? receiveVoucher : null,
         },
         prismaTransaction
       );

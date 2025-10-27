@@ -17,11 +17,18 @@ export class PayablePaymentRepository {
     data: PayablePaymentForm,
     prismaTransaction: Prisma.TransactionClient
   ): Promise<Payment> {
-    const { payableId, journalEntryId, paymentAmount, paymentDate, method } =
-      data;
+    const {
+      payableId,
+      paymentVoucher,
+      journalEntryId,
+      paymentAmount,
+      paymentDate,
+      method,
+    } = data;
     return await prismaTransaction.payment.create({
       data: {
         payableId,
+        paymentVoucher,
         journalEntryId: journalEntryId,
         amount: paymentAmount,
         paymentDate: new Date(paymentDate),
@@ -42,15 +49,18 @@ export class PayablePaymentRepository {
   async updatePayment(
     data: {
       paymentId: string;
+      paymentVoucher: string;
       paymentAmount: Decimal;
       paymentDate: Date;
       method: string;
     },
     prismaTransaction: Prisma.TransactionClient
   ): Promise<Payment> {
-    const { paymentId, paymentAmount, paymentDate, method } = data;
+    const { paymentId, paymentVoucher, paymentAmount, paymentDate, method } =
+      data;
     return await prismaTransaction.payment.update({
       data: {
+        paymentVoucher,
         amount: paymentAmount,
         paymentDate: new Date(paymentDate),
         method,

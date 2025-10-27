@@ -76,4 +76,13 @@ export const purchaseSchema: ObjectSchema<PurchaseRequest> = Joi.object({
       }, 'Due date must be at least one day after sale date'),
     otherwise: Joi.forbidden(),
   }),
+
+  paymentVoucher: Joi.when('paymentType', {
+    is: Joi.valid('CASH', 'MIXED'),
+    then: Joi.string().max(50).required().messages({
+      'any.required':
+        'Payment voucher is required for CASH or MIXED payment type',
+    }),
+    otherwise: Joi.forbidden(),
+  }),
 });

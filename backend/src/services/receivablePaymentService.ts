@@ -9,13 +9,14 @@ import { validate } from '../validation/validation';
 import { accountService } from './accountService';
 import {
   ReceivablePaymentRequest,
-  UpdatePaymentPayableRequest,
+  UpdatePaymentReceivableRequest,
 } from '../utils/interface';
 import { journalRepository } from '../repository/journalRepository';
 import { receivablePaymentRepository } from '../repository/receivablePaymentRepository';
 import { receivablePaymentSchema } from '../validation/receivablePaymentValidation';
 import { receivableService } from './receivableService';
 import { receivableRepository } from '../repository/receivableRepository';
+import { formatRupiah } from '../utils/helper';
 
 export class ReceivablePaymentService {
   private async validatePaymentDate(
@@ -60,7 +61,8 @@ export class ReceivablePaymentService {
     body: ReceivablePaymentRequest;
   }): Promise<ReceivablePayment> {
     const paymentReq = validate(receivablePaymentSchema, body);
-    const { receivableId, amount, paymentDate, method } = paymentReq;
+    const { receivableId, receiveVoucher, amount, paymentDate, method } =
+      paymentReq;
 
     return await prismaClient.$transaction(async (prismaTransaction) => {
       // ambil hutang
@@ -109,10 +111,10 @@ export class ReceivablePaymentService {
       const journal = await journalRepository.createJournal(
         {
           date: new Date(paymentDate),
-          description: `Pembayaran piutang penjualan dari ${customer.customerName} (No. Invoice: ${sale.invoiceNumber})${
+          description: `Pembayaran piutang penjualan dari ${customer.customerName}${
             isLatePayment ? ' [TERLAMBAT]' : ''
           }`,
-          reference: `REC-${receivable}`,
+          reference: receiveVoucher,
         },
         prismaTransaction
       );
@@ -128,8 +130,8 @@ export class ReceivablePaymentService {
         {
           journalId: journal.journalId,
           accountId: cashAccount.accountId,
-          credit: paymentAmount,
-          debit: new Decimal(0),
+          debit: paymentAmount,
+          credit: new Decimal(0),
         },
       ];
 
@@ -153,6 +155,7 @@ export class ReceivablePaymentService {
       const payment = await receivablePaymentRepository.createPayment(
         {
           receivableId,
+          receiveVoucher,
           journalEntryId: cashJournalEntry.journalEntryId,
           paymentAmount,
           paymentDate: new Date(paymentDate),
@@ -201,10 +204,10 @@ export class ReceivablePaymentService {
 
   async updateReceivablePayment(
     paymentId: string,
-    body: UpdatePaymentPayableRequest
+    body: UpdatePaymentReceivableRequest
   ): Promise<ReceivablePayment> {
     const paymentReq = validate(updateReceivablePaymentSchema, body);
-    const { amount, paymentDate, method } = paymentReq;
+    const { receiveVoucher, amount, paymentDate, method } = paymentReq;
 
     return await prismaClient.$transaction(async (prismaTransaction) => {
       // Ambil payment lama
@@ -243,7 +246,7 @@ export class ReceivablePaymentService {
       if (newRemainingAmount.lt(0)) {
         throw new ResponseError(
           400,
-          'Updated payment exceeds remaining receivable amount'
+          `Updated payment exceeds remaining receivable amount of ${formatRupiah(receivable.remainingAmount)}`
         );
       }
 
@@ -283,9 +286,10 @@ export class ReceivablePaymentService {
         {
           journalId: oldJournal.journalId,
           date: paymentDt,
-          description: `Update pembayaran piutang penjualan dari ${customer.customerName} (No. Invoice: ${sale.invoiceNumber})${
+          description: `Update pembayaran piutang penjualan dari ${customer.customerName} ${
             isLatePayment ? ' [TERLAMBAT]' : ''
           }`,
+          reference: receiveVoucher,
         },
         prismaTransaction
       );
@@ -319,6 +323,7 @@ export class ReceivablePaymentService {
       const updatedPayment = await receivablePaymentRepository.updatePayment(
         {
           paymentId,
+          receiveVoucher,
           paymentAmount: newPaymentAmount,
           paymentDate: paymentDt,
           method,

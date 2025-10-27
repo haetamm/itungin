@@ -76,8 +76,15 @@ export class PurchaseService {
     data: UpdatePurchaseDataRelation,
     prismaTransaction: Prisma.TransactionClient
   ): Promise<PurchaseResult> {
-    const { date, supplierId, invoiceNumber, items, vatRateId, paymentType } =
-      data;
+    const {
+      date,
+      supplierId,
+      invoiceNumber,
+      paymentReference,
+      items,
+      vatRateId,
+      paymentType,
+    } = data;
 
     // ambil inventory method
     const setting =
@@ -116,6 +123,7 @@ export class PurchaseService {
         date: new Date(data.date),
         description: `Pembelian ${paymentType.toLowerCase()} ${invoiceNumber}`,
         reference: invoiceNumber,
+        paymentReference,
       },
       prismaTransaction
     );
@@ -330,6 +338,7 @@ export class PurchaseService {
       date,
       supplierId,
       invoiceNumber,
+      paymentVoucher,
       vatRateId,
       items,
       paymentType,
@@ -351,6 +360,7 @@ export class PurchaseService {
             date,
             supplierId,
             invoiceNumber,
+            paymentReference: paymentVoucher,
             items,
             vatRateId,
             paymentType,
@@ -544,6 +554,7 @@ export class PurchaseService {
       date,
       supplierId,
       invoiceNumber,
+      paymentVoucher,
       vatRateId,
       items,
       paymentType,
@@ -813,6 +824,7 @@ export class PurchaseService {
           date: new Date(date),
           description: `Pembelian ${paymentType.toLowerCase()} ${invoiceNumber} (diperbarui ${stringToDate(new Date())})`,
           reference: invoiceNumber,
+          paymentReference: paymentVoucher ? paymentVoucher : null,
         },
         prismaTransaction
       );

@@ -1,12 +1,11 @@
-import { ObjectSchema } from 'joi';
+import Joi, { ObjectSchema } from 'joi';
 import {
   ReceivablePaymentRequest,
   UpdatePaymentReceivableRequest,
 } from '../utils/interface';
 
-const Joi = require('joi');
-
 const receivableId = Joi.string().uuid().required();
+const receiveVoucher = Joi.string().trim().required();
 const amount = Joi.number().positive().precision(2).required();
 const paymentDate = Joi.string().isoDate().required();
 const method = Joi.string().trim().min(1).required();
@@ -14,6 +13,7 @@ const method = Joi.string().trim().min(1).required();
 export const receivablePaymentSchema: ObjectSchema<ReceivablePaymentRequest> =
   Joi.object({
     receivableId,
+    receiveVoucher,
     amount,
     paymentDate,
     method,
@@ -21,6 +21,7 @@ export const receivablePaymentSchema: ObjectSchema<ReceivablePaymentRequest> =
 
 export const updateReceivablePaymentSchema: ObjectSchema<UpdatePaymentReceivableRequest> =
   Joi.object({
+    receiveVoucher,
     amount,
     paymentDate,
     method,

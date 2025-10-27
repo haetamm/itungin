@@ -6,11 +6,13 @@ export class JournalRepository {
     data: JournalForm,
     prismaTransaction: Prisma.TransactionClient
   ): Promise<Journal> {
+    const { date, description, reference, paymentReference } = data;
     return prismaTransaction.journal.create({
       data: {
-        date: data.date,
-        description: data.description,
-        reference: data.reference,
+        date,
+        description,
+        reference,
+        paymentReference,
       },
     });
   }
@@ -28,12 +30,14 @@ export class JournalRepository {
     data: UpdateJournalForm,
     prismaTransaction: Prisma.TransactionClient
   ): Promise<Journal> {
+    const { journalId, date, description, reference, paymentReference } = data;
     return prismaTransaction.journal.update({
-      where: { journalId: data.journalId },
+      where: { journalId },
       data: {
-        date: data.date,
-        description: data.description,
-        reference: data.reference,
+        date,
+        description,
+        reference,
+        paymentReference,
       },
     });
   }

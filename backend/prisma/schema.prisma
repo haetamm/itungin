@@ -119,19 +119,19 @@ model AccountDefault {
   salesAccountId            String
   vatOutputAccountId        String
   receivableAccountId       String
-  costOfGoodsSoldAccountId   String
+  costOfGoodsSoldAccountId  String
 
   // Relasi ke Account
-  cashAccount                 Account    @relation("CashAccount", fields: [cashAccountId], references: [accountId])
-  inventoryAccount            Account    @relation("InventoryAccount", fields: [inventoryAccountId], references: [accountId])
-  vatInputAccount             Account    @relation("VatInputAccount", fields: [vatInputAccountId], references: [accountId])
-  payableAccount              Account    @relation("PayableAccount", fields: [payableAccountId], references: [accountId])
-  ownerCapitalAccount         Account    @relation("OwnerCapitalAccount", fields: [ownerCapitalAccountId], references: [accountId])
+  cashAccount               Account    @relation("CashAccount", fields: [cashAccountId], references: [accountId])
+  inventoryAccount          Account    @relation("InventoryAccount", fields: [inventoryAccountId], references: [accountId])
+  vatInputAccount           Account    @relation("VatInputAccount", fields: [vatInputAccountId], references: [accountId])
+  payableAccount            Account    @relation("PayableAccount", fields: [payableAccountId], references: [accountId])
+  ownerCapitalAccount       Account    @relation("OwnerCapitalAccount", fields: [ownerCapitalAccountId], references: [accountId])
 
-  salesAccount                Account    @relation("SalesAccount", fields: [salesAccountId], references: [accountId])
-  vatOutputAccount            Account    @relation("VatOutputAccount", fields: [vatOutputAccountId], references: [accountId])
-  receivableAccount           Account    @relation("ReceivableAccount", fields: [receivableAccountId], references: [accountId])
-  costOfGoodsSoldAccount      Account    @relation("CostOfGoodsSoldAccount", fields: [costOfGoodsSoldAccountId], references: [accountId])
+  salesAccount              Account    @relation("SalesAccount", fields: [salesAccountId], references: [accountId])
+  vatOutputAccount          Account    @relation("VatOutputAccount", fields: [vatOutputAccountId], references: [accountId])
+  receivableAccount         Account    @relation("ReceivableAccount", fields: [receivableAccountId], references: [accountId])
+  costOfGoodsSoldAccount    Account    @relation("CostOfGoodsSoldAccount", fields: [costOfGoodsSoldAccountId], references: [accountId])
 
 
   createdAt       DateTime         @default(now()) @map("created_at")
@@ -141,15 +141,18 @@ model AccountDefault {
 }
 
 model Journal {
-  journalId      String          @id @default(uuid()) @map("journal_id")
-  date           DateTime        @db.Date
-  description    String?         @db.VarChar(255)
-  reference      String?         @db.VarChar(50)
-  journalEntries JournalEntry[]
-  sales          Sale[]
-  purchases      Purchase[]
-  createdAt      DateTime        @default(now()) @map("created_at")
-  updatedAt      DateTime        @updatedAt @map("updated_at")
+  journalId         String          @id @default(uuid()) @map("journal_id")
+  date              DateTime        @db.Date
+  description       String?         @db.VarChar(255)
+  reference         String?         @db.VarChar(50)
+  paymentReference  String?         @db.VarChar(50)
+
+  journalEntries    JournalEntry[]
+  sales             Sale[]
+  purchases         Purchase[]
+
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
 
   @@map("journals")
 }
@@ -304,6 +307,7 @@ model Payable {
 
 model Payment {
   paymentId       String        @id @default(uuid()) @map("payment_id")
+  paymentVoucher  String        @default("TEMP-BKK") @db.VarChar(50) @map("payment_voucher")
   payableId       String        @map("payable_id")
   journalEntryId  String        @unique @map("journal_entry_id")
   amount          Decimal       @db.Decimal(15, 2)
@@ -384,6 +388,7 @@ model Receivable {
 
 model ReceivablePayment {
   paymentId       String        @id @default(uuid()) @map("payment_id")
+  receiveVoucher  String        @default("TEMP-BKM") @db.VarChar(50) @map("receive_voucher")
   receivableId    String        @map("receivable_id")
   journalEntryId  String        @unique @map("journal_entry_id")
   amount          Decimal       @db.Decimal(15, 2)

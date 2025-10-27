@@ -133,6 +133,7 @@ export interface JournalForm {
   date: string | Date;
   description?: string;
   reference?: string;
+  paymentReference?: string;
 }
 
 export interface UpdateJournalForm {
@@ -140,6 +141,7 @@ export interface UpdateJournalForm {
   date: string | Date;
   description?: string;
   reference?: string;
+  paymentReference?: string | null;
 }
 
 export interface PurchaseForm {
@@ -274,6 +276,7 @@ export interface UpdatePurchaseDataRelation {
   date: string;
   supplierId: string;
   invoiceNumber: string;
+  paymentReference?: string;
   items: PurchaseItem[];
   vatRateId: string;
   paymentType: PaymentType;
@@ -283,6 +286,7 @@ export interface PurchaseRequest {
   date: string;
   supplierId: string;
   invoiceNumber: string;
+  paymentVoucher: string;
   vatRateId: string;
   items: PurchaseItem[];
   paymentType: PaymentType; // CASH | CREDIT | MIXED
@@ -313,6 +317,7 @@ export interface SaleRequest {
   date: string;
   customerId: string;
   invoiceNumber: string;
+  receiveVoucher?: string;
   vatRateId: string;
   items: SaleItem[];
   paymentType: PaymentType;
@@ -339,12 +344,14 @@ export interface UpdateSaleDetail {
 
 export interface PaymentPayableRequest {
   payableId: string;
+  paymentVoucher: string;
   amount: Decimal;
   paymentDate: string;
   method: string;
 }
 
 export interface UpdatePaymentPayableRequest {
+  paymentVoucher: string;
   amount: Decimal;
   paymentDate: string;
   method: string;
@@ -352,6 +359,7 @@ export interface UpdatePaymentPayableRequest {
 
 export interface PayablePaymentForm {
   payableId: string;
+  paymentVoucher: string;
   journalEntryId: string;
   paymentAmount: Decimal;
   paymentDate: Date;
@@ -365,6 +373,7 @@ export interface PaginatedPayablesResult {
 
 export interface ReceivablePaymentRequest {
   receivableId: string;
+  receiveVoucher: string;
   amount: Decimal;
   paymentDate: string;
   method: string;
@@ -372,9 +381,17 @@ export interface ReceivablePaymentRequest {
 
 export interface ReceivablePaymentForm {
   receivableId: string;
+  receiveVoucher: string;
   journalEntryId: string;
   paymentAmount: Decimal;
   paymentDate: Date;
+  method: string;
+}
+
+export interface UpdatePaymentReceivableRequest {
+  receiveVoucher: string;
+  amount: Decimal;
+  paymentDate: string;
   method: string;
 }
 
@@ -385,14 +402,9 @@ export interface RecordReceivablePaymentForm {
   status: PaymentStatus;
 }
 
-export interface UpdatePaymentReceivableRequest {
-  amount: Decimal;
-  paymentDate: string;
-  method: string;
-}
-
 export interface UpdateReceivablePaymentForm {
   paymentId: string;
+  receiveVoucher: string;
   paymentAmount: Decimal;
   paymentDate: Date;
   method: string;

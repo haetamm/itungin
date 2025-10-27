@@ -1622,7 +1622,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-02\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00001\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CASH\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"140\",\r\n        \"unitPrice\": \"8900\",\r\n        \"profitMargin\": \"800\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"80\",\r\n        \"unitPrice\": \"6000\",\r\n        \"profitMargin\": \"500\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-02\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00001\",\r\n  \"paymentVoucher\": \"BKK-0001\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CASH\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"140\",\r\n        \"unitPrice\": \"8900\",\r\n        \"profitMargin\": \"800\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"80\",\r\n        \"unitPrice\": \"6000\",\r\n        \"profitMargin\": \"500\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1744,7 +1744,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-10\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00010\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"MIXED\",\r\n  \"cashAmount\": 300000,\r\n  \"dueDate\": \"2025-09-28\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"100\",\r\n        \"unitPrice\": \"7000\",\r\n        \"profitMargin\": \"1000\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-10\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00010\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"MIXED\",\r\n  \"paymentVoucher\": \"BKK-0001\",\r\n  \"cashAmount\": 300000,\r\n  \"dueDate\": \"2025-09-28\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"100\",\r\n        \"unitPrice\": \"7000\",\r\n        \"profitMargin\": \"1000\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1974,7 +1974,7 @@
 					"response": []
 				},
 				{
-					"name": "update cash purchase to credit | 1",
+					"name": "update purchase to credit | 1",
 					"event": [
 						{
 							"listen": "test",
@@ -2003,7 +2003,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-02\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00001\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CREDIT\",\r\n  \"dueDate\": \"2025-10-10\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"200\",\r\n        \"unitPrice\": \"2300\",\r\n        \"profitMargin\": \"600\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"230\",\r\n        \"unitPrice\": \"4500\",\r\n        \"profitMargin\": \"450\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-01\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00001\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CREDIT\",\r\n  \"dueDate\": \"2025-10-10\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"200\",\r\n        \"unitPrice\": \"2300\",\r\n        \"profitMargin\": \"600\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"230\",\r\n        \"unitPrice\": \"4500\",\r\n        \"profitMargin\": \"450\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2028,7 +2028,7 @@
 					"response": []
 				},
 				{
-					"name": "update credit purchase to mixed | 1",
+					"name": "update purchase to mixed | 1",
 					"event": [
 						{
 							"listen": "test",
@@ -2057,7 +2057,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-01\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00001\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"MIXED\",\r\n  \"cashAmount\": 15000,\r\n  \"dueDate\": \"2025-10-10\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"400\",\r\n        \"unitPrice\": \"2300\",\r\n        \"profitMargin\": \"800\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"120\",\r\n        \"unitPrice\": \"4500\",\r\n        \"profitMargin\": \"500\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-01\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00001\",\r\n  \"paymentVoucher\": \"BKK-0001\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"MIXED\",\r\n  \"cashAmount\": 15000,\r\n  \"dueDate\": \"2025-10-10\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"400\",\r\n        \"unitPrice\": \"2300\",\r\n        \"profitMargin\": \"800\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"120\",\r\n        \"unitPrice\": \"4500\",\r\n        \"profitMargin\": \"500\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2082,7 +2082,7 @@
 					"response": []
 				},
 				{
-					"name": "update mixed purchase to cash | 1",
+					"name": "update purchase to cash | 1",
 					"event": [
 						{
 							"listen": "test",
@@ -2111,7 +2111,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-02\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00001\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CASH\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"40\",\r\n        \"unitPrice\": \"2300\",\r\n        \"profitMargin\": \"800\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-02\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00001\",\r\n  \"paymentVoucher\": \"BKK-0001\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CASH\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"40\",\r\n        \"unitPrice\": \"2300\",\r\n        \"profitMargin\": \"800\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2136,7 +2136,7 @@
 					"response": []
 				},
 				{
-					"name": "update credit purchase to cash | 2",
+					"name": "update purchase to cash | 2",
 					"event": [
 						{
 							"listen": "test",
@@ -2165,7 +2165,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-02\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00002\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CASH\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"240\",\r\n        \"unitPrice\": \"10000\",\r\n        \"profitMargin\": \"800\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"180\",\r\n        \"unitPrice\": \"6500\",\r\n        \"profitMargin\": \"500\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-02\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00002\",\r\n  \"paymentVoucher\": \"BKK-0002\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CASH\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"240\",\r\n        \"unitPrice\": \"10000\",\r\n        \"profitMargin\": \"800\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"180\",\r\n        \"unitPrice\": \"6500\",\r\n        \"profitMargin\": \"500\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2190,7 +2190,7 @@
 					"response": []
 				},
 				{
-					"name": "update cash purchase to mixed | 2",
+					"name": "update purchase to mixed | 2",
 					"event": [
 						{
 							"listen": "test",
@@ -2219,7 +2219,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-02\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00002\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"MIXED\",\r\n  \"cashAmount\": 240000,\r\n  \"dueDate\": \"2025-10-01\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"120\",\r\n        \"unitPrice\": \"10000\",\r\n        \"profitMargin\": \"800\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"90\",\r\n        \"unitPrice\": \"6500\",\r\n        \"profitMargin\": \"500\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-02\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00002\",\r\n  \"paymentVoucher\": \"BKK-0002\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"MIXED\",\r\n  \"cashAmount\": 240000,\r\n  \"dueDate\": \"2025-10-01\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"120\",\r\n        \"unitPrice\": \"10000\",\r\n        \"profitMargin\": \"800\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"90\",\r\n        \"unitPrice\": \"6500\",\r\n        \"profitMargin\": \"500\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2244,7 +2244,7 @@
 					"response": []
 				},
 				{
-					"name": "update mixed purchase to credit | 2",
+					"name": "update purchase to credit | 2",
 					"event": [
 						{
 							"listen": "test",
@@ -2292,6 +2292,60 @@
 								"v1",
 								"purchases",
 								"{{purchaseId2}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update purchase to credit | 3",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"date\": \"2025-09-02\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00002\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CREDIT\",\r\n  \"dueDate\": \"2025-10-01\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"240\",\r\n        \"unitPrice\": \"10000\",\r\n        \"profitMargin\": \"800\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"100\",\r\n        \"unitPrice\": \"7000\",\r\n        \"profitMargin\": \"1000\"\r\n    }\r\n  ]\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/v1/purchases/{{purchaseId3}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"purchases",
+								"{{purchaseId3}}"
 							]
 						}
 					},
@@ -2617,7 +2671,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"payableId\" : \"{{payableId}}\",\r\n    \"amount\" : 200000,\r\n    \"paymentDate\" : \"2025-09-27\",\r\n    \"method\": \"CASH\"\r\n}\r\n",
+							"raw": "{\r\n    \"payableId\" : \"{{payableId}}\",\r\n    \"amount\" : 200000,\r\n    \"paymentVoucher\": \"BKK-003\",\r\n    \"paymentDate\" : \"2025-09-27\",\r\n    \"method\": \"CASH\"\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2671,7 +2725,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"amount\" : 2200000,\r\n    \"paymentDate\" : \"2025-09-10\",\r\n    \"method\": \"CASH\"\r\n}\r\n",
+							"raw": "{\r\n    \"paymentVoucher\": \"BKK-0002\",\r\n    \"amount\" : 670000,\r\n    \"paymentDate\" : \"2025-09-10\",\r\n    \"method\": \"CASH\"\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2831,7 +2885,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-04\",\r\n  \"customerId\": \"{{customerId}}\",\r\n  \"invoiceNumber\": \"BG-00001\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CASH\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"30\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"20\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-04\",\r\n  \"customerId\": \"{{customerId}}\",\r\n  \"invoiceNumber\": \"BG-00001\",\r\n  \"receiveVoucher\": \"BKM-0001\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CASH\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"30\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"20\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2953,7 +3007,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-17\",\r\n  \"customerId\": \"{{customerId}}\",\r\n  \"invoiceNumber\": \"BG-00003\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"MIXED\",\r\n  \"cashAmount\": \"800000\",\r\n  \"dueDate\": \"2025-10-02\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"101\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"46\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-17\",\r\n  \"customerId\": \"{{customerId}}\",\r\n  \"invoiceNumber\": \"BG-00003\",\r\n  \"receiveVoucher\": \"BKM-00002\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"MIXED\",\r\n  \"cashAmount\": \"800000\",\r\n  \"dueDate\": \"2025-10-02\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"101\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"46\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -3038,7 +3092,7 @@
 					"response": []
 				},
 				{
-					"name": "update mixed sale to credit | 3",
+					"name": "update sale to credit | 3",
 					"event": [
 						{
 							"listen": "test",
@@ -3092,7 +3146,7 @@
 					"response": []
 				},
 				{
-					"name": "update credit sale to mixed | 3",
+					"name": "update sale to cash | 2",
 					"event": [
 						{
 							"listen": "test",
@@ -3121,7 +3175,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-17\",\r\n  \"customerId\": \"{{customerId}}\",\r\n  \"invoiceNumber\": \"BG-00003\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"MIXED\",\r\n  \"cashAmount\": \"450000\",\r\n  \"dueDate\": \"2025-10-02\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"56\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"25\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-17\",\r\n  \"customerId\": \"{{customerId}}\",\r\n  \"invoiceNumber\": \"BG-00002\",\r\n  \"receiveVoucher\": \"BKM-0002\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CASH\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"56\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"25\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -3129,7 +3183,7 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost:8000/api/v1/sales/{{saleId3}}",
+							"raw": "http://localhost:8000/api/v1/sales/{{saleId2}}",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -3139,61 +3193,7 @@
 								"api",
 								"v1",
 								"sales",
-								"{{saleId3}}"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "update mixed sale to cash | 3",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									""
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "bearer",
-							"bearer": [
-								{
-									"key": "token",
-									"value": "{{token}}",
-									"type": "string"
-								}
-							]
-						},
-						"method": "PUT",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-10\",\r\n  \"customerId\": \"{{customerId2}}\",\r\n  \"invoiceNumber\": \"BG-00003\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CASH\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"56\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"25\"\r\n    }\r\n  ]\r\n}\r\n",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "http://localhost:8000/api/v1/sales/{{saleId3}}",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "8000",
-							"path": [
-								"api",
-								"v1",
-								"sales",
-								"{{saleId3}}"
+								"{{saleId2}}"
 							]
 						}
 					},
@@ -3752,7 +3752,7 @@
 			"name": "RECEIVABLE PAYMENT",
 			"item": [
 				{
-					"name": "create payble payment",
+					"name": "create receivable payment",
 					"event": [
 						{
 							"listen": "test",
@@ -3789,7 +3789,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"receivableId\" : \"{{receivableId}}\",\r\n    \"amount\" : 200000,\r\n    \"paymentDate\" : \"2025-09-27\",\r\n    \"method\": \"CASH\"\r\n}\r\n",
+							"raw": "{\r\n    \"receivableId\" : \"{{receivableId}}\",\r\n    \"receiveVoucher\": \"BKM-0001\",\r\n    \"amount\" : 50000,\r\n    \"paymentDate\" : \"2025-09-28\",\r\n    \"method\": \"CASH\"\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -3814,7 +3814,7 @@
 					"response": []
 				},
 				{
-					"name": "update payble payment",
+					"name": "update receivable payment",
 					"event": [
 						{
 							"listen": "test",
@@ -3843,7 +3843,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"amount\" : 100000,\r\n    \"paymentDate\" : \"2025-09-30\",\r\n    \"method\": \"CASH\"\r\n}\r\n",
+							"raw": "{\r\n    \"receiveVoucher\": \"BKM-0004\",\r\n    \"amount\" : 90000,\r\n    \"paymentDate\" : \"2025-09-30\",\r\n    \"method\": \"CASH\"\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -3869,7 +3869,7 @@
 					"response": []
 				},
 				{
-					"name": "delete payble payment",
+					"name": "delete receivable payment",
 					"event": [
 						{
 							"listen": "test",

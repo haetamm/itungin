@@ -18,6 +18,7 @@ import { payableService } from './payableService';
 import { journalRepository } from '../repository/journalRepository';
 import { payableRepository } from '../repository/payableRepository';
 import { payablePaymentRepository } from '../repository/payablePaymentRepository';
+import { formatRupiah } from '../utils/helper';
 
 export class PayablePaymentService {
   private async validatePaymentDate(
@@ -61,7 +62,8 @@ export class PayablePaymentService {
     body: PaymentPayableRequest;
   }): Promise<Payment> {
     const paymentReq = validate(paymentPayableSchema, body);
-    const { payableId, amount, paymentDate, method } = paymentReq;
+    const { payableId, paymentVoucher, amount, paymentDate, method } =
+      paymentReq;
 
     return await prismaClient.$transaction(async (prismaTransaction) => {
       // ambil hutang
@@ -116,7 +118,7 @@ export class PayablePaymentService {
           description: `Pembayaran utang pembelian kepada ${supplier.supplierName} (No. Invoice: ${purchase.invoiceNumber})${
             isLatePayment ? ' [TERLAMBAT]' : ''
           }`,
-          reference: `PAY-${payableId}`,
+          reference: paymentVoucher,
         },
         prismaTransaction
       );
@@ -157,6 +159,7 @@ export class PayablePaymentService {
       const payment = await payablePaymentRepository.createPayment(
         {
           payableId,
+          paymentVoucher,
           journalEntryId: cashJournalEntry.journalEntryId,
           paymentAmount,
           paymentDate: new Date(paymentDate),
@@ -208,7 +211,7 @@ export class PayablePaymentService {
     body: UpdatePaymentPayableRequest
   ): Promise<Payment> {
     const paymentReq = validate(updatePaymentPayableSchema, body);
-    const { amount, paymentDate, method } = paymentReq;
+    const { paymentVoucher, amount, paymentDate, method } = paymentReq;
 
     return await prismaClient.$transaction(async (prismaTransaction) => {
       // Ambil data payment lama
@@ -249,7 +252,7 @@ export class PayablePaymentService {
       if (newRemainingAmount.lt(0)) {
         throw new ResponseError(
           400,
-          'Updated payment exceeds remaining payable amount'
+          `Updated payment exceeds remaining payable amount of ${formatRupiah(payable.remainingAmount)}`
         );
       }
 
@@ -292,6 +295,7 @@ export class PayablePaymentService {
           description: `Update pembayaran utang pembelian kepada ${supplier.supplierName} (No. Invoice: ${purchase.invoiceNumber})${
             isLatePayment ? ' [TERLAMBAT]' : ''
           }`,
+          reference: paymentVoucher,
         },
         prismaTransaction
       );
@@ -325,6 +329,7 @@ export class PayablePaymentService {
       const updatedPayment = await payablePaymentRepository.updatePayment(
         {
           paymentId,
+          paymentVoucher,
           paymentAmount: newPaymentAmount,
           paymentDate: paymentDt,
           method,
