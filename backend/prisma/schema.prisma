@@ -82,6 +82,11 @@ enum InventoryMethod {
   LIFO
 }
 
+enum PurchaseReturnStatus {
+  PENDING
+  PROCESSED
+}
+
 model Account {
   accountId       String          @id @default(uuid()) @map("account_id")
   accountCode     String          @unique @db.VarChar(20) @map("account_code")
@@ -109,7 +114,7 @@ model Account {
 }
 
 model AccountDefault {
-  id                        String           @id @default(uuid())
+  id                        String    @id @default(uuid())
   inventoryAccountId        String
   vatInputAccountId         String
   cashAccountId             String
@@ -134,8 +139,8 @@ model AccountDefault {
   costOfGoodsSoldAccount    Account    @relation("CostOfGoodsSoldAccount", fields: [costOfGoodsSoldAccountId], references: [accountId])
 
 
-  createdAt       DateTime         @default(now()) @map("created_at")
-  updatedAt       DateTime         @updatedAt @map("updated_at")
+  createdAt                 DateTime   @default(now()) @map("created_at")
+  updatedAt                 DateTime   @updatedAt @map("updated_at")
 
   @@map("account_default")
 }
@@ -177,53 +182,64 @@ model JournalEntry {
 }
 
 model Supplier {
-  supplierId   String      @id @default(uuid()) @map("supplier_id")
-  supplierName String      @db.VarChar(255) @map("supplier_name")
-  phone        String?     @db.VarChar(20)
-  email        String?     @db.VarChar(100)
-  address      String?     @db.VarChar(100)
-  purchases    Purchase[]
-  payables     Payable[]
-  createdAt    DateTime    @default(now()) @map("created_at")
-  updatedAt    DateTime    @updatedAt @map("updated_at")
-  deletedAt    DateTime?   @map("deleted_at")
+  supplierId        String      @id @default(uuid()) @map("supplier_id")
+  supplierName      String      @db.VarChar(255) @map("supplier_name")
+  phone             String?     @db.VarChar(20)
+  email             String?     @db.VarChar(100)
+  address           String?     @db.VarChar(100)
+
+  purchases         Purchase[]
+  payables          Payable[]
+  purchaseReturns   PurchaseReturn[]
+
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
+  deletedAt         DateTime?   @map("deleted_at")
 
   @@map("suppliers")
 }
 
 model Product {
-  productId        String           @id @default(uuid()) @map("product_id")
-  productCode      String           @unique @db.VarChar(20) @map("product_code")
-  productName      String           @db.VarChar(255) @map("product_name")
-  category         String?          @db.VarChar(100)
-  unit             String           @db.VarChar(20) 
-  avgPurchasePrice Decimal          @db.Decimal(15, 2) @map("avg_purchase_price")
-  profitMargin     Decimal          @db.Decimal(15, 2) @map("profit_margin")
-  sellingPrice     Decimal          @db.Decimal(15, 2) @map("selling_price")
-  stock            Int
-  inventoryBatches InventoryBatch[]
-  saleDetails      SaleDetail[]
-  purchaseDetails  PurchaseDetail[]
-  createdAt        DateTime         @default(now()) @map("created_at")
-  updatedAt        DateTime         @updatedAt @map("updated_at")
-  deletedAt        DateTime?        @map("deleted_at")
+  productId             String           @id @default(uuid()) @map("product_id")
+  productCode           String           @unique @db.VarChar(20) @map("product_code")
+  productName           String           @db.VarChar(255) @map("product_name")
+  category              String?          @db.VarChar(100)
+  unit                  String           @db.VarChar(20) 
+  avgPurchasePrice      Decimal          @db.Decimal(15, 2) @map("avg_purchase_price")
+  profitMargin          Decimal          @db.Decimal(15, 2) @map("profit_margin")
+  sellingPrice          Decimal          @db.Decimal(15, 2) @map("selling_price")
+  stock                 Int
+
+  inventoryBatches      InventoryBatch[]
+  saleDetails           SaleDetail[]
+  purchaseDetails       PurchaseDetail[]
+  purchaseReturnDetails PurchaseReturnDetail[]
+  saleReturnDetails     SaleReturnDetail[]
+
+  createdAt             DateTime         @default(now()) @map("created_at")
+  updatedAt             DateTime         @updatedAt @map("updated_at")
+  deletedAt             DateTime?        @map("deleted_at")
 
   @@map("products")
 }
 
 model InventoryBatch {
-  batchId          String         @id @default(uuid()) @map("batch_id")
-  productId        String         @map("product_id")
-  purchaseDetailId String         @unique @map("purchase_detail_id")
-  purchaseDate     DateTime       @db.Date @map("purchase_date")
-  quantity         Int
-  purchasePrice    Decimal        @db.Decimal(15, 2) @map("purchase_price")
-  remainingStock   Int            @map("remaining_stock")
-  product          Product        @relation(fields: [productId], references: [productId], onDelete: Cascade)
-  purchaseDetail   PurchaseDetail @relation(fields: [purchaseDetailId], references: [purchaseDetailId], onDelete: Cascade)
-  saleDetails      SaleDetail[]
-  createdAt        DateTime       @default(now()) @map("created_at")
-  updatedAt        DateTime       @updatedAt @map("updated_at")
+  batchId                 String         @id @default(uuid()) @map("batch_id")
+  productId               String         @map("product_id")
+  purchaseDetailId        String         @unique @map("purchase_detail_id")
+  purchaseDate            DateTime       @db.Date @map("purchase_date")
+  quantity                Int
+  purchasePrice           Decimal        @db.Decimal(15, 2) @map("purchase_price")
+  remainingStock          Int            @map("remaining_stock")
+
+  product                 Product        @relation(fields: [productId], references: [productId], onDelete: Cascade)
+  purchaseDetail          PurchaseDetail @relation(fields: [purchaseDetailId], references: [purchaseDetailId], onDelete: Cascade)
+  saleDetails             SaleDetail[]
+  purchaseReturnDetails   PurchaseReturnDetail[]
+  saleReturnDetails       SaleReturnDetail[]
+
+  createdAt               DateTime       @default(now()) @map("created_at")
+  updatedAt               DateTime       @updatedAt @map("updated_at")
 
   @@map("inventory_batches")
 }
@@ -233,8 +249,11 @@ model Customer {
   customerName String      @db.VarChar(100) @map("customer_name")
   phone        String?     @db.VarChar(15)
   address      String?     @db.VarChar(100)
+
   sales        Sale[]
   receivables  Receivable[]
+  saleReturns  SaleReturn[]
+
   
   createdAt    DateTime    @default(now()) @map("created_at")
   updatedAt    DateTime    @updatedAt @map("updated_at")
@@ -244,38 +263,40 @@ model Customer {
 }
 
 model Purchase {
-  purchaseId      String          @id @default(uuid()) @map("purchase_id")
-  date            DateTime        @db.Date
-  supplierId      String          @map("supplier_id")
-  journalId       String          @map("journal_id")
-  invoiceNumber   String          @db.VarChar(50) @map("invoice_number")
-  paymentType     PaymentType     @map("payment_type")
-  subtotal        Decimal         @db.Decimal(15, 2)
-  vat             Decimal         @db.Decimal(15, 2)
-  total           Decimal         @db.Decimal(15, 2)
+  purchaseId        String          @id @default(uuid()) @map("purchase_id")
+  date              DateTime        @db.Date
+  supplierId        String          @map("supplier_id")
+  journalId         String          @map("journal_id")
+  invoiceNumber     String          @db.VarChar(50) @map("invoice_number")
+  paymentType       PaymentType     @map("payment_type")
+  subtotal          Decimal         @db.Decimal(15, 2)
+  vat               Decimal         @db.Decimal(15, 2)
+  total             Decimal         @db.Decimal(15, 2)
 
-  supplier        Supplier        @relation(fields: [supplierId], references: [supplierId], onDelete: Restrict)
-  journal         Journal         @relation(fields: [journalId], references: [journalId], onDelete: Cascade)
-  purchaseDetails PurchaseDetail[]
-  payable         Payable?       
+  supplier          Supplier        @relation(fields: [supplierId], references: [supplierId], onDelete: Restrict)
+  journal           Journal         @relation(fields: [journalId], references: [journalId], onDelete: Cascade)
+  purchaseDetails   PurchaseDetail[]
+  payable           Payable?       
+  purchaseReturns   PurchaseReturn[]
 
-  createdAt       DateTime        @default(now()) @map("created_at")
-  updatedAt       DateTime        @updatedAt @map("updated_at")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
 
   @@map("purchases")
 }
 
 model PurchaseDetail {
-  purchaseDetailId String           @id @default(uuid()) @map("purchase_detail_id")
-  purchaseId       String           @map("purchase_id")
-  productId        String           @map("product_id")
-  quantity         Int
-  unitPrice        Decimal          @db.Decimal(15, 2) @map("unit_price")
-  subtotal         Decimal          @db.Decimal(15, 2)
+  purchaseDetailId        String           @id @default(uuid()) @map("purchase_detail_id")
+  purchaseId              String           @map("purchase_id")
+  productId               String           @map("product_id")
+  quantity                Int
+  unitPrice               Decimal          @db.Decimal(15, 2) @map("unit_price")
+  subtotal                Decimal          @db.Decimal(15, 2)
 
-  purchase         Purchase         @relation(fields: [purchaseId], references: [purchaseId], onDelete: Cascade)
-  product          Product          @relation(fields: [productId], references: [productId], onDelete: Restrict)
-  inventoryBatches InventoryBatch[] 
+  purchase                Purchase         @relation(fields: [purchaseId], references: [purchaseId], onDelete: Cascade)
+  product                 Product          @relation(fields: [productId], references: [productId], onDelete: Restrict)
+  inventoryBatches        InventoryBatch[]
+  purchaseReturnDetails   PurchaseReturnDetail[] 
 
   createdAt        DateTime         @default(now()) @map("created_at")
   updatedAt        DateTime         @updatedAt @map("updated_at")
@@ -323,6 +344,58 @@ model Payment {
   @@map("payments")
 }
 
+model PurchaseReturn {
+  returnId           String    @id @default(uuid()) @map("return_id")
+  purchaseId         String    @map("purchase_id")
+  supplierId         String    @map("supplier_id")
+  returnDate         DateTime  @default(now()) @map("return_date")
+  reason             String?   @db.Text
+
+  subtotal           Decimal   @db.Decimal(15, 2)
+  
+  vat                Decimal   @db.Decimal(15, 2)
+  total              Decimal   @db.Decimal(15, 2)
+
+  status             PurchaseReturnStatus @default(PENDING)
+
+  purchase           Purchase  @relation(fields: [purchaseId], references: [purchaseId])
+  supplier           Supplier  @relation(fields: [supplierId], references: [supplierId])
+  returnDetails      PurchaseReturnDetail[]
+
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  deletedAt          DateTime? @map("deleted_at")
+
+  @@map("purchase_returns")
+}
+
+model PurchaseReturnDetail {
+  returnDetailId     String  @id @default(uuid()) @map("return_detail_id")
+  returnId           String  @map("return_id")
+  purchaseDetailId   String  @map("purchase_detail_id")
+  batchId            String  @map("batch_id")
+  itemId             String  @map("item_id")
+
+  qtyReturned        Int     @map("qty_returned")
+  unitPrice          Decimal @db.Decimal(15, 2)
+  
+  // NILAI
+  returnValue        Decimal @db.Decimal(15, 2)
+  vatRate            Decimal @default(0.11) @db.Decimal(5, 4)
+  vatAmount          Decimal @db.Decimal(15, 2)
+  totalWithVat       Decimal @db.Decimal(15, 2)
+
+  purchaseReturn     PurchaseReturn     @relation(fields: [returnId], references: [returnId])
+  purchaseDetail     PurchaseDetail     @relation(fields: [purchaseDetailId], references: [purchaseDetailId])
+  inventoryBatch     InventoryBatch     @relation(fields: [batchId], references: [batchId])
+  product            Product            @relation(fields: [itemId], references: [productId])
+
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  @@map("purchase_return_details")
+}
+
 model Sale {
   saleId        String        @id @default(uuid()) @map("sale_id")
   date          DateTime      @db.Date
@@ -335,9 +408,11 @@ model Sale {
   total         Decimal       @db.Decimal(15, 2)
 
   customer      Customer     @relation(fields: [customerId], references: [customerId], onDelete: Restrict)
-  journal       Journal       @relation(fields: [journalId], references: [journalId], onDelete: Cascade)
+  journal       Journal      @relation(fields: [journalId], references: [journalId], onDelete: Cascade)
   saleDetails   SaleDetail[]
   receivable    Receivable?
+  saleReturns   SaleReturn[]
+
 
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
@@ -357,7 +432,9 @@ model SaleDetail {
   sale         Sale             @relation(fields: [saleId], references: [saleId], onDelete: Cascade)
   product      Product          @relation(fields: [productId], references: [productId], onDelete: Restrict)
   batch        InventoryBatch  @relation(fields: [batchId], references: [batchId], onDelete: Restrict)
-  
+  saleReturnDetails   SaleReturnDetail[] 
+
+
   createdAt    DateTime         @default(now()) @map("created_at")
   updatedAt    DateTime         @updatedAt @map("updated_at")
 
@@ -402,6 +479,57 @@ model ReceivablePayment {
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
   @@map("receivable_payments")
+}
+
+model SaleReturn {
+  returnId           String    @id @default(uuid()) @map("return_id")
+  saleId             String    @map("sale_id")
+  customerId         String    @map("customer_id")
+  returnDate         DateTime  @default(now()) @map("return_date")
+  reason             String?   @db.Text
+
+  subtotal           Decimal   @db.Decimal(15, 2)
+  
+  vat                Decimal   @db.Decimal(15, 2)
+  total              Decimal   @db.Decimal(15, 2)
+
+  status             PurchaseReturnStatus @default(PENDING)
+
+  sale               Sale  @relation(fields: [saleId], references: [saleId])
+  customer           Customer  @relation(fields: [customerId], references: [customerId])
+  returnDetails      SaleReturnDetail[]
+
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+  deletedAt          DateTime? @map("deleted_at")
+
+  @@map("sale_returns")
+}
+
+model SaleReturnDetail {
+  returnDetailId     String  @id @default(uuid()) @map("return_detail_id")
+  returnId           String  @map("return_id")
+  saleDetailId       String  @map("sale_detail_id")
+  batchId            String  @map("batch_id")
+  itemId             String  @map("item_id")
+
+  qtyReturned        Int     @map("qty_returned")
+  unitPrice          Decimal @db.Decimal(15, 2)
+  
+  returnValue        Decimal @db.Decimal(15, 2)
+  vatAmount          Decimal @db.Decimal(15, 2)
+  totalWithVat       Decimal @db.Decimal(15, 2)
+
+  // Relations
+  saleReturn         SaleReturn         @relation(fields: [returnId], references: [returnId])
+  saleDetail         SaleDetail         @relation(fields: [saleDetailId], references: [saleDetailId])
+  inventoryBatch     InventoryBatch     @relation(fields: [batchId], references: [batchId])
+  product            Product            @relation(fields: [itemId], references: [productId])
+
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  @@map("sale_return_details")
 }
 
 model GeneralSetting {

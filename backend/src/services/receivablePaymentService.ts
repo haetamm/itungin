@@ -16,7 +16,7 @@ import { receivablePaymentRepository } from '../repository/receivablePaymentRepo
 import { receivablePaymentSchema } from '../validation/receivablePaymentValidation';
 import { receivableService } from './receivableService';
 import { receivableRepository } from '../repository/receivableRepository';
-import { formatRupiah } from '../utils/helper';
+import { formatRupiah, stringToDate } from '../utils/helper';
 
 export class ReceivablePaymentService {
   private async validatePaymentDate(
@@ -286,9 +286,9 @@ export class ReceivablePaymentService {
         {
           journalId: oldJournal.journalId,
           date: paymentDt,
-          description: `Update pembayaran piutang penjualan dari ${customer.customerName} ${
+          description: `Pembayaran piutang penjualan dari ${customer.customerName} ${
             isLatePayment ? ' [TERLAMBAT]' : ''
-          }`,
+          } | diperbarui: ${stringToDate(new Date())}`,
           reference: receiveVoucher,
         },
         prismaTransaction

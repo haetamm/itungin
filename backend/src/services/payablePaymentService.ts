@@ -18,7 +18,7 @@ import { payableService } from './payableService';
 import { journalRepository } from '../repository/journalRepository';
 import { payableRepository } from '../repository/payableRepository';
 import { payablePaymentRepository } from '../repository/payablePaymentRepository';
-import { formatRupiah } from '../utils/helper';
+import { formatRupiah, stringToDate } from '../utils/helper';
 
 export class PayablePaymentService {
   private async validatePaymentDate(
@@ -292,9 +292,9 @@ export class PayablePaymentService {
         {
           journalId: oldJournal.journalId,
           date: paymentDt,
-          description: `Update pembayaran utang pembelian kepada ${supplier.supplierName} (No. Invoice: ${purchase.invoiceNumber})${
+          description: `Pembayaran utang pembelian kepada ${supplier.supplierName} (No. Invoice: ${purchase.invoiceNumber}) ${
             isLatePayment ? ' [TERLAMBAT]' : ''
-          }`,
+          } | diperbarui: ${stringToDate(new Date())}`,
           reference: paymentVoucher,
         },
         prismaTransaction
