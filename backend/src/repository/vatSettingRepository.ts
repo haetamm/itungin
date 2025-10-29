@@ -45,6 +45,21 @@ export class VatSettingRepository {
       where: { vatId, deletedAt: null },
     });
   }
+
+  async getActiveVatSetting(
+    date: Date,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<VatSetting | null> {
+    return await prismaTransaction.vatSetting.findFirst({
+      where: {
+        effectiveDate: { lte: date },
+        deletedAt: null,
+      },
+      orderBy: {
+        effectiveDate: 'desc',
+      },
+    });
+  }
 }
 
 export const vatSettingRepository = new VatSettingRepository();

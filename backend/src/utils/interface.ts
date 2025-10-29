@@ -8,6 +8,7 @@ import {
   PaymentType,
   Purchase,
   Receivable,
+  ReturnStatus,
 } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 
@@ -306,6 +307,36 @@ export interface PurchaseResult {
   subtotal: Decimal;
   vat: Decimal;
   total: Decimal;
+}
+
+export interface PurchaseReturnRequest {
+  purchaseId: string;
+  returnDate: string;
+  reason: string;
+  items: SaleItem[];
+}
+
+export interface PurchaseReturnForm {
+  purchaseId: string;
+  supplierId: string;
+  returnDate: Date;
+  reason: string | null;
+  subtotal: Decimal;
+  vat: Decimal;
+  total: Decimal;
+  status: ReturnStatus;
+  journalId: string;
+}
+
+export interface PurchaseReturnDetailForm {
+  purchaseDetailId: string;
+  batchId: string;
+  productId: string;
+  qtyReturned: number;
+  unitPrice: Decimal;
+  returnValue: Decimal;
+  vatAmount: Decimal;
+  totalWithVat: Decimal;
 }
 
 export interface SaleItem {

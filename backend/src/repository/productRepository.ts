@@ -10,11 +10,14 @@ import { Decimal } from '@prisma/client/runtime/library';
 
 export class ProductRepository {
   async updateProductPriceById(
-    productId: string,
-    avgPurchasePrice: Decimal,
-    sellingPrice: Decimal,
+    data: {
+      productId: string;
+      avgPurchasePrice: Decimal;
+      sellingPrice: Decimal;
+    },
     prismaTransaction: Prisma.TransactionClient
   ): Promise<Product> {
+    const { productId, avgPurchasePrice, sellingPrice } = data;
     return await prismaTransaction.product.update({
       where: { productId, deletedAt: null },
       data: {

@@ -1136,8 +1136,17 @@ export class PurchaseService {
   }
 
   async getPurchaseById(id: string) {
-    const purchase = await purchaseRepository.findPurchaseDetailById(id);
-    if (!purchase) throw new ResponseError(404, 'Purchase not found');
+    const result = await purchaseRepository.findPurchaseDetailById(id);
+    if (!result) throw new ResponseError(404, 'Purchase not found');
+    const purchase = {
+      ...result,
+      purchaseDetails: result.purchaseDetails.map(
+        ({ inventoryBatch, ...detail }) => ({
+          ...detail,
+          batchId: inventoryBatch?.batchId ?? null,
+        })
+      ),
+    };
     return purchase;
   }
 

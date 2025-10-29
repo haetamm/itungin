@@ -11,10 +11,13 @@ CREATE TYPE "EntryType" AS ENUM ('DEBIT', 'CREDIT');
 CREATE TYPE "PaymentType" AS ENUM ('CASH', 'CREDIT', 'MIXED');
 
 -- CreateEnum
-CREATE TYPE "PaymentStatus" AS ENUM ('PAID', 'UNPAID');
+CREATE TYPE "PaymentStatus" AS ENUM ('PAID', 'UNPAID', 'PARTIAL');
 
 -- CreateEnum
 CREATE TYPE "InventoryMethod" AS ENUM ('AVG', 'FIFO', 'LIFO');
+
+-- CreateEnum
+CREATE TYPE "ReturnStatus" AS ENUM ('PENDING', 'PROCESSED');
 
 -- CreateTable
 CREATE TABLE "roles" (
@@ -91,6 +94,7 @@ CREATE TABLE "journals" (
     "date" DATE NOT NULL,
     "description" VARCHAR(255),
     "reference" VARCHAR(50),
+    "paymentReference" VARCHAR(50),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -125,6 +129,19 @@ CREATE TABLE "suppliers" (
 );
 
 -- CreateTable
+CREATE TABLE "customers" (
+    "customer_id" TEXT NOT NULL,
+    "customer_name" VARCHAR(100) NOT NULL,
+    "phone" VARCHAR(15),
+    "address" VARCHAR(100),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+    "deleted_at" TIMESTAMP(3),
+
+    CONSTRAINT "customers_pkey" PRIMARY KEY ("customer_id")
+);
+
+-- CreateTable
 CREATE TABLE "products" (
     "product_id" TEXT NOT NULL,
     "product_code" VARCHAR(20) NOT NULL,
@@ -155,19 +172,6 @@ CREATE TABLE "inventory_batches" (
     "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "inventory_batches_pkey" PRIMARY KEY ("batch_id")
-);
-
--- CreateTable
-CREATE TABLE "customers" (
-    "customer_id" TEXT NOT NULL,
-    "customer_name" VARCHAR(100) NOT NULL,
-    "phone" VARCHAR(15),
-    "address" VARCHAR(100),
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-    "deleted_at" TIMESTAMP(3),
-
-    CONSTRAINT "customers_pkey" PRIMARY KEY ("customer_id")
 );
 
 -- CreateTable
@@ -208,6 +212,8 @@ CREATE TABLE "payables" (
     "purchase_id" TEXT,
     "supplier_id" TEXT NOT NULL,
     "amount" DECIMAL(15,2) NOT NULL,
+    "paid_amount" DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+    "remaining_amount" DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     "due_date" DATE NOT NULL,
     "status" "PaymentStatus" NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -219,6 +225,7 @@ CREATE TABLE "payables" (
 -- CreateTable
 CREATE TABLE "payments" (
     "payment_id" TEXT NOT NULL,
+    "payment_voucher" VARCHAR(50) NOT NULL DEFAULT 'TEMP-BKK',
     "payable_id" TEXT NOT NULL,
     "journal_entry_id" TEXT NOT NULL,
     "amount" DECIMAL(15,2) NOT NULL,
@@ -228,6 +235,42 @@ CREATE TABLE "payments" (
     "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "payments_pkey" PRIMARY KEY ("payment_id")
+);
+
+-- CreateTable
+CREATE TABLE "purchase_returns" (
+    "return_id" TEXT NOT NULL,
+    "purchase_id" TEXT NOT NULL,
+    "supplier_id" TEXT NOT NULL,
+    "return_date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "reason" TEXT,
+    "subtotal" DECIMAL(15,2) NOT NULL,
+    "vat" DECIMAL(15,2) NOT NULL,
+    "total" DECIMAL(15,2) NOT NULL,
+    "status" "ReturnStatus" NOT NULL DEFAULT 'PENDING',
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+    "deleted_at" TIMESTAMP(3),
+
+    CONSTRAINT "purchase_returns_pkey" PRIMARY KEY ("return_id")
+);
+
+-- CreateTable
+CREATE TABLE "purchase_return_details" (
+    "return_detail_id" TEXT NOT NULL,
+    "return_id" TEXT NOT NULL,
+    "purchase_detail_id" TEXT NOT NULL,
+    "batch_id" TEXT NOT NULL,
+    "item_id" TEXT NOT NULL,
+    "qty_returned" INTEGER NOT NULL,
+    "unitPrice" DECIMAL(15,2) NOT NULL,
+    "returnValue" DECIMAL(15,2) NOT NULL,
+    "vatAmount" DECIMAL(15,2) NOT NULL,
+    "totalWithVat" DECIMAL(15,2) NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "purchase_return_details_pkey" PRIMARY KEY ("return_detail_id")
 );
 
 -- CreateTable
@@ -269,6 +312,8 @@ CREATE TABLE "receivables" (
     "sale_id" TEXT,
     "customer_id" TEXT NOT NULL,
     "amount" DECIMAL(15,2) NOT NULL,
+    "paid_amount" DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+    "remaining_amount" DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     "due_date" DATE NOT NULL,
     "status" "PaymentStatus" NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -280,6 +325,7 @@ CREATE TABLE "receivables" (
 -- CreateTable
 CREATE TABLE "receivable_payments" (
     "payment_id" TEXT NOT NULL,
+    "receive_voucher" VARCHAR(50) NOT NULL DEFAULT 'TEMP-BKM',
     "receivable_id" TEXT NOT NULL,
     "journal_entry_id" TEXT NOT NULL,
     "amount" DECIMAL(15,2) NOT NULL,
@@ -289,6 +335,42 @@ CREATE TABLE "receivable_payments" (
     "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "receivable_payments_pkey" PRIMARY KEY ("payment_id")
+);
+
+-- CreateTable
+CREATE TABLE "sale_returns" (
+    "return_id" TEXT NOT NULL,
+    "sale_id" TEXT NOT NULL,
+    "customer_id" TEXT NOT NULL,
+    "return_date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "reason" TEXT,
+    "subtotal" DECIMAL(15,2) NOT NULL,
+    "vat" DECIMAL(15,2) NOT NULL,
+    "total" DECIMAL(15,2) NOT NULL,
+    "status" "ReturnStatus" NOT NULL DEFAULT 'PENDING',
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+    "deleted_at" TIMESTAMP(3),
+
+    CONSTRAINT "sale_returns_pkey" PRIMARY KEY ("return_id")
+);
+
+-- CreateTable
+CREATE TABLE "sale_return_details" (
+    "return_detail_id" TEXT NOT NULL,
+    "return_id" TEXT NOT NULL,
+    "sale_detail_id" TEXT NOT NULL,
+    "batch_id" TEXT NOT NULL,
+    "item_id" TEXT NOT NULL,
+    "qty_returned" INTEGER NOT NULL,
+    "unitPrice" DECIMAL(15,2) NOT NULL,
+    "returnValue" DECIMAL(15,2) NOT NULL,
+    "vatAmount" DECIMAL(15,2) NOT NULL,
+    "totalWithVat" DECIMAL(15,2) NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "sale_return_details_pkey" PRIMARY KEY ("return_detail_id")
 );
 
 -- CreateTable
@@ -327,6 +409,9 @@ CREATE UNIQUE INDEX "accounts_account_code_key" ON "accounts"("account_code");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "products_product_code_key" ON "products"("product_code");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "inventory_batches_purchase_detail_id_key" ON "inventory_batches"("purchase_detail_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "payables_journal_entry_id_key" ON "payables"("journal_entry_id");
@@ -422,6 +507,24 @@ ALTER TABLE "payments" ADD CONSTRAINT "payments_payable_id_fkey" FOREIGN KEY ("p
 ALTER TABLE "payments" ADD CONSTRAINT "payments_journal_entry_id_fkey" FOREIGN KEY ("journal_entry_id") REFERENCES "journal_entries"("journal_entry_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "purchase_returns" ADD CONSTRAINT "purchase_returns_purchase_id_fkey" FOREIGN KEY ("purchase_id") REFERENCES "purchases"("purchase_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "purchase_returns" ADD CONSTRAINT "purchase_returns_supplier_id_fkey" FOREIGN KEY ("supplier_id") REFERENCES "suppliers"("supplier_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "purchase_return_details" ADD CONSTRAINT "purchase_return_details_return_id_fkey" FOREIGN KEY ("return_id") REFERENCES "purchase_returns"("return_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "purchase_return_details" ADD CONSTRAINT "purchase_return_details_purchase_detail_id_fkey" FOREIGN KEY ("purchase_detail_id") REFERENCES "purchase_details"("purchase_detail_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "purchase_return_details" ADD CONSTRAINT "purchase_return_details_batch_id_fkey" FOREIGN KEY ("batch_id") REFERENCES "inventory_batches"("batch_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "purchase_return_details" ADD CONSTRAINT "purchase_return_details_item_id_fkey" FOREIGN KEY ("item_id") REFERENCES "products"("product_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "sales" ADD CONSTRAINT "sales_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("customer_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -450,3 +553,21 @@ ALTER TABLE "receivable_payments" ADD CONSTRAINT "receivable_payments_receivable
 
 -- AddForeignKey
 ALTER TABLE "receivable_payments" ADD CONSTRAINT "receivable_payments_journal_entry_id_fkey" FOREIGN KEY ("journal_entry_id") REFERENCES "journal_entries"("journal_entry_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "sale_returns" ADD CONSTRAINT "sale_returns_sale_id_fkey" FOREIGN KEY ("sale_id") REFERENCES "sales"("sale_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "sale_returns" ADD CONSTRAINT "sale_returns_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("customer_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "sale_return_details" ADD CONSTRAINT "sale_return_details_return_id_fkey" FOREIGN KEY ("return_id") REFERENCES "sale_returns"("return_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "sale_return_details" ADD CONSTRAINT "sale_return_details_sale_detail_id_fkey" FOREIGN KEY ("sale_detail_id") REFERENCES "sale_details"("sale_detail_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "sale_return_details" ADD CONSTRAINT "sale_return_details_batch_id_fkey" FOREIGN KEY ("batch_id") REFERENCES "inventory_batches"("batch_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "sale_return_details" ADD CONSTRAINT "sale_return_details_item_id_fkey" FOREIGN KEY ("item_id") REFERENCES "products"("product_id") ON DELETE RESTRICT ON UPDATE CASCADE;

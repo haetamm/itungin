@@ -182,6 +182,26 @@ export class PayableRepository {
       include: { journalEntry: true, purchase: true, supplier: true },
     });
   }
+
+  async applyPurchaseReturnToPayable(
+    data: {
+      payableId: string;
+      reduceFromPayable: number;
+      remainingAmount: number;
+      status: PaymentStatus;
+    },
+    prismaTransaction: Prisma.TransactionClient
+  ) {
+    const { payableId, reduceFromPayable, remainingAmount, status } = data;
+    return prismaTransaction.payable.update({
+      where: { payableId },
+      data: {
+        amount: { decrement: reduceFromPayable },
+        remainingAmount,
+        status,
+      },
+    });
+  }
 }
 
 export const payableRepository = new PayableRepository();

@@ -18,6 +18,7 @@ import PayablePaymentRoutes from '../routers/PayablePaymentRoutes';
 import PayableRoutes from '../routers/PayableRoutes';
 import ReceivableRoutes from '../routers/ReceivableRoutes';
 import ReceivablePaymentRoutes from '../routers/ReceivablePaymentRoutes';
+import PurchaseReturnRoutes from '../routers/PurchaseReturnRoutes';
 
 class App {
   public app: Application;
@@ -59,6 +60,7 @@ class App {
     this.app.use('/api/v1', GeneralSettingRoutes);
     this.app.use('/api/v1', AccountRoutes);
     this.app.use('/api/v1', PurchaseRoutes);
+    this.app.use('/api/v1', PurchaseReturnRoutes);
     this.app.use('/api/v1', CustomerRoutes);
     this.app.use('/api/v1', SaleRoutes);
     this.app.use('/api/v1', PayableRoutes);
