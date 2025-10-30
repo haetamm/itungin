@@ -11,6 +11,15 @@ export class PurchaseReturnDetailRepository {
       data: data.map((d) => ({ returnId, ...d })),
     });
   }
+
+  async deleteByReturnId(
+    returnId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ) {
+    return await prismaTransaction.purchaseReturnDetail.deleteMany({
+      where: { returnId },
+    });
+  }
 }
 
 export const purchaseReturnDetailRepository =

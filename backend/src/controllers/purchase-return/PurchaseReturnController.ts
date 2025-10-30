@@ -17,6 +17,21 @@ class PurchaseReturnController implements IController {
       next(e);
     }
   }
+
+  async deletePurchaseReturn(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { id } = req.params;
+      const result = await purchaseReturnService.deletePurchaseReturn(id);
+      const response = new ResponseSuccess(204, result);
+      res.status(204).json(response);
+    } catch (e) {
+      next(e);
+    }
+  }
 }
 
 export default new PurchaseReturnController();

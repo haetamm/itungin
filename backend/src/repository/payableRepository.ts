@@ -8,6 +8,18 @@ import { paginate } from '../utils/pagination';
 import { prismaClient } from '../application/database';
 
 export class PayableRepository {
+  async getPayableById(
+    payableId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<Prisma.PayableGetPayload<{
+    include: { journalEntry: true; purchase: true; supplier: true };
+  }> | null> {
+    return prismaTransaction.payable.findUnique({
+      where: { payableId },
+      include: { journalEntry: true, purchase: true, supplier: true },
+    });
+  }
+
   async getAllPayables(
     page: number,
     limit: number,
@@ -168,18 +180,6 @@ export class PayableRepository {
   ): Promise<void> {
     await prismaTransaction.payable.delete({
       where: { payableId },
-    });
-  }
-
-  async getPayableById(
-    payableId: string,
-    prismaTransaction: Prisma.TransactionClient
-  ): Promise<Prisma.PayableGetPayload<{
-    include: { journalEntry: true; purchase: true; supplier: true };
-  }> | null> {
-    return prismaTransaction.payable.findUnique({
-      where: { payableId },
-      include: { journalEntry: true, purchase: true, supplier: true },
     });
   }
 

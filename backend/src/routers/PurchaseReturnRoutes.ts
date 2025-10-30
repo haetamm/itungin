@@ -9,6 +9,12 @@ class PurchaseReturnRoutes extends BaseRoutes {
       authMiddleware,
       PurchaseReturnController.createPurchaseReturn
     );
+
+    this.router.delete(
+      '/purchase-return/:id',
+      authMiddleware,
+      PurchaseReturnController.deletePurchaseReturn
+    );
   }
 }
 
