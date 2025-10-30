@@ -1683,7 +1683,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-02\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00002\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CREDIT\",\r\n  \"dueDate\": \"2025-09-10\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"240\",\r\n        \"unitPrice\": \"10000\",\r\n        \"profitMargin\": \"800\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"180\",\r\n        \"unitPrice\": \"6500\",\r\n        \"profitMargin\": \"500\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-02\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00002\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CREDIT\",\r\n  \"dueDate\": \"2025-09-10\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"240\",\r\n        \"unitPrice\": \"10000\",\r\n        \"profitMargin\": \"800\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"180\",\r\n        \"unitPrice\": \"12500\",\r\n        \"profitMargin\": \"500\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2489,6 +2489,186 @@
 			]
 		},
 		{
+			"name": "PURCHASE RETURN",
+			"item": [
+				{
+					"name": "create purchase return | 1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('should response 201 status code', () => {\r",
+									"    pm.response.to.have.status(201);\r",
+									"});\r",
+									"\r",
+									"pm.test('should respose with correct property and message', () => {\r",
+									"    const responseJson = pm.response.json();\r",
+									"\r",
+									"    pm.environment.set('purchaseId', responseJson.data.purchaseId);\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"purchaseId\": \"{{purchaseId}}\",\r\n  \"returnDate\": \"2025-09-06\",\r\n  \"reason\": \"barang kadaluarsa\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"10\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"10\"\r\n    }\r\n  ]\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/v1/purchase-return",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"purchase-return"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "create purchase return | 2",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('should response 201 status code', () => {\r",
+									"    pm.response.to.have.status(201);\r",
+									"});\r",
+									"\r",
+									"pm.test('should respose with correct property and message', () => {\r",
+									"    const responseJson = pm.response.json();\r",
+									"\r",
+									"    pm.environment.set('purchaseId', responseJson.data.purchaseId);\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"purchaseId\": \"{{purchaseId2}}\",\r\n  \"returnDate\": \"2025-09-10\",\r\n  \"reason\": \"barang kadaluarsa\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"240\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"180\"\r\n    }\r\n  ]\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/v1/purchase-return",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"purchase-return"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "delete purchase return | 1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('should response 201 status code', () => {\r",
+									"    pm.response.to.have.status(201);\r",
+									"});\r",
+									"\r",
+									"pm.test('should respose with correct property and message', () => {\r",
+									"    const responseJson = pm.response.json();\r",
+									"\r",
+									"    pm.environment.set('purchaseId', responseJson.data.purchaseId);\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/v1/purchase-return/{{purchaseReturnId}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"purchase-return",
+								"{{purchaseReturnId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
 			"name": "PAYABLE",
 			"item": [
 				{
@@ -2725,7 +2905,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"paymentVoucher\": \"BKK-0002\",\r\n    \"amount\" : 670000,\r\n    \"paymentDate\" : \"2025-09-10\",\r\n    \"method\": \"CASH\"\r\n}\r\n",
+							"raw": "{\r\n    \"paymentVoucher\": \"BKK-0002\",\r\n    \"amount\" : 340000,\r\n    \"paymentDate\" : \"2025-10-30\",\r\n    \"method\": \"CASH\"\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -3092,7 +3272,7 @@
 					"response": []
 				},
 				{
-					"name": "update sale to credit | 3",
+					"name": "update sale to credit | 1",
 					"event": [
 						{
 							"listen": "test",
@@ -3121,7 +3301,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-17\",\r\n  \"customerId\": \"{{customerId}}\",\r\n  \"invoiceNumber\": \"BG-00003\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CREDIT\",\r\n  \"dueDate\": \"2025-10-02\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"200\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"70\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-03\",\r\n  \"customerId\": \"{{customerId}}\",\r\n  \"invoiceNumber\": \"BG-0001\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CREDIT\",\r\n  \"dueDate\": \"2025-10-02\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"100\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"70\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -3129,7 +3309,7 @@
 							}
 						},
 						"url": {
-							"raw": "http://localhost:8000/api/v1/sales/{{saleId3}}",
+							"raw": "http://localhost:8000/api/v1/sales/{{saleId}}",
 							"protocol": "http",
 							"host": [
 								"localhost"
@@ -3139,7 +3319,61 @@
 								"api",
 								"v1",
 								"sales",
-								"{{saleId3}}"
+								"{{saleId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update sale to mixed | 1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"date\": \"2025-09-04\",\r\n  \"customerId\": \"{{customerId}}\",\r\n  \"invoiceNumber\": \"BG-00001\",\r\n  \"receiveVoucher\": \"BKM-0001\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"MIXED\",\r\n  \"cashAmount\": \"500000\",\r\n  \"dueDate\": \"2025-10-02\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"45\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"45\"\r\n    }\r\n  ]\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/v1/sales/{{saleId}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"sales",
+								"{{saleId}}"
 							]
 						}
 					},
@@ -3194,6 +3428,60 @@
 								"v1",
 								"sales",
 								"{{saleId2}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "update sale to credit | 3",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"date\": \"2025-09-17\",\r\n  \"customerId\": \"{{customerId}}\",\r\n  \"invoiceNumber\": \"BG-00003\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"CREDIT\",\r\n  \"dueDate\": \"2025-10-02\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"200\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"70\"\r\n    }\r\n  ]\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/v1/sales/{{saleId3}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"sales",
+								"{{saleId3}}"
 							]
 						}
 					},
