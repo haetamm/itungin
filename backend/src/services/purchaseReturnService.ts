@@ -87,18 +87,46 @@ export class PurchaseReturnService {
         const detail = purchaseDetails.find(
           (d) => d.productId === item.productId
         );
-        if (!detail) throw new ResponseError(400, `Product not found`);
-
-        const batch = detail.inventoryBatch;
-        if (!batch) throw new ResponseError(500, `Batch not found`);
-
-        const returnableQty = batch.remainingStock;
-        if (item.quantity > returnableQty) {
-          throw new ResponseError(400, `Cannot return ${item.quantity} units`);
+        if (!detail) {
+          throw new ResponseError(
+            400,
+            `Product ${item.productId} not found in purchase`
+          );
         }
 
+        const batch = detail.inventoryBatch;
+        if (!batch) {
+          throw new ResponseError(
+            400,
+            `Batch not found for purchase detail ${detail.purchaseDetailId}`
+          );
+        }
+
+        // validasi: hanya boleh return dari sisa stok di batch
+        const returnedBefore = detail.purchaseReturnDetails.reduce(
+          (s, r) => s + r.qtyReturned,
+          0
+        );
+
+        const returnableQty = batch.remainingStock; // Hanya dari stok yang tersisa
+
+        if (item.quantity > returnableQty) {
+          throw new ResponseError(
+            400,
+            `Cannot return ${item.quantity} unit(s) of "${detail.product.productName}".\n` +
+              `• Purchased: ${detail.quantity}\n` +
+              `• In batch: ${batch.quantity}\n` +
+              `• Remaining stock: ${batch.remainingStock}\n` +
+              `• Already returned: ${returnedBefore}\n` +
+              `• Available to return: ${returnableQty}`
+          );
+        }
+
+        // hitung nilai yg di return
         const returnValue = new Decimal(item.quantity).mul(detail.unitPrice);
         const vatAmount = returnValue.mul(vatRate).div(100);
+        const totalWithVat = returnValue.plus(vatAmount);
+
         subtotal = subtotal.plus(returnValue);
 
         returnDetailsData.push({
@@ -109,21 +137,25 @@ export class PurchaseReturnService {
           unitPrice: detail.unitPrice,
           returnValue,
           vatAmount,
-          totalWithVat: returnValue.plus(vatAmount),
+          totalWithVat,
         });
+
+        // kurangi stok (barang keluar ke supplier)
+        const actualReturnQty = item.quantity;
 
         await inventoryBatchRepository.decrementBatchStock(
           batch.batchId,
-          item.quantity,
+          actualReturnQty,
           prismaTransaction
         );
 
         await productRepository.decrementStock(
           item.productId,
-          item.quantity,
+          actualReturnQty,
           prismaTransaction
         );
 
+        // Recalculate COGS & update harga jual
         const cogs = await recalculateCOGS(
           item.productId,
           inventoryMethod,
