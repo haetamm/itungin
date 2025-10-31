@@ -1,4 +1,4 @@
-import { Payment, PaymentStatus, Prisma } from '@prisma/client';
+import { Payment, PaymentMethod, PaymentStatus, Prisma } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import { prismaClient } from '../application/database';
 import { ResponseError } from '../entities/responseError';
@@ -105,7 +105,7 @@ export class PayablePaymentService {
 
       // valid saldo cash
       if (
-        method.toLowerCase() === 'cash' &&
+        method === PaymentMethod.CASH &&
         cashAccount.balance.comparedTo(paymentAmount) < 0
       ) {
         throw new ResponseError(400, 'Insufficient cash balance');
@@ -263,7 +263,7 @@ export class PayablePaymentService {
 
       // Validasi saldo kas
       if (
-        method.toLowerCase() === 'cash' &&
+        method === PaymentMethod.CASH &&
         newPaymentAmount.gt(oldPaymentAmount) &&
         cashAccount.balance.comparedTo(
           newPaymentAmount.minus(oldPaymentAmount)
@@ -379,6 +379,13 @@ export class PayablePaymentService {
     return await prismaClient.$transaction(async (prismaTransaction) => {
       // ambil payment
       const payment = await this.getPayment(paymentId, prismaTransaction);
+
+      if (payment.method === PaymentMethod.RETURN) {
+        throw new ResponseError(
+          400,
+          'Payment with method RETURN cannot be deleted directly. Please delete the associated Purchase Return transaction.'
+        );
+      }
 
       const { payableId, amount, journalEntryId, method } = payment;
       const paymentAmount = new Decimal(amount);

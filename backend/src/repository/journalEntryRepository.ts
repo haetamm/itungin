@@ -29,6 +29,22 @@ export class JournalEntryRepository {
     });
   }
 
+  async findLatestDebitEntry(
+    journalId: string,
+    amount: Decimal,
+    accountId: string,
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<JournalEntry | null> {
+    return prismaTransaction.journalEntry.findFirst({
+      where: {
+        journalId,
+        accountId,
+        debit: amount.toNumber(),
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async deleteManyJournalEntries(
     journalEntryIds: string[],
     prismaTransaction: Prisma.TransactionClient

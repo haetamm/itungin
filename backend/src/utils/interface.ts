@@ -4,6 +4,7 @@ import {
   InventoryMethod,
   Journal,
   Payable,
+  PaymentMethod,
   PaymentStatus,
   PaymentType,
   Purchase,
@@ -378,23 +379,23 @@ export interface PaymentPayableRequest {
   paymentVoucher: string;
   amount: Decimal;
   paymentDate: string;
-  method: string;
+  method: PaymentMethod;
 }
 
 export interface UpdatePaymentPayableRequest {
   paymentVoucher: string;
   amount: Decimal;
   paymentDate: string;
-  method: string;
+  method: PaymentMethod;
 }
 
 export interface PayablePaymentForm {
   payableId: string;
-  paymentVoucher: string;
+  paymentVoucher: string | null;
   journalEntryId: string;
   paymentAmount: Decimal;
   paymentDate: Date;
-  method: string;
+  method: PaymentMethod;
 }
 
 export interface PaginatedPayablesResult {
@@ -407,7 +408,7 @@ export interface ReceivablePaymentRequest {
   receiveVoucher: string;
   amount: Decimal;
   paymentDate: string;
-  method: string;
+  method: PaymentMethod;
 }
 
 export interface ReceivablePaymentForm {
@@ -416,14 +417,14 @@ export interface ReceivablePaymentForm {
   journalEntryId: string;
   paymentAmount: Decimal;
   paymentDate: Date;
-  method: string;
+  method: PaymentMethod;
 }
 
 export interface UpdatePaymentReceivableRequest {
   receiveVoucher: string;
   amount: Decimal;
   paymentDate: string;
-  method: string;
+  method: PaymentMethod;
 }
 
 export interface RecordReceivablePaymentForm {
@@ -438,7 +439,7 @@ export interface UpdateReceivablePaymentForm {
   receiveVoucher: string;
   paymentAmount: Decimal;
   paymentDate: Date;
-  method: string;
+  method: PaymentMethod;
 }
 
 export interface PaginatedReceivablesResult {

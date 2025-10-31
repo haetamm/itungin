@@ -19,6 +19,9 @@ CREATE TYPE "InventoryMethod" AS ENUM ('AVG', 'FIFO', 'LIFO');
 -- CreateEnum
 CREATE TYPE "ReturnStatus" AS ENUM ('PENDING', 'PROCESSED');
 
+-- CreateEnum
+CREATE TYPE "PaymentMethod" AS ENUM ('CASH', 'RETURN');
+
 -- CreateTable
 CREATE TABLE "roles" (
     "id" TEXT NOT NULL,
@@ -225,12 +228,12 @@ CREATE TABLE "payables" (
 -- CreateTable
 CREATE TABLE "payments" (
     "payment_id" TEXT NOT NULL,
-    "payment_voucher" VARCHAR(50) NOT NULL DEFAULT 'TEMP-BKK',
+    "payment_voucher" VARCHAR(50) DEFAULT 'TEMP-BKK',
     "payable_id" TEXT NOT NULL,
     "journal_entry_id" TEXT NOT NULL,
     "amount" DECIMAL(15,2) NOT NULL,
     "payment_date" DATE NOT NULL,
-    "method" VARCHAR(50) NOT NULL,
+    "method" "PaymentMethod" NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -240,6 +243,7 @@ CREATE TABLE "payments" (
 -- CreateTable
 CREATE TABLE "purchase_returns" (
     "return_id" TEXT NOT NULL,
+    "journal_id" TEXT NOT NULL,
     "purchase_id" TEXT NOT NULL,
     "supplier_id" TEXT NOT NULL,
     "return_date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -330,7 +334,7 @@ CREATE TABLE "receivable_payments" (
     "journal_entry_id" TEXT NOT NULL,
     "amount" DECIMAL(15,2) NOT NULL,
     "payment_date" DATE NOT NULL,
-    "method" VARCHAR(50) NOT NULL,
+    "method" "PaymentMethod" NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -340,6 +344,7 @@ CREATE TABLE "receivable_payments" (
 -- CreateTable
 CREATE TABLE "sale_returns" (
     "return_id" TEXT NOT NULL,
+    "journal_id" TEXT NOT NULL,
     "sale_id" TEXT NOT NULL,
     "customer_id" TEXT NOT NULL,
     "return_date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -507,6 +512,9 @@ ALTER TABLE "payments" ADD CONSTRAINT "payments_payable_id_fkey" FOREIGN KEY ("p
 ALTER TABLE "payments" ADD CONSTRAINT "payments_journal_entry_id_fkey" FOREIGN KEY ("journal_entry_id") REFERENCES "journal_entries"("journal_entry_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "purchase_returns" ADD CONSTRAINT "purchase_returns_journal_id_fkey" FOREIGN KEY ("journal_id") REFERENCES "journals"("journal_id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "purchase_returns" ADD CONSTRAINT "purchase_returns_purchase_id_fkey" FOREIGN KEY ("purchase_id") REFERENCES "purchases"("purchase_id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -553,6 +561,9 @@ ALTER TABLE "receivable_payments" ADD CONSTRAINT "receivable_payments_receivable
 
 -- AddForeignKey
 ALTER TABLE "receivable_payments" ADD CONSTRAINT "receivable_payments_journal_entry_id_fkey" FOREIGN KEY ("journal_entry_id") REFERENCES "journal_entries"("journal_entry_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "sale_returns" ADD CONSTRAINT "sale_returns_journal_id_fkey" FOREIGN KEY ("journal_id") REFERENCES "journals"("journal_id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "sale_returns" ADD CONSTRAINT "sale_returns_sale_id_fkey" FOREIGN KEY ("sale_id") REFERENCES "sales"("sale_id") ON DELETE RESTRICT ON UPDATE CASCADE;

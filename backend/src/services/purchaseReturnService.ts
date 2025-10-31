@@ -17,12 +17,19 @@ import { journalEntryRepository } from '../repository/journalEntryRepository';
 import { vatSettingRepository } from '../repository/vatSettingRepository';
 import { generalsettingService } from './generalSettingService';
 import { supplierService } from './supplierService';
-import { PaymentStatus, PaymentType, ReturnStatus } from '@prisma/client';
+import {
+  PaymentMethod,
+  PaymentStatus,
+  PaymentType,
+  ReturnStatus,
+} from '@prisma/client';
 import { ResponseError } from '../entities/responseError';
 import { Decimal } from '@prisma/client/runtime/library';
 import { recalculateCOGS } from '../utils/cogs';
 import { purchaseReturnRepository } from '../repository/purchaseReturnRepository';
 import { purchaseReturnDetailRepository } from '../repository/purchaseReturnDetailRepository';
+import { payablePaymentRepository } from '../repository/payablePaymentRepository';
+import { getCashPaidFromJournal } from '../utils/helper';
 
 export class PurchaseReturnService {
   async createPurchaseReturn({
@@ -34,41 +41,45 @@ export class PurchaseReturnService {
     const { purchaseId, returnDate, reason, items } = req;
 
     return await prismaClient.$transaction(async (prismaTransaction) => {
-      // Ambil account default
+      // ambil account default
       const accountDefault =
         await accountService.getAccountDefault(prismaTransaction);
       const { inventoryAccount, vatInputAccount, payableAccount, cashAccount } =
         accountDefault;
 
-      // Ambil purchase dan relasinya
+      // ambil purchase dan relasinya
       const purchase = await purchaseService.getPurchase(
         purchaseId,
         prismaTransaction
       );
-      const { supplier, payable, purchaseDetails, paymentType, invoiceNumber } =
-        purchase;
+      const {
+        supplier,
+        payable,
+        journal: oldJournal,
+        purchaseDetails,
+        paymentType,
+        invoiceNumber,
+      } = purchase;
 
-      // Validasi supplier
+      // validasi supplier
       await supplierService.getSupplierTransaction(
         supplier.supplierId,
         prismaTransaction
       );
 
-      // Ambil VAT rate aktif SAAT PEMBELIAN
+      // ambil VAT rate
       const vatSetting = await vatSettingRepository.getActiveVatSetting(
         purchase.date,
         prismaTransaction
       );
-      if (!vatSetting) {
-        throw new ResponseError(400, 'VAT setting not found for purchase date');
-      }
+      if (!vatSetting) throw new ResponseError(400, 'VAT setting not found');
       const vatRate = new Decimal(vatSetting.vatRate);
 
-      // mbil inventory method
+      // ambil inventory method
       const { inventoryMethod } =
         await generalsettingService.getSettingInventory(prismaTransaction);
 
-      // Hitung subtotal, VAT, total + update stok
+      // hitung return details + update stok
       let subtotal = new Decimal(0);
       const returnDetailsData: PurchaseReturnDetailForm[] = [];
 
@@ -76,46 +87,18 @@ export class PurchaseReturnService {
         const detail = purchaseDetails.find(
           (d) => d.productId === item.productId
         );
-        if (!detail) {
-          throw new ResponseError(
-            400,
-            `Product ${item.productId} not found in purchase`
-          );
-        }
+        if (!detail) throw new ResponseError(400, `Product not found`);
 
         const batch = detail.inventoryBatch;
-        if (!batch) {
-          throw new ResponseError(
-            500,
-            `Batch not found for purchase detail ${detail.purchaseDetailId}`
-          );
-        }
+        if (!batch) throw new ResponseError(500, `Batch not found`);
 
-        // VALIDASI: Hanya boleh return dari sisa stok di batch
-        const returnedBefore = detail.purchaseReturnDetails.reduce(
-          (s, r) => s + r.qtyReturned,
-          0
-        );
-
-        const returnableQty = batch.remainingStock; // Hanya dari stok yang tersisa
-
+        const returnableQty = batch.remainingStock;
         if (item.quantity > returnableQty) {
-          throw new ResponseError(
-            400,
-            `Cannot return ${item.quantity} unit(s) of "${detail.product.productName}".\n` +
-              `• Purchased: ${detail.quantity}\n` +
-              `• In batch: ${batch.quantity}\n` +
-              `• Remaining stock: ${batch.remainingStock}\n` +
-              `• Already returned: ${returnedBefore}\n` +
-              `• Available to return: ${returnableQty}`
-          );
+          throw new ResponseError(400, `Cannot return ${item.quantity} units`);
         }
 
-        // hitung nilai yg di return
         const returnValue = new Decimal(item.quantity).mul(detail.unitPrice);
         const vatAmount = returnValue.mul(vatRate).div(100);
-        const totalWithVat = returnValue.plus(vatAmount);
-
         subtotal = subtotal.plus(returnValue);
 
         returnDetailsData.push({
@@ -126,25 +109,21 @@ export class PurchaseReturnService {
           unitPrice: detail.unitPrice,
           returnValue,
           vatAmount,
-          totalWithVat,
+          totalWithVat: returnValue.plus(vatAmount),
         });
-
-        // kurangi stok (barang keluar ke supplier)
-        const actualReturnQty = item.quantity;
 
         await inventoryBatchRepository.decrementBatchStock(
           batch.batchId,
-          actualReturnQty,
+          item.quantity,
           prismaTransaction
         );
 
         await productRepository.decrementStock(
           item.productId,
-          actualReturnQty,
+          item.quantity,
           prismaTransaction
         );
 
-        // Recalculate COGS & update harga jual
         const cogs = await recalculateCOGS(
           item.productId,
           inventoryMethod,
@@ -185,13 +164,13 @@ export class PurchaseReturnService {
             subtotal,
             vat,
             total,
-            status: 'PROCESSED',
+            status: ReturnStatus.PROCESSED,
             journalId: journal.journalId,
           },
           prismaTransaction
         );
 
-      // buat purchase return detail
+      // buat detail purchase detail
       await purchaseReturnDetailRepository.createManyPurchaseReturnDetails(
         purchaseReturn.returnId,
         returnDetailsData,
@@ -201,7 +180,6 @@ export class PurchaseReturnService {
       // buat journal entries
       const journalEntries: JournalEntryForm[] = [];
 
-      // Kredit Inventory (barang keluar)
       journalEntries.push({
         journalId: journal.journalId,
         accountId: inventoryAccount.accountId,
@@ -209,7 +187,6 @@ export class PurchaseReturnService {
         credit: subtotal,
       });
 
-      // Kredit VAT Input
       if (vat.gt(0)) {
         journalEntries.push({
           journalId: journal.journalId,
@@ -219,13 +196,12 @@ export class PurchaseReturnService {
         });
       }
 
-      // Debit Payable / Cash (pengurangan oetang/uang)
       let reduceFromPayable = new Decimal(0);
-      let reduceFromCash = new Decimal(0);
+      let cashRefund = new Decimal(0);
 
       switch (paymentType) {
-        case 'CASH':
-          reduceFromCash = total;
+        case PaymentType.CASH:
+          cashRefund = total;
           journalEntries.push({
             journalId: journal.journalId,
             accountId: cashAccount.accountId,
@@ -234,12 +210,8 @@ export class PurchaseReturnService {
           });
           break;
 
-        case 'CREDIT':
-          if (!payable)
-            throw new ResponseError(
-              404,
-              'Payable not found for CREDIT purchase'
-            );
+        case PaymentType.CREDIT:
+          if (!payable) throw new ResponseError(500, 'Payable not found');
           reduceFromPayable = total;
           journalEntries.push({
             journalId: journal.journalId,
@@ -249,14 +221,18 @@ export class PurchaseReturnService {
           });
           break;
 
-        case 'MIXED':
-          if (!payable)
-            throw new ResponseError(
-              404,
-              'Payable not found for MIXED purchase'
-            );
-          reduceFromPayable = Decimal.min(payable.remainingAmount, total);
-          reduceFromCash = total.minus(reduceFromPayable);
+        case PaymentType.MIXED:
+          if (!payable) throw new ResponseError(500, 'Payable not found');
+
+          const cashPaidFromPurchase = getCashPaidFromJournal(
+            oldJournal.journalEntries,
+            cashAccount.accountId
+          );
+
+          const maxFromPayable = Decimal.min(payable.remainingAmount, total);
+          let potentialCashRefund = total.minus(maxFromPayable);
+          cashRefund = Decimal.min(potentialCashRefund, cashPaidFromPurchase);
+          reduceFromPayable = total.minus(cashRefund);
 
           if (reduceFromPayable.gt(0)) {
             journalEntries.push({
@@ -266,21 +242,19 @@ export class PurchaseReturnService {
               credit: new Decimal(0),
             });
           }
-          if (reduceFromCash.gt(0)) {
+
+          if (cashRefund.gt(0)) {
             journalEntries.push({
               journalId: journal.journalId,
               accountId: cashAccount.accountId,
-              debit: reduceFromCash,
+              debit: cashRefund,
               credit: new Decimal(0),
             });
           }
           break;
 
         default:
-          throw new ResponseError(
-            400,
-            `Unsupported paymentType: ${paymentType}`
-          );
+          throw new ResponseError(400, `Unsupported paymentType`);
       }
 
       await journalEntryRepository.createManyJournalEntries(
@@ -288,8 +262,37 @@ export class PurchaseReturnService {
         prismaTransaction
       );
 
-      // update payable
-      if ((paymentType === 'CREDIT' || paymentType === 'MIXED') && payable) {
+      // update payable (jika ada pengurangan hutang)
+      if (
+        (paymentType === PaymentType.CREDIT ||
+          paymentType === PaymentType.MIXED) &&
+        payable &&
+        reduceFromPayable.gt(0)
+      ) {
+        const payableJournalEntry =
+          await journalEntryRepository.findLatestDebitEntry(
+            journal.journalId,
+            reduceFromPayable,
+            payableAccount.accountId,
+            prismaTransaction
+          );
+
+        if (!payableJournalEntry)
+          throw new ResponseError(500, 'Journal entry not found');
+
+        await payablePaymentRepository.createPayment(
+          {
+            payableId: payable.payableId,
+            paymentVoucher: null,
+            journalEntryId: payableJournalEntry.journalEntryId,
+            paymentAmount: reduceFromPayable,
+            paymentDate: new Date(returnDate),
+            method: PaymentMethod.RETURN,
+          },
+          prismaTransaction
+        );
+
+        const newPaid = new Decimal(payable.paidAmount).plus(reduceFromPayable);
         const newRemaining = new Decimal(payable.remainingAmount).minus(
           reduceFromPayable
         );
@@ -297,11 +300,11 @@ export class PurchaseReturnService {
           ? PaymentStatus.PAID
           : PaymentStatus.PARTIAL;
 
-        await payableRepository.applyPurchaseReturnToPayable(
+        await payableRepository.recordPayablePayment(
           {
             payableId: payable.payableId,
-            reduceFromPayable: reduceFromPayable.toNumber(),
-            remainingAmount: Math.max(0, newRemaining.toNumber()),
+            paidAmount: newPaid,
+            remainingAmount: newRemaining,
             status,
           },
           prismaTransaction
@@ -309,41 +312,39 @@ export class PurchaseReturnService {
       }
 
       // update saldo account
-      await accountRepository.updateAccountTransaction(
-        {
-          accountCode: inventoryAccount.accountCode,
-          balance: inventoryAccount.balance.minus(subtotal),
-        },
-        prismaTransaction
+      const updateAccountBalance = async (
+        account: any,
+        newBalance: Decimal
+      ) => {
+        await accountRepository.updateAccountTransaction(
+          { accountCode: account.accountCode, balance: newBalance },
+          prismaTransaction
+        );
+      };
+
+      await updateAccountBalance(
+        inventoryAccount,
+        inventoryAccount.balance.minus(subtotal)
       );
 
       if (vat.gt(0)) {
-        await accountRepository.updateAccountTransaction(
-          {
-            accountCode: vatInputAccount.accountCode,
-            balance: vatInputAccount.balance.minus(vat),
-          },
-          prismaTransaction
+        await updateAccountBalance(
+          vatInputAccount,
+          vatInputAccount.balance.minus(vat)
         );
       }
 
       if (reduceFromPayable.gt(0)) {
-        await accountRepository.updateAccountTransaction(
-          {
-            accountCode: payableAccount.accountCode,
-            balance: payableAccount.balance.minus(reduceFromPayable),
-          },
-          prismaTransaction
+        const newPayableBalance = new Decimal(payable?.remainingAmount!).minus(
+          reduceFromPayable
         );
+        await updateAccountBalance(payableAccount, newPayableBalance);
       }
 
-      if (reduceFromCash.gt(0)) {
-        await accountRepository.updateAccountTransaction(
-          {
-            accountCode: cashAccount.accountCode,
-            balance: cashAccount.balance.plus(reduceFromCash),
-          },
-          prismaTransaction
+      if (cashRefund.gt(0)) {
+        await updateAccountBalance(
+          cashAccount,
+          cashAccount.balance.plus(cashRefund)
         );
       }
 
@@ -353,7 +354,7 @@ export class PurchaseReturnService {
 
   async deletePurchaseReturn(returnId: string): Promise<void> {
     return await prismaClient.$transaction(async (prismaTransaction) => {
-      // Ambil PurchaseReturn LENGKAP
+      // ambil purchase retrun dan relasinya
       const purchaseReturn =
         await purchaseReturnRepository.getPurchaseReturnById(
           returnId,
@@ -367,10 +368,10 @@ export class PurchaseReturnService {
       const {
         subtotal,
         vat,
-        total,
         journalId,
         status,
         returnDetails: purchaseReturnDetails,
+        journal,
         purchase,
       } = purchaseReturn;
 
@@ -380,39 +381,39 @@ export class PurchaseReturnService {
 
       const { paymentType, payable } = purchase;
 
-      // Ambil account default
+      // ambil account default
       const accountDefault =
         await accountService.getAccountDefault(prismaTransaction);
       const { inventoryAccount, vatInputAccount, payableAccount, cashAccount } =
         accountDefault;
 
-      // Ambil inventory method
+      // ambil inventory method
       const { inventoryMethod } =
         await generalsettingService.getSettingInventory(prismaTransaction);
 
       // reverse stok dan harga
       for (const detail of purchaseReturnDetails) {
-        const { batchId, productId, qtyReturned } = detail;
-
         await inventoryBatchRepository.incrementBatchStock(
-          batchId,
-          qtyReturned,
+          detail.batchId,
+          detail.qtyReturned,
           prismaTransaction
         );
+
         await productRepository.incrementStock(
-          productId,
-          qtyReturned,
+          detail.productId,
+          detail.qtyReturned,
           prismaTransaction
         );
 
         const cogs = await recalculateCOGS(
-          productId,
+          detail.productId,
           inventoryMethod,
           prismaTransaction
         );
+
         await productRepository.updateProductPriceById(
           {
-            productId,
+            productId: detail.productId,
             avgPurchasePrice: cogs,
             sellingPrice: cogs.add(detail.product.profitMargin || 0),
           },
@@ -420,64 +421,65 @@ export class PurchaseReturnService {
         );
       }
 
-      // reverese payable / cash
+      // hitung reduceFromPayable & cashRefund dari JOURNAL ENTRIES
       let reduceFromPayable = new Decimal(0);
-      let reduceFromCash = new Decimal(0);
+      let cashRefund = new Decimal(0);
 
-      switch (paymentType) {
-        case PaymentType.CASH:
-          reduceFromCash = total;
-          break;
+      if (journal?.journalEntries) {
+        // cari debit ke payableAccount → ini pengurangan hutang
+        const payableEntry = journal.journalEntries.find(
+          (je) => je.accountId === payableAccount.accountId && je.debit.gt(0)
+        );
+        reduceFromPayable = payableEntry
+          ? new Decimal(payableEntry.debit)
+          : new Decimal(0);
 
-        case PaymentType.CREDIT:
-          if (!payable) throw new ResponseError(404, 'Payable not found');
-          reduceFromPayable = total;
-          break;
-
-        case PaymentType.MIXED:
-          if (!payable) throw new ResponseError(404, 'Payable not found');
-          reduceFromPayable = Decimal.min(payable.remainingAmount, total);
-          reduceFromCash = total.minus(reduceFromPayable);
-          break;
+        // cari debit ke cashAccount → ini refund cash
+        const cashEntry = journal.journalEntries.find(
+          (je) => je.accountId === cashAccount.accountId && je.debit.gt(0)
+        );
+        cashRefund = cashEntry ? new Decimal(cashEntry.debit) : new Decimal(0);
       }
 
+      // reverse payable dgn nilai dari jouornal
       if (
         (paymentType === PaymentType.CREDIT ||
           paymentType === PaymentType.MIXED) &&
-        payable
+        payable &&
+        reduceFromPayable.gt(0)
       ) {
-        const amount = new Decimal(payable.amount);
+        const currentPaid = new Decimal(payable.paidAmount);
         const currentRemaining = new Decimal(payable.remainingAmount);
-        const reverseAmount = reduceFromPayable;
 
-        const newRemaining = currentRemaining.plus(reverseAmount);
-        const newPaidAmount = amount.minus(newRemaining);
-
-        if (newPaidAmount.lt(0)) {
+        if (reduceFromPayable.gt(currentPaid)) {
           throw new ResponseError(
             400,
-            'Cannot reverse: paid amount would be negative'
+            'Cannot reverse: return amount exceeds paid amount'
           );
         }
 
+        const newPaidAmount = currentPaid.minus(reduceFromPayable);
+        const newRemaining = currentRemaining.plus(reduceFromPayable);
+
+        const totalAmount = new Decimal(payable.amount);
         const newStatus = newRemaining.lte(0)
           ? PaymentStatus.PAID
-          : newRemaining.gte(amount)
+          : newRemaining.gte(totalAmount)
             ? PaymentStatus.UNPAID
             : PaymentStatus.PARTIAL;
 
         await payableRepository.recordPayablePayment(
           {
             payableId: payable.payableId,
-            remainingAmount: newRemaining,
             paidAmount: newPaidAmount,
+            remainingAmount: newRemaining,
             status: newStatus,
           },
           prismaTransaction
         );
       }
 
-      // reverse saldo account
+      //  reverse saldo account default
       await accountRepository.updateAccountTransaction(
         {
           accountCode: inventoryAccount.accountCode,
@@ -506,30 +508,46 @@ export class PurchaseReturnService {
         );
       }
 
-      if (reduceFromCash.gt(0)) {
+      if (cashRefund.gt(0)) {
         await accountRepository.updateAccountTransaction(
           {
             accountCode: cashAccount.accountCode,
-            balance: cashAccount.balance.minus(reduceFromCash),
+            balance: cashAccount.balance.minus(cashRefund),
           },
           prismaTransaction
         );
       }
 
-      // Hapus Detail purchase return
+      // hapus payable
+      if (payable?.payments?.length) {
+        const returnPayments = payable.payments.filter(
+          (p) =>
+            p.method === PaymentMethod.RETURN &&
+            p.journalEntry?.journalId === journalId
+        );
+
+        if (returnPayments.length > 0) {
+          await payablePaymentRepository.deletePaymentsByIds(
+            returnPayments.map((p) => p.paymentId),
+            prismaTransaction
+          );
+        }
+      }
+
+      // hapus detail purchase return
       await purchaseReturnDetailRepository.deleteByReturnId(
         returnId,
         prismaTransaction
       );
 
-      // Hapus Journal Entries
+      // hapus journal entries
       await journalEntryRepository.deleteByJournalId(
         journalId,
         prismaTransaction
       );
 
-      // Hapus Journal
-      await prismaTransaction.journal.delete({ where: { journalId } });
+      // hapus journal
+      await journalRepository.deleteJournal(journalId, prismaTransaction);
     });
   }
 }

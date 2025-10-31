@@ -1,4 +1,4 @@
-import { Payment, Prisma } from '@prisma/client';
+import { Payment, PaymentMethod, Prisma } from '@prisma/client';
 import { PayablePaymentForm } from '../utils/interface';
 import { Decimal } from '@prisma/client/runtime/library';
 import { prismaClient } from '../application/database';
@@ -52,7 +52,7 @@ export class PayablePaymentRepository {
       paymentVoucher: string;
       paymentAmount: Decimal;
       paymentDate: Date;
-      method: string;
+      method: PaymentMethod;
     },
     prismaTransaction: Prisma.TransactionClient
   ): Promise<Payment> {
@@ -118,6 +118,18 @@ export class PayablePaymentRepository {
             },
           },
         },
+      },
+    });
+  }
+
+  async deletePaymentsByIds(
+    paymentIds: string[],
+    prismaTransaction: Prisma.TransactionClient
+  ): Promise<void> {
+    if (paymentIds.length === 0) return;
+    await prismaTransaction.payment.deleteMany({
+      where: {
+        paymentId: { in: paymentIds },
       },
     });
   }

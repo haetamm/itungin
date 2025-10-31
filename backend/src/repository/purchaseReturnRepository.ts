@@ -21,7 +21,15 @@ export class PurchaseReturnRepository {
         purchase: {
           include: {
             supplier: true,
-            payable: true,
+            payable: {
+              include: {
+                payments: {
+                  include: {
+                    journalEntry: true,
+                  },
+                },
+              },
+            },
           },
         },
         returnDetails: {
@@ -30,7 +38,11 @@ export class PurchaseReturnRepository {
             inventoryBatch: true,
           },
         },
-        journal: true,
+        journal: {
+          include: {
+            journalEntries: true,
+          },
+        },
       },
     });
   }

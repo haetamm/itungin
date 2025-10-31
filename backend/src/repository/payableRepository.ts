@@ -6,6 +6,7 @@ import {
 } from '../utils/interface';
 import { paginate } from '../utils/pagination';
 import { prismaClient } from '../application/database';
+import { Decimal } from '@prisma/client/runtime/library';
 
 export class PayableRepository {
   async getPayableById(
@@ -186,17 +187,19 @@ export class PayableRepository {
   async applyPurchaseReturnToPayable(
     data: {
       payableId: string;
-      reduceFromPayable: number;
-      remainingAmount: number;
+      amount: Decimal;
+      paidAmount: Decimal;
+      remainingAmount: Decimal;
       status: PaymentStatus;
     },
     prismaTransaction: Prisma.TransactionClient
   ) {
-    const { payableId, reduceFromPayable, remainingAmount, status } = data;
+    const { payableId, amount, paidAmount, remainingAmount, status } = data;
     return prismaTransaction.payable.update({
       where: { payableId },
       data: {
-        amount: { decrement: reduceFromPayable },
+        amount,
+        paidAmount,
         remainingAmount,
         status,
       },

@@ -1744,7 +1744,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"date\": \"2025-09-10\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00010\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"MIXED\",\r\n  \"paymentVoucher\": \"BKK-0001\",\r\n  \"cashAmount\": 300000,\r\n  \"dueDate\": \"2025-09-28\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"100\",\r\n        \"unitPrice\": \"7000\",\r\n        \"profitMargin\": \"1000\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"date\": \"2025-09-10\",\r\n  \"supplierId\": \"{{supplierId}}\",\r\n  \"invoiceNumber\": \"TS-00010\",\r\n  \"vatRateId\": \"{{vatId}}\",\r\n  \"paymentType\": \"MIXED\",\r\n  \"paymentVoucher\": \"BKK-0001\",\r\n  \"cashAmount\": 2500000,\r\n  \"dueDate\": \"2025-09-28\",\r\n  \"items\": [\r\n     {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"320\",\r\n        \"unitPrice\": \"8700\",\r\n        \"profitMargin\": \"500\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"100\",\r\n        \"unitPrice\": \"7000\",\r\n        \"profitMargin\": \"1000\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2505,7 +2505,7 @@
 									"pm.test('should respose with correct property and message', () => {\r",
 									"    const responseJson = pm.response.json();\r",
 									"\r",
-									"    pm.environment.set('purchaseId', responseJson.data.purchaseId);\r",
+									"    pm.environment.set('purchaseReturnId', responseJson.data.returnId);\r",
 									"});"
 								],
 								"type": "text/javascript",
@@ -2529,7 +2529,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"purchaseId\": \"{{purchaseId}}\",\r\n  \"returnDate\": \"2025-09-06\",\r\n  \"reason\": \"barang kadaluarsa\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"10\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"10\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"purchaseId\": \"{{purchaseId}}\",\r\n  \"returnDate\": \"2025-09-06\",\r\n  \"reason\": \"barang kadaluarsa\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"15\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"50\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2566,7 +2566,7 @@
 									"pm.test('should respose with correct property and message', () => {\r",
 									"    const responseJson = pm.response.json();\r",
 									"\r",
-									"    pm.environment.set('purchaseId', responseJson.data.purchaseId);\r",
+									"    pm.environment.set('purchaseReturnId2', responseJson.data.returnId);\r",
 									"});"
 								],
 								"type": "text/javascript",
@@ -2590,7 +2590,68 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n  \"purchaseId\": \"{{purchaseId2}}\",\r\n  \"returnDate\": \"2025-09-10\",\r\n  \"reason\": \"barang kadaluarsa\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"240\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"180\"\r\n    }\r\n  ]\r\n}\r\n",
+							"raw": "{\r\n  \"purchaseId\": \"{{purchaseId2}}\",\r\n  \"returnDate\": \"2025-09-10\",\r\n  \"reason\": \"barang kadaluarsa\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"50\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"90\"\r\n    }\r\n  ]\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8000/api/v1/purchase-return",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"purchase-return"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "create purchase return | 3",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('should response 201 status code', () => {\r",
+									"    pm.response.to.have.status(201);\r",
+									"});\r",
+									"\r",
+									"pm.test('should respose with correct property and message', () => {\r",
+									"    const responseJson = pm.response.json();\r",
+									"\r",
+									"    pm.environment.set('purchaseReturnId3', responseJson.data.returnId);\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"purchaseId\": \"{{purchaseId3}}\",\r\n  \"returnDate\": \"2025-09-10\",\r\n  \"reason\": \"barang kadaluarsa\",\r\n  \"items\": [\r\n    {\r\n        \"productId\": \"{{productId}}\",\r\n        \"quantity\": \"60\"\r\n    },\r\n    {\r\n        \"productId\": \"{{productId2}}\",\r\n        \"quantity\": \"90\"\r\n    }\r\n  ]\r\n}\r\n",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2620,15 +2681,7 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"pm.test('should response 201 status code', () => {\r",
-									"    pm.response.to.have.status(201);\r",
-									"});\r",
-									"\r",
-									"pm.test('should respose with correct property and message', () => {\r",
-									"    const responseJson = pm.response.json();\r",
-									"\r",
-									"    pm.environment.set('purchaseId', responseJson.data.purchaseId);\r",
-									"});"
+									""
 								],
 								"type": "text/javascript",
 								"packages": {},
@@ -2661,6 +2714,96 @@
 								"v1",
 								"purchase-return",
 								"{{purchaseReturnId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "delete purchase return | 2",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/v1/purchase-return/{{purchaseReturnId2}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"purchase-return",
+								"{{purchaseReturnId2}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "delete purchase return | 3",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8000/api/v1/purchase-return/{{purchaseReturnId3}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8000",
+							"path": [
+								"api",
+								"v1",
+								"purchase-return",
+								"{{purchaseReturnId3}}"
 							]
 						}
 					},

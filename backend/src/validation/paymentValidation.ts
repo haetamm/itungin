@@ -7,7 +7,7 @@ const payableId = Joi.string().uuid().required();
 const paymentVoucher = Joi.string().required();
 const amount = Joi.number().positive().precision(2).required();
 const paymentDate = Joi.string().isoDate().required();
-const method = Joi.string().trim().min(1).required();
+const method = Joi.string().valid('CASH', 'RETURN').required();
 
 export const paymentPayableSchema: ObjectSchema<PaymentPayableRequest> =
   Joi.object({

@@ -1,5 +1,10 @@
 import { updateReceivablePaymentSchema } from './../validation/receivablePaymentValidation';
-import { PaymentStatus, Prisma, ReceivablePayment } from '@prisma/client';
+import {
+  PaymentMethod,
+  PaymentStatus,
+  Prisma,
+  ReceivablePayment,
+} from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import { prismaClient } from '../application/database';
 import { ResponseError } from '../entities/responseError';
@@ -101,7 +106,7 @@ export class ReceivablePaymentService {
 
       // valid saldo cash
       if (
-        method.toLowerCase() === 'cash' &&
+        method === PaymentMethod.CASH &&
         cashAccount.balance.comparedTo(paymentAmount) < 0
       ) {
         throw new ResponseError(400, 'Insufficient cash balance');
@@ -257,7 +262,7 @@ export class ReceivablePaymentService {
 
       // Validasi saldo kas
       if (
-        method.toLowerCase() === 'cash' &&
+        method === PaymentMethod.CASH &&
         newPaymentAmount.gt(oldPaymentAmount) &&
         cashAccount.balance.comparedTo(
           newPaymentAmount.minus(oldPaymentAmount)
