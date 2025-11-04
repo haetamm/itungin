@@ -1,4 +1,4 @@
-import { Navigate, Outlet } from 'react-router-dom'
+import { Navigate, Outlet } from 'react-router-dom';
 import SideBar from '../component/auth/SideBar';
 import NavBar from '../component/auth/NavBar';
 import Modal from '../component/auth/Modal';
@@ -7,28 +7,27 @@ import { Toaster } from 'sonner';
 import { RootState } from '../store';
 import { useSelector } from 'react-redux';
 
-import '../styles/default-layout.scss';
-
 export default function DefaultLayout() {
   const { token } = useSelector((state: RootState) => state.user);
 
   if (!token) {
-    return <Navigate to={'/login'} />
+    return <Navigate to={'/login'} />;
   }
 
   return (
     <>
-      <div className='wrap-default-layout '>
-        <div className='min-h-screen flex flex-col'>
+      <div className="kontener">
+        <SideBar />
+        <div className="ml-[60px] xl:ml-[230px] flex-1 flex flex-col min-h-screen px-1">
           <NavBar />
-          <SideBar />
-          <Outlet />
+          <div className="flex-1  pt-12 px-2 xs:pt-14 lg:pt-20 lg:px-6">
+            <Outlet />
+          </div>
           <Footer />
         </div>
-        <Modal />
       </div>
-    
-      <Toaster className="text-lg" position="bottom-right" />
+      <Modal />
+      <Toaster position="bottom-right" />
     </>
-  )
+  );
 }

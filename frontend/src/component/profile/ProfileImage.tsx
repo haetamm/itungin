@@ -3,17 +3,17 @@ import { AppDispatch, RootState } from '../../store';
 import { useDispatch, useSelector } from 'react-redux';
 import { openModal } from '../../store/auth/modalSlice';
 
-
-
 const ProfileImage = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { imageUrl, createdAt } = useSelector((state: RootState) => state.user);
 
   const handleOpenModal = () => {
-    dispatch(openModal({
-      type: 'big',
-      isOpen: true
-    }));
+    dispatch(
+      openModal({
+        type: 'big',
+        isOpen: true,
+      })
+    );
   };
 
   return (
@@ -22,9 +22,13 @@ const ProfileImage = () => {
         <div className="items-center justify-center">
           <div onClick={handleOpenModal} className="cursor-pointer">
             <img
-              className="rounded-full w-[220px] h-[220px]" 
-              alt="image-profile" 
-              src={imageUrl ? `http://localhost:8000/api/v1/user${imageUrl}?update=${timestamp}` : "http://laravel-react-fullstack.test/default-image.png"}  
+              className="rounded-full w-[220px] h-[220px]"
+              alt="image-profile"
+              src={
+                imageUrl
+                  ? `http://localhost:8000/api/v1/user${imageUrl}?update=${timestamp}`
+                  : 'http://laravel-react-fullstack.test/default-image.png'
+              }
             />
           </div>
           <div className="flex items-center justify-center mt-3">
@@ -34,8 +38,6 @@ const ProfileImage = () => {
       </div>
     </div>
   );
-}
+};
 
 export default ProfileImage;
-
-

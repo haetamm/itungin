@@ -1,9 +1,9 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-import { jwtDecode } from 'jwt-decode'
-import Cookies from 'js-cookie'
+import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { jwtDecode } from 'jwt-decode';
+import Cookies from 'js-cookie';
 
 interface UserState {
-  username: string | "";
+  username: string | '';
   imageUrl: string | null;
   name: string;
   role: string;
@@ -27,16 +27,16 @@ interface DecodedToken {
 }
 
 const userData = localStorage.getItem('user');
-const dataUser = userData ? JSON.parse(userData) : "";
+const dataUser = userData ? JSON.parse(userData) : '';
 
 const token = Cookies.get('token');
-let decodedToken: DecodedToken | null = null; 
-let role = "";
+let decodedToken: DecodedToken | null = null;
+let role = '';
 
 if (token) {
   try {
     decodedToken = jwtDecode<DecodedToken>(token);
-    role = decodedToken ? decodedToken.roles : "";
+    role = decodedToken ? decodedToken.roles : '';
   } catch (e) {
     console.error('Invalid token', e);
   }
@@ -47,8 +47,8 @@ const initialState: UserState = {
   imageUrl: dataUser.imageUrl,
   name: dataUser.name,
   role,
-  token: token || "",
-  createdAt: dataUser.createdAt
+  token: token || '',
+  createdAt: dataUser.createdAt,
 };
 
 const userSlice = createSlice({
@@ -72,13 +72,13 @@ const userSlice = createSlice({
       state.imageUrl = action.payload.imageUrl;
     },
     logout(state) {
-      state.username = "";
+      state.username = '';
       state.imageUrl = null;
-      state.name = "";
-      state.role = "";
+      state.name = '';
+      state.role = '';
       state.token = null;
-    }
-  }
+    },
+  },
 });
 
 export const { login, logout, setUser, setImageUser } = userSlice.actions;

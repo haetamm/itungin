@@ -16,7 +16,12 @@ export default function Register() {
   const dispatch = useDispatch<AppDispatch>();
   const { loading } = useSelector((state: RootState) => state.register);
 
-  const { control, handleSubmit, setError, formState: { errors, isValid, isSubmitting } } = useForm<RegisterFormValues>({
+  const {
+    control,
+    handleSubmit,
+    setError,
+    formState: { errors, isValid, isSubmitting },
+  } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerFormSchema),
     mode: 'onChange',
   });
@@ -25,12 +30,12 @@ export default function Register() {
     const dataReg = {
       name: data.name,
       username: data.username,
-      password: data.password
+      password: data.password,
     };
     try {
       await dispatch(registerUser(dataReg)).unwrap();
       navigate('/login');
-    } catch(error) {  
+    } catch (error) {
       handleFormErrors<RegisterFormValues>(error, setError);
     }
   });
@@ -39,7 +44,7 @@ export default function Register() {
     <>
       <Helmet>
         <title>Register | Itungin</title>
-        <meta name='description' content='Register page itungin' />
+        <meta name="description" content="Register page itungin" />
       </Helmet>
       <div className={`${guestStyle.loginSignupForm} animated fadeInDown`}>
         <div className={`${guestStyle.form}`}>
@@ -47,13 +52,13 @@ export default function Register() {
             <h1 className={`${guestStyle.title}`}>Register for free</h1>
 
             {registerFields.map((input) => (
-              <Controller 
+              <Controller
                 key={input.name}
                 name={input.name}
                 control={control}
                 defaultValue=""
                 render={({ field }) => (
-                  <FormInput 
+                  <FormInput
                     label={input.label}
                     type={input.type}
                     name={input.name}
@@ -76,11 +81,14 @@ export default function Register() {
             </button>
 
             <p className={`${guestStyle.message}`}>
-              Already registered? <Link to="/login" className="text-slate-600">Sign in</Link>
+              Already registered?{' '}
+              <Link to="/login" className="text-slate-600">
+                Sign in
+              </Link>
             </p>
           </form>
         </div>
       </div>
     </>
-  )
+  );
 }

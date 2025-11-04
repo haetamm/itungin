@@ -1,12 +1,11 @@
-
 interface HeaderPageProps {
-  title: string,
+  title: string;
   children: React.ReactNode;
 }
 
 export default function HeaderPage({ children, title }: HeaderPageProps) {
   return (
-    <div  className="border-b-2 lg:border-b-4 border-black py-3">
+    <div className="border-b-2 lg:border-b-4 border-black py-3">
       <div className="inline xs:flex justify-between items-center">
         <div className="mb-3 xs:mb-0">
           <div className="text-3xl">{title}</div>
@@ -18,5 +17,5 @@ export default function HeaderPage({ children, title }: HeaderPageProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -7,7 +7,7 @@ export default function NotFound() {
     <>
       <Helmet>
         <title>Not Found | 404</title>
-        <meta name='description' content='Not Found page 404' />
+        <meta name="description" content="Not Found page 404" />
       </Helmet>
       <div id="app" className="bg-white font-gabarito">
         <div>404</div>
@@ -16,5 +16,5 @@ export default function NotFound() {
         </div>
       </div>
     </>
-  )
+  );
 }

@@ -1,16 +1,21 @@
-
 interface CardDashboardProps {
-  id: number,
-  desc: string,
-  border: string,
-  bg: string,
-  link: string | null
+  id: number;
+  desc: string;
+  border: string;
+  bg: string;
+  link: string | null;
 }
 
-export default function CardDashboard({border, bg, desc }: CardDashboardProps) {
+export default function CardDashboard({
+  border,
+  bg,
+  desc,
+}: CardDashboardProps) {
   return (
     <div className={`${border} border-l-4`}>
-      <div className={`${bg}  flex space-x-1 xl:space-x-2 items-center justify-between px-2 h-[65px]`}>
+      <div
+        className={`${bg}  flex space-x-1 xl:space-x-2 items-center justify-between px-2 h-[65px]`}
+      >
         <p>{desc}</p>
         <div className={`${bg} px-1 text-white rounded-md text-center`}>0</div>
       </div>
@@ -21,5 +26,5 @@ export default function CardDashboard({border, bg, desc }: CardDashboardProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

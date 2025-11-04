@@ -26,47 +26,58 @@ export default function Modal() {
       if (axiosError.response) {
         handleFormErrors(axiosError.response.data, null);
       } else {
-        console.log("Unexpected error:", error);
+        console.log('Unexpected error:', error);
       }
     }
   };
-  
+
   const closeModalHandle = () => {
     dispatch(closeModal());
-  }
+  };
 
   return (
-    <> {
-        isOpen && (
-          <div id="myModal" className="modal-custom animated fadeInDown">
-              <div className={`modal-content ${type !== "small" ? 'mt-besar' : 'mt-kecil'}`}>
-                  <div className={`modal-card ${type !== "small" ? 'besar-modal' : 'kecil-modal'}`}>
-                    <div className="modal-card-kecil__body">
-                        <div className="close-wrap flex justify-end">
-                            <div onClick={closeModalHandle} className="close">&times;</div>
-                        </div>
-                        { type === "big" &&
-                          <div className="besar-modal__wrap">
-                            <div className="besar-modal__title"></div>
-                            <CropImage />
-                            <div className="besar-modal__title"></div>
-                          </div>
-                        }
-
-                        { type === "small" &&
-                          <>
-                            <div>Logout ??</div>
-                            <div className="wrap-button flex justify-end">
-                                <button onClick={onLogout} className="pointer button-custom">Yes</button>
-                            </div>
-                          </>
-                        }
-                    </div>
+    <>
+      {' '}
+      {isOpen && (
+        <div id="myModal" className="modal-custom animated fadeInDown">
+          <div
+            className={`modal-content ${type !== 'small' ? 'mt-besar' : 'mt-kecil'}`}
+          >
+            <div
+              className={`modal-card ${type !== 'small' ? 'besar-modal' : 'kecil-modal'}`}
+            >
+              <div className="modal-card-kecil__body">
+                <div className="close-wrap flex justify-end">
+                  <div onClick={closeModalHandle} className="close">
+                    &times;
+                  </div>
                 </div>
+                {type === 'big' && (
+                  <div className="besar-modal__wrap">
+                    <div className="besar-modal__title"></div>
+                    <CropImage />
+                    <div className="besar-modal__title"></div>
+                  </div>
+                )}
+
+                {type === 'small' && (
+                  <>
+                    <div>Logout ??</div>
+                    <div className="wrap-button flex justify-end">
+                      <button
+                        onClick={onLogout}
+                        className="pointer button-custom"
+                      >
+                        Yes
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
+            </div>
           </div>
-        )
-      }
+        </div>
+      )}
     </>
-  )
+  );
 }

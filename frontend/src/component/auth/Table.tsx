@@ -1,29 +1,29 @@
-import { columnTable } from '../../utils/dataInterface'
+import { columnTable } from '../../utils/dataInterface';
 
 interface THeadProps {
-    columns: columnTable[];
+  columns: columnTable[];
 }
 
 const Thead = ({ columns }: THeadProps) => {
   return (
     <tr>
       <th className="bg-white">No.</th>
-        {columns.map((column, index) => (
-            <td key={index}>{column.label}</td>
-        ))}
+      {columns.map((column, index) => (
+        <td key={index}>{column.label}</td>
+      ))}
     </tr>
-  )
-}
+  );
+};
 
-export default function Table ({ columns }: THeadProps) {
-    return (
-        <>
-            <div className="overflow-x-auto bg-white max-h-[430px] xs:max-h-[250px] md:max-h-[500px]">
-                <table className="table table-zebra table-md table-pin-rows table-pin-cols font-normal">
-                    <thead>
-                        <Thead columns={columns} />
-                    </thead>
-                    {/* <tbody>
+export default function Table({ columns }: THeadProps) {
+  return (
+    <>
+      <div className="overflow-x-auto bg-white max-h-[430px] xs:max-h-[250px] md:max-h-[500px]">
+        <table className="table table-zebra table-md table-pin-rows table-pin-cols font-normal">
+          <thead>
+            <Thead columns={columns} />
+          </thead>
+          {/* <tbody>
                     {loading ? ( 
                         <tr>
                         <td colSpan={columns.length + 1}>
@@ -59,9 +59,8 @@ export default function Table ({ columns }: THeadProps) {
                         </tr>
                     )}
                     </tbody> */}
-
-                </table>
-            </div>
-        </>
-    )
+        </table>
+      </div>
+    </>
+  );
 }

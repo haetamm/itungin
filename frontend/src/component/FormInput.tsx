@@ -9,7 +9,16 @@ interface FormInputProps {
   error?: string;
 }
 
-const FormInput: React.FC<FormInputProps> = ({ label, type, name, value, onChange, disabled, children, error }) => (
+const FormInput: React.FC<FormInputProps> = ({
+  label,
+  type,
+  name,
+  value,
+  onChange,
+  disabled,
+  children,
+  error,
+}) => (
   <div className="m-0">
     <div className="relative font-normal m-0">
       {children}
@@ -26,6 +35,5 @@ const FormInput: React.FC<FormInputProps> = ({ label, type, name, value, onChang
     {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
   </div>
 );
-
 
 export default FormInput;

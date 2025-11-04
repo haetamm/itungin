@@ -1,7 +1,7 @@
-import { reportList } from "./report-list"
+import { reportList } from './report-list';
 
 export const getData = (): reportList[] => {
-return [
+  return [
     {
       id: 1,
       title: null,
@@ -32,5 +32,5 @@ return [
       desc: null,
       category: 'Persetujuan',
     },
-  ]
-}
+  ];
+};

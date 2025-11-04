@@ -1,13 +1,12 @@
-import { IoHome } from "react-icons/io5";
-import { BiSolidReport } from "react-icons/bi";
-import { BsBank2 } from "react-icons/bs";
-import { IoPricetagsSharp } from "react-icons/io5";
-import { GoTriangleUp } from "react-icons/go";
-import { FaShoppingCart } from "react-icons/fa";
-import { RiCurrencyFill } from "react-icons/ri";
-import { RiContactsBook2Fill } from "react-icons/ri";
-import { GiCardboardBoxClosed } from "react-icons/gi";
-import { MdHomeWork } from "react-icons/md";
+import { IoHome } from 'react-icons/io5';
+import { BiSolidReport } from 'react-icons/bi';
+import { BsBank2 } from 'react-icons/bs';
+import { IoPricetagsSharp } from 'react-icons/io5';
+import { FaShoppingCart } from 'react-icons/fa';
+import { RiCurrencyFill } from 'react-icons/ri';
+import { RiContactsBook2Fill } from 'react-icons/ri';
+import { GiCardboardBoxClosed } from 'react-icons/gi';
+import { MdHomeWork } from 'react-icons/md';
 import { NavLink } from '../auth/NavLink';
 import { RootState } from '../../store';
 import { useSelector } from 'react-redux';
@@ -16,8 +15,7 @@ import { timestamp } from '../../utils/helper';
 import '../../styles/components/sidebar.scss';
 
 export default function SideBar() {
-  const { imageUrl } = useSelector((state: RootState) => state.user);
-  const { name } = useSelector((state: RootState) => state.user);
+  const { imageUrl, name } = useSelector((state: RootState) => state.user);
 
   const navLinks = [
     { to: '/home', icon: IoHome, label: 'Home' },
@@ -28,22 +26,28 @@ export default function SideBar() {
     { to: '/products', icon: GiCardboardBoxClosed, label: 'Products' },
     { to: '/expense', icon: RiCurrencyFill, label: 'Expense' },
     { to: '#', icon: RiContactsBook2Fill, label: 'Contacts' },
-    { to: '#', icon: MdHomeWork, label: 'Asset Management' }
+    { to: '#', icon: MdHomeWork, label: 'Asset Management' },
   ];
 
   return (
     <>
-      <div id="nav-bar">
+      <div id="side-bar">
         <div id="nav-header">
-          <a id="nav-title" href="#" className="hidden xl:block">Itungin</a>
-          <hr className="hidden lg:block"/>
+          <a id="nav-title" href="#" className="hidden xl:block">
+            Itungin
+          </a>
+          <hr className="hidden lg:block" />
         </div>
         <div id="nav-content">
-
           {navLinks.map((link, index) => (
-            <NavLink key={index} to={link.to} icon={link.icon} label={link.label} />
+            <NavLink
+              key={index}
+              to={link.to}
+              icon={link.icon}
+              label={link.label}
+            />
           ))}
-          
+
           <div id="nav-content-highlight"></div>
         </div>
         <input id="nav-footer-toggle" type="checkbox" />
@@ -51,22 +55,22 @@ export default function SideBar() {
           <div id="nav-footer-heading">
             <div id="nav-footer-avatar">
               <img
-                alt="Avatar" 
-                src={imageUrl ? `http://localhost:8000/api/v1/user${imageUrl}?update=${timestamp}` : "http://laravel-react-fullstack.test/default-image.png"}  
+                alt="Avatar"
+                src={
+                  imageUrl
+                    ? `http://localhost:8000/api/v1/user${imageUrl}?update=${timestamp}`
+                    : 'http://laravel-react-fullstack.test/default-image.png'
+                }
               />
             </div>
             <div id="nav-footer-titlebox">
-              <a id="nav-footer-title" href="#" target="_blank">{name}</a>
+              <a id="nav-footer-title" href="#" target="_blank">
+                {name}
+              </a>
             </div>
-            <label htmlFor="nav-footer-toggle">
-              <i className="fas"><GoTriangleUp /></i>
-            </label>
-          </div>
-          <div id="nav-footer-content">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
           </div>
         </div>
       </div>
     </>
-  )
+  );
 }

@@ -11,8 +11,8 @@ const TheadComp = () => {
       <td>Tindakan</td>
       <th className="hidden md:block"></th>
     </tr>
-  )
-}
+  );
+};
 
 export default function Table() {
   const data = ['Kas', 'Rekening Bank', 'Giro'];
@@ -23,22 +23,22 @@ export default function Table() {
           <TheadComp />
         </thead>
         <tbody>
-        {data.map((item, index) => (
-          <tr key={index}>
-            <th className="bg-white">{index + 1}</th>
-            <td>1-1000{index + 1}</td>
-            <td>{item}</td>
-            <td>0,00</td>
-            <td>0,00</td>
-            <td>12/16/2020</td>
-            <th className="hidden md:block">{index +1}</th>
-          </tr>
-        ))}
+          {data.map((item, index) => (
+            <tr key={index}>
+              <th className="bg-white">{index + 1}</th>
+              <td>1-1000{index + 1}</td>
+              <td>{item}</td>
+              <td>0,00</td>
+              <td>0,00</td>
+              <td>12/16/2020</td>
+              <th className="hidden md:block">{index + 1}</th>
+            </tr>
+          ))}
         </tbody>
         <tfoot className="text-sm">
           <TheadComp />
         </tfoot>
       </table>
     </div>
-  )
+  );
 }

@@ -38,27 +38,27 @@ const routerConfig: RouteConfig[] = [
       },
       {
         path: '/cash',
-        element: <CashBank />
+        element: <CashBank />,
       },
       {
         path: '/sales',
-        element: <Sales />
+        element: <Sales />,
       },
       {
         path: '/purchases',
-        element: <Purchases />
+        element: <Purchases />,
       },
       {
         path: '/expense',
-        element: <Expense />
+        element: <Expense />,
       },
       {
         path: '/products',
-        element: <Product />
+        element: <Product />,
       },
       {
         path: '/profile',
-        element: <Profile />
+        element: <Profile />,
       },
     ],
   },

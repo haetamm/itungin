@@ -16,12 +16,26 @@ const initialState: LoginState = {
 
 export const loginUser = createAsyncThunk(
   'login/loginUser',
-  async (formData: { username: string; password: string }, { rejectWithValue }) => {
+  async (
+    formData: { username: string; password: string },
+    { rejectWithValue }
+  ) => {
     try {
-      const {data : response } = await axiosInstance.post('/auth/login', formData);
-      const { data: user } = response
+      const { data: response } = await axiosInstance.post(
+        '/auth/login',
+        formData
+      );
+      const { data: user } = response;
       Cookies.set('token', user.token, { expires: 10080 });
-      localStorage.setItem('user', JSON.stringify({name: user.name, imageUrl: user.imageUrl, username: user.username, createdAt: user.createdAt}));
+      localStorage.setItem(
+        'user',
+        JSON.stringify({
+          name: user.name,
+          imageUrl: user.imageUrl,
+          username: user.username,
+          createdAt: user.createdAt,
+        })
+      );
       toast.success(`Selamat datang ${user.name}`);
       return user;
     } catch (error: unknown) {
