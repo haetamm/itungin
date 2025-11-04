@@ -72,7 +72,7 @@ export default [
       ],
 
       // Tambahan
-      "no-console": "warn",
+      "no-console": "off",
     },
   },
 
